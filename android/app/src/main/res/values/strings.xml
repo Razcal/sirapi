@@ -1,0 +1,8 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">PROVERTI</string>
+    <string name="title_activity_main">PROVERTI</string>
+    <string name="package_name">com.proverti.tuban</string>
+    <string name="custom_url_scheme">com.proverti.tuban</string>
+    <string name="server_client_id">640859770536-uc58dsoiaka67huadtkmhj0qdoufjmqp.apps.googleusercontent.com</string>
+</resources>
