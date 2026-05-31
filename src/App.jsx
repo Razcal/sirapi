@@ -1915,7 +1915,7 @@ function AppContent() {
       {!hideSplashDOM && (
         <div className="splash-container">
           <div className="fade-in bg-white px-8 py-4 rounded-2xl shadow-2xl shadow-white/10 text-center">
-            <h1 className="text-6xl font-black text-slate-900 tracking-tighter">SIRAPI</h1>
+            <h1 className="text-6xl font-black text-slate-900 tracking-tighter">Sarapi</h1>
             <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mt-2">BIDANG KESEHATAN HEWAN</p>
           </div>
         </div>
