@@ -127,7 +127,7 @@ export function AuthScreen({ setProfile }) {
     <div className="fixed inset-0 z-[100] bg-slate-50 flex flex-col overflow-hidden slide-up">
       <div className="pb-6 px-6 bg-white rounded-b-[32px] shadow-sm z-10 relative" style={{ paddingTop: 'calc(env(safe-area-inset-top) + 3rem)' }}>
         <div className="flex justify-center mb-4"><div className="w-16 h-16 bg-emerald-50 rounded-full flex items-center justify-center p-3"><img src={logoTuban} alt="Logo Tuban" className="w-full h-full object-contain" /></div></div>
-        <h1 className="text-2xl font-black text-center text-slate-900 tracking-tight">PROVERTI</h1>
+        <h1 className="text-2xl font-black text-center text-slate-900 tracking-tight">SIRAPI</h1>
         <p className="text-[10px] font-bold text-center text-slate-500 uppercase tracking-widest mt-1">Kabupaten Tuban</p>
         <div className="flex bg-slate-100 p-1.5 rounded-2xl mt-6">
           <button type="button" onClick={() => setIsLogin(true)} className={`flex-1 py-3 text-xs font-bold rounded-xl transition-all ${isLogin ? "bg-white text-emerald-600 shadow-sm" : "text-slate-500"}`}>Masuk</button>

@@ -57,7 +57,7 @@ function ShareSummaryModal({ open, onClose, stats, profile }) {
   if (!open) return null;
   const farmName = profile?.farm || "Peternakan";
   const ownerName = profile?.name || "Peternak";
-  const txt = `*LAPORAN POPULASI TERNAK - PROVERTI*\n\n🏡 Peternakan: ${farmName}\n🧑‍🌾 Pemilik: ${ownerName}\n📊 Total Aset: ${stats.total} Ekor\n🐄 Indukan Produktif: ${stats.betina} Ekor (Bunting: ${stats.pregnant})\n🐂 Pejantan/Bakalan: ${stats.jantan} Ekor\n\n~ Dibagikan dari Aplikasi PROVERTI Tuban`;
+  const txt = `*LAPORAN POPULASI TERNAK - SIRAPI*\n\n🏡 Peternakan: ${farmName}\n🧑‍🌾 Pemilik: ${ownerName}\n📊 Total Aset: ${stats.total} Ekor\n🐄 Indukan Produktif: ${stats.betina} Ekor (Bunting: ${stats.pregnant})\n🐂 Pejantan/Bakalan: ${stats.jantan} Ekor\n\n~ Dibagikan dari Aplikasi SIRAPI Tuban`;
   const shareWA = () => window.open(`https://wa.me/?text=${encodeURIComponent(txt)}`, '_blank');
   const shareFB = () => window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent('https://proverti.tubankab.go.id')}&quote=${encodeURIComponent(txt)}`, '_blank');
   const shareOther = async () => { if (navigator.share) { try { await navigator.share({ title: `Laporan Populasi ${farmName}`, text: txt }); } catch (e) {} } else { dialog.alert("Perangkat Anda tidak mendukung fitur berbagi.", "Info"); } };
