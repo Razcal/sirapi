@@ -1055,7 +1055,7 @@ function AssetRecordCard({ item, onEdit, onOpenAction, onOpenDetail, onDelete, h
         </div>
       </div>
       <div className="bg-slate-50/50 px-5 py-4 flex gap-3 border-t border-slate-100">
-        <button onClick={(e) => { e.stopPropagation(); if(onOpenAction) onOpenAction(item); }} className="flex-1 bg-emerald-700 text-white py-2.5 rounded-xl text-xs font-bold hover:bg-emerald-800 shadow-sm transition-colors">Lapor Aksi</button>
+        <button onClick={(e) => { e.stopPropagation(); if(onOpenAction) onOpenAction(item); }} className="flex-1 bg-emerald-700 text-white py-2.5 rounded-xl text-xs font-bold hover:bg-emerald-800 shadow-sm transition-colors">Catat Kondisi</button>
         {onEdit && <button onClick={(e) => { e.stopPropagation(); onEdit(item); }} className="bg-white border border-slate-200 text-slate-600 px-3 py-2.5 rounded-xl text-xs font-bold hover:bg-slate-50 shadow-sm transition-colors">Edit</button>}
         {onDelete && <button onClick={(e) => { e.stopPropagation(); onDelete(item.id); }} className="bg-rose-50 border border-rose-200 text-rose-600 px-3 py-2.5 rounded-xl text-xs font-bold hover:bg-rose-100 shadow-sm transition-colors">Hapus</button>}
       </div>
@@ -1114,7 +1114,7 @@ function ActionModal({ open, item, onClose, onSaveRepro, onSaveHealth, setAppToa
       if (item?.conceptionDate) {
         const diffDays = Math.floor((new Date(dRepro) - new Date(item.conceptionDate)) / 86400000);
         if (diffDays < 265) {
-          setMedicalWarning(`❌ Tanggal Tidak Sesuai: Usia kandungan baru ${diffDays} hari, padahal sapi normal melahirkan di kisaran 265-295 hari. Jika sapi mengalami keguguran, silakan ubah 'Jenis Aksi' menjadi Keguguran.`);
+          setMedicalWarning(`❌ Tanggal Tidak Sesuai: Usia kandungan baru ${diffDays} hari, padahal sapi normal melahirkan di kisaran 265-295 hari. Jika sapi mengalami keguguran, silakan ubah 'Jenis Kondisi' menjadi Keguguran.`);
         } else if (diffDays > 300) {
           setMedicalWarning(`⚠️ Perhatian: Usia kandungan sudah ${diffDays} hari, melebihi batas normal. Waspada risiko kesulitan melahirkan (distokia).`);
         } else {
@@ -1142,7 +1142,7 @@ function ActionModal({ open, item, onClose, onSaveRepro, onSaveHealth, setAppToa
   const waLink = `https://wa.me/6281555863186?text=${encodeURIComponent(`Halo Petugas, saya ${ownerName}. Sapi ${item.code || item.id} terdeteksi Nymphomania (3x IB jarak dekat). Mohon bantuannya.`)}`;
 
   const handleSaveRepro = () => {
-    if (resRepro === "NONE") return setAppToast({ message: "Silakan pilih jenis aksi terlebih dahulu", type: "error" });
+    if (resRepro === "NONE") return setAppToast({ message: "Silakan pilih jenis kondisi terlebih dahulu", type: "error" });
     if (medicalWarning?.includes("❌")) return setAppToast({ message: "Tanggal tidak valid", type: "error" });
     if (resRepro !== 'POSITIVE' && resRepro !== 'NEGATIVE' && !dRepro) return setAppToast({ message: "Tanggal tindakan/kejadian wajib diisi", type: "error" });
 
@@ -1174,7 +1174,7 @@ function ActionModal({ open, item, onClose, onSaveRepro, onSaveHealth, setAppToa
       <div className="bg-white w-full max-w-md rounded-t-[32px] sm:rounded-[32px] p-6 slide-up shadow-2xl max-h-[90vh] overflow-y-auto">
         
         <div className="flex justify-between items-center mb-5">
-          <div><p className="font-black text-xl text-slate-900">Lapor Aksi</p><p className="text-[10px] font-bold text-slate-500 uppercase">ID: {item.code || item.id}</p></div>
+          <div><p className="font-black text-xl text-slate-900">Catat Kondisi</p><p className="text-[10px] font-bold text-slate-500 uppercase">ID: {item.code || item.id}</p></div>
           <button onClick={onClose} className="bg-slate-100 w-8 h-8 rounded-full flex items-center justify-center font-bold">✕</button>
         </div>
 
@@ -1186,9 +1186,9 @@ function ActionModal({ open, item, onClose, onSaveRepro, onSaveHealth, setAppToa
         {tab === "REPRO" && !activeHealth && (
           <div className="space-y-4 fade-in">
             
-            <FF label="Jenis Aksi">
+            <FF label="Jenis Kondisi">
               <select className={`${inp} bg-white`} value={resRepro} onChange={e => setResRepro(e.target.value)}>
-                <option value="NONE">-- Pilih Aksi --</option>
+                <option value="NONE">-- Pilih Kondisi --</option>
                 {(item?.status_reproduksi || item?.phase) === "ABORTUS_PENDING" ? (
                   <option value="TERAPI">✅ Sudah Mendapatkan Terapi Medis</option>
                 ) : (
@@ -1280,7 +1280,7 @@ function ActionModal({ open, item, onClose, onSaveRepro, onSaveHealth, setAppToa
                 )}
               </div>
             )}
-            <button onClick={handleSaveRepro} disabled={medicalWarning?.includes('❌')} className={`w-full font-bold py-4 rounded-xl text-sm ${medicalWarning?.includes('❌') ? 'bg-slate-200 text-slate-400' : 'bg-emerald-600 text-white hover:bg-emerald-700'}`}>Simpan Aksi</button>
+            <button onClick={handleSaveRepro} disabled={medicalWarning?.includes('❌')} className={`w-full font-bold py-4 rounded-xl text-sm ${medicalWarning?.includes('❌') ? 'bg-slate-200 text-slate-400' : 'bg-emerald-600 text-white hover:bg-emerald-700'}`}>Simpan Kondisi</button>
           </div>
         )}
 
