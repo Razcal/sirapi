@@ -1503,7 +1503,7 @@ function ReproStatusChart({ dbCattle }) {
           </button>
           {kandangInfoOpen && (
             <div className="absolute right-0 top-full mt-2 w-56 bg-slate-800 text-white text-[10px] font-medium leading-relaxed rounded-xl p-3 shadow-xl z-20">
-              Status ini dihitung dari persentase sapi dengan kondisi mendesak (perlu penanganan petugas) dari total populasi betina: <strong>Kondisi Baik</strong> (0%), <strong>Cukup Baik</strong> (&gt;0%), <strong>Waspada</strong> (&gt;10%), <strong>Kritis</strong> (&gt;30%).
+Menunjukkan seberapa banyak sapi yang butuh penanganan mendesak dari petugas. Semakin tinggi tingkatnya — dari <strong>Kondisi Baik</strong>, <strong>Cukup Baik</strong>, <strong>Waspada</strong>, hingga <strong>Kritis</strong> — semakin banyak sapi yang perlu segera diperiksa.
             </div>
           )}
         </div>
