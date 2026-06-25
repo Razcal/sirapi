@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
+import { toPng } from "html-to-image";
 import { AuthScreen } from "./AuthScreen";
 import { DialogSystem } from "./core/components/SharedUI";
 import logoTuban from "./Tubankab.png";
@@ -89,6 +90,18 @@ const COLOR = {
   violet: { bg: "bg-violet-100", text: "text-violet-800", border: "border-violet-200" },
   rose: { bg: "bg-rose-100", text: "text-rose-800", border: "border-rose-200" },
   slate: { bg: "bg-slate-100", text: "text-slate-800", border: "border-slate-200" }
+};
+
+// Satu sumber kebenaran warna hex, sejajar dengan key COLOR di atas — dipakai
+// di tempat yang butuh nilai hex mentah (misal Recharts), bukan class Tailwind.
+const COLOR_HEX = {
+  emerald: "#10b981",
+  amber: "#f59e0b",
+  orange: "#f97316",
+  blue: "#3b82f6",
+  violet: "#8b5cf6",
+  rose: "#f43f5e",
+  slate: "#64748b"
 };
 
 // UI COMPONENT BARU: IN-APP TOAST NOTIFICATION (PENGGANTI ALERT)
@@ -1283,59 +1296,111 @@ function ActionModal({ open, item, onClose, onSaveRepro, onSaveHealth, setAppToa
   );
 }
 
-function ShareSummaryModal({ open, onClose, stats, profile, setAppToast }) {
+function ShareSummaryModal({ open, onClose, stats, profile, dbCattle, setAppToast }) {
+  const cardRef = React.useRef(null);
+  const [isGenerating, setIsGenerating] = useState(false);
+
   if (!open) return null;
   const ownerName = profile?.name || "Peternak";
   const address = profile?.alamat || profile?.desa || "Tuban";
-  const txt = `*LAPORAN POPULASI TERNAK - SIRAPI*\n\n🧑‍🌾 Pemilik: ${ownerName}\n📍 Alamat: ${address}\n📊 Total Aset: ${stats.total} Ekor\n🐄 Indukan Produktif: ${stats.betina} Ekor (Bunting: ${stats.pregnant})\n🐂 Pejantan/Bakalan: ${stats.jantan} Ekor\n\n~ Dibagikan dari Aplikasi SIRAPI Tuban`;
-  
-  const shareWA = () => window.open(`https://wa.me/?text=${encodeURIComponent(txt)}`, '_blank');
-  const shareFB = () => window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent('https://sirapi.vercel.app')}&quote=${encodeURIComponent(txt)}`, '_blank');
-  const shareOther = async () => { 
-    if (navigator.share) { 
-      try { await navigator.share({ title: `Laporan Populasi ${ownerName}`, text: txt }); } catch (e) {} 
-    } else { 
-      setAppToast({ message: "Perangkat Anda tidak mendukung fitur berbagi ini", type: "error" }); 
-    } 
+
+  const safeDbForChart = Array.isArray(dbCattle) ? dbCattle : [];
+  const femaleForChart = safeDbForChart.filter(i => i && (i.jenis_kelamin || i.gender) !== "JANTAN");
+  const totalFemale = femaleForChart.length;
+  const pregnantN = femaleForChart.filter(i => (i.status_reproduksi || i.phase) === "PREGNANT").length;
+  const belumBuntingN = femaleForChart.filter(i => (i.status_reproduksi || i.phase) === "BRED").length;
+  const tidakBuntingN = totalFemale - pregnantN - belumBuntingN;
+
+  const shareChartData = [
+    { name: "Bunting", value: pregnantN, color: COLOR_HEX.emerald },
+    { name: "Belum Bunting", value: belumBuntingN, color: COLOR_HEX.amber },
+    { name: "Tidak Bunting", value: tidakBuntingN, color: COLOR_HEX.slate }
+  ];
+
+  const handleShareImage = async () => {
+    if (!cardRef.current) return;
+    setIsGenerating(true);
+    try {
+      const dataUrl = await toPng(cardRef.current, { quality: 0.95, pixelRatio: 2, backgroundColor: '#0f172a' });
+      const blob = await (await fetch(dataUrl)).blob();
+      const file = new File([blob], `sirapi-laporan-${todayStr()}.png`, { type: 'image/png' });
+
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          files: [file],
+          title: `Laporan Populasi ${ownerName}`,
+          text: `Laporan populasi ternak ${ownerName} dari Aplikasi SIRAPI Tuban.`
+        });
+      } else {
+        const link = document.createElement('a');
+        link.href = dataUrl;
+        link.download = `sirapi-laporan-${todayStr()}.png`;
+        link.click();
+        setAppToast({ message: "Gambar berhasil diunduh! Silakan bagikan manual ke platform pilihan Anda.", type: "success" });
+      }
+    } catch (error) {
+      if (error?.name !== 'AbortError') {
+        setAppToast({ message: "Gagal membuat/membagikan gambar laporan. Coba lagi.", type: "error" });
+      }
+    }
+    setIsGenerating(false);
   };
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/80 backdrop-blur-sm p-4 pop-in" onClick={onClose}>
       <div className="w-full max-w-sm" onClick={e => e.stopPropagation()}>
-        <div className="bg-gradient-to-br from-slate-900 to-slate-800 rounded-[32px] p-8 text-white shadow-2xl relative overflow-hidden aspect-[9/16] flex flex-col justify-between border border-slate-700">
+        <div ref={cardRef} className="bg-gradient-to-br from-slate-900 to-slate-800 rounded-[32px] p-7 text-white shadow-2xl relative overflow-hidden border border-slate-700">
           <div className="relative z-10">
-            <h2 className="text-3xl font-black mb-1 leading-tight">Laporan<br/>Aset Ternak</h2>
-            <p className="text-slate-400 text-[10px] font-bold tracking-widest uppercase mb-8">{fmtDate(new Date())}</p>
-            <div className="space-y-4">
-              <div className="bg-white/5 p-4 rounded-2xl flex justify-between items-center"><span className="text-sm font-semibold">Total Populasi</span><span className="text-3xl font-black">{stats.total}</span></div>
-              <div className="bg-white/5 p-4 rounded-2xl flex justify-between items-center"><span className="text-sm font-semibold">Indukan</span><span className="text-2xl font-black">{stats.betina}</span></div>
-              <div className="bg-white/5 p-4 rounded-2xl flex justify-between items-center"><span className="text-sm font-semibold">Pejantan</span><span className="text-2xl font-black">{stats.jantan}</span></div>
-              <div className="bg-emerald-500/20 p-4 rounded-2xl border border-emerald-500/30 flex justify-between items-center mt-2"><span className="text-sm font-semibold text-emerald-300">Bunting Aktif</span><span className="text-2xl font-black text-emerald-400">{stats.pregnant}</span></div>
+            <h2 className="text-2xl font-black leading-tight">Laporan Populasi Ternak</h2>
+            <p className="text-slate-400 text-[10px] font-bold tracking-widest uppercase mt-1">{ownerName} • {address}</p>
+            <p className="text-slate-500 text-[9px] font-semibold mb-5">{fmtDate(new Date())}</p>
+
+            {totalFemale > 0 && (
+              <div className="flex items-center gap-3 bg-white/5 rounded-2xl p-4 mb-4">
+                <div style={{ width: 90, height: 90 }} className="shrink-0">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie data={shareChartData} dataKey="value" innerRadius={26} outerRadius={42} paddingAngle={3}>
+                        {shareChartData.map((entry, index) => (
+                          <Cell key={index} fill={entry.color} strokeWidth={0} />
+                        ))}
+                      </Pie>
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="flex-1 space-y-1.5 min-w-0">
+                  {shareChartData.map((entry, index) => (
+                    <div key={index} className="flex items-center gap-2 text-[10px]">
+                      <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: entry.color }}></div>
+                      <span className="font-semibold text-slate-300 flex-1 truncate">{entry.name}</span>
+                      <span className="font-black text-white">{entry.value}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="grid grid-cols-3 gap-2.5">
+              <div className="bg-white/5 p-3 rounded-xl text-center"><p className="text-[8px] font-bold uppercase text-slate-400 tracking-widest mb-1">Total</p><p className="text-xl font-black">{stats.total}</p></div>
+              <div className="bg-white/5 p-3 rounded-xl text-center"><p className="text-[8px] font-bold uppercase text-slate-400 tracking-widest mb-1">Indukan</p><p className="text-xl font-black">{stats.betina}</p></div>
+              <div className="bg-white/5 p-3 rounded-xl text-center"><p className="text-[8px] font-bold uppercase text-slate-400 tracking-widest mb-1">Pejantan</p><p className="text-xl font-black">{stats.jantan}</p></div>
             </div>
+
+            <p className="text-center text-[8px] font-bold text-slate-500 uppercase tracking-widest mt-4">Dibuat dari Aplikasi SIRAPI Tuban</p>
           </div>
         </div>
+
         <div className="mt-6">
-          <p className="text-center text-white/90 text-[11px] font-bold mb-3">Bagikan langsung ke sosial media:</p>
-          <div className="flex gap-2.5 mb-4">
-            <button onClick={shareWA} className="flex-1 bg-[#25D366] text-white py-3 rounded-2xl font-bold">WA</button>
-            <button onClick={shareFB} className="flex-1 bg-[#1877F2] text-white py-3 rounded-2xl font-bold">FB</button>
-            <button onClick={shareOther} className="flex-1 bg-[#ee2a7b] text-white py-3 rounded-2xl font-bold">Share</button>
-          </div>
+          <button onClick={handleShareImage} disabled={isGenerating} className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-800 disabled:cursor-not-allowed text-white py-4 rounded-2xl font-bold text-sm shadow-lg shadow-emerald-500/30 flex items-center justify-center gap-2 transition-colors">
+            {isGenerating ? 'Membuat Gambar...' : '📤 Bagikan sebagai Gambar'}
+          </button>
+          <p className="text-center text-white/50 text-[10px] font-semibold mt-3 mb-4">Bisa dibagikan langsung ke WhatsApp, Instagram, Facebook, dan platform lain</p>
           <button onClick={onClose} className="w-full bg-white/10 text-white border border-white/20 py-3 rounded-2xl font-bold text-sm hover:bg-white/20 transition-colors">Tutup</button>
         </div>
       </div>
     </div>
   );
 }
-
-const REPRO_STATUS_COLORS = {
-  OPEN: "#f59e0b",
-  BRED: "#3b82f6",
-  PREGNANT: "#10b981",
-  POSTPARTUM: "#8b5cf6",
-  CALF: "#6366f1",
-  ABORTUS_PENDING: "#e11d48"
-};
 
 function ReproStatusChart({ dbCattle }) {
   const safeDb = Array.isArray(dbCattle) ? dbCattle : [];
@@ -1360,19 +1425,21 @@ function ReproStatusChart({ dbCattle }) {
     try { analysis = analyzeCattle(item); } catch (e) { analysis = null; }
     const detailLabel = (analysis?.statusLabel || status).replace(/⚠️|🚨/g, '').trim();
     if (!detailCounts[detailLabel]) {
-      detailCounts[detailLabel] = { count: 0, color: REPRO_STATUS_COLORS[status] || "#94a3b8", isUrgent: !!analysis?.isUrgent };
+      detailCounts[detailLabel] = { count: 0, color: COLOR_HEX[analysis?.color] || COLOR_HEX.slate, isUrgent: !!analysis?.isUrgent };
     }
     detailCounts[detailLabel].count += 1;
     if (analysis?.isUrgent) detailCounts[detailLabel].isUrgent = true;
   });
 
-  const pregnantCount = counts["PREGNANT"] || 0;
-  const notPregnantCount = total - pregnantCount;
+  const pregnantCount = counts["PREGNANT"] || 0; // sudah diperiksa petugas, hasil positif
+  const belumBuntingCount = counts["BRED"] || 0; // sudah IB, belum diperiksa petugas
+  const tidakBuntingCount = total - pregnantCount - belumBuntingCount; // belum bunting (kosong/pedet/pasca melahirkan/dll)
 
   const chartData = [
-    { name: "PREGNANT", label: "Bunting", value: pregnantCount, color: "#10b981" },
-    { name: "NOT_PREGNANT", label: "Tidak Bunting", value: notPregnantCount, color: "#94a3b8" }
-  ].filter(d => d.value > 0);
+    { name: "PREGNANT", label: "Bunting", value: pregnantCount, color: COLOR_HEX.emerald },
+    { name: "BRED", label: "Belum Bunting", value: belumBuntingCount, color: COLOR_HEX.amber },
+    { name: "OTHER", label: "Tidak Bunting", value: tidakBuntingCount, color: COLOR_HEX.slate }
+  ]; // sengaja tidak difilter value > 0 — tabel di bawah harus tetap menampilkan ketiga kategori meski jumlahnya 0
 
   const detailRows = Object.entries(detailCounts)
     .map(([label, info]) => ({ label, ...info }))
@@ -1446,9 +1513,12 @@ function ReproStatusChart({ dbCattle }) {
         </div>
       </div>
 
-      <p className="text-[10px] font-medium text-slate-400 leading-relaxed mt-3 bg-slate-50 rounded-lg px-3 py-2">
-        💡 Persentase dihitung dari total <strong className="text-slate-600">{total} ekor</strong> sapi betina. <strong className="text-emerald-600">Bunting</strong> = sudah terkonfirmasi pemeriksaan kebuntingan positif. <strong className="text-slate-600">Tidak Bunting</strong> mencakup pedet/dara, kosong, sudah kawin (tunggu pemeriksaan kebuntingan), dan pasca melahirkan — lihat rincian lengkapnya di bawah.
-      </p>
+      <div className="text-[10px] font-medium text-slate-400 leading-relaxed mt-3 bg-slate-50 rounded-lg px-3 py-2 space-y-1">
+        <p>💡 Persentase dihitung dari total <strong className="text-slate-600">{total} ekor</strong> sapi betina:</p>
+        <p>• <strong className="text-emerald-600">Bunting</strong> — sudah diperiksa petugas/dokter hewan dan hasilnya positif.</p>
+        <p>• <strong className="text-amber-600">Belum Bunting</strong> — sudah di-IB, tapi belum diperiksa kebuntingannya oleh petugas.</p>
+        <p>• <strong className="text-slate-600">Tidak Bunting</strong> — kategori sapi yang saat ini belum bunting (pedet/dara, kosong, pasca melahirkan, dll). Lihat rincian lengkapnya di bawah.</p>
+      </div>
 
       <div className="mt-5 pt-4 border-t border-slate-100">
         <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Rincian Kondisi Detail</p>
@@ -1528,7 +1598,7 @@ function DashboardView({ dbCattle, profile, onAdviceClick, setAppToast }) {
           )}
         </div>
       </div>
-      <ShareSummaryModal open={shareModalOpen} onClose={() => setShareModalOpen(false)} stats={{total, jantan, betina, pregnant}} profile={profile} setAppToast={setAppToast} />
+      <ShareSummaryModal open={shareModalOpen} onClose={() => setShareModalOpen(false)} stats={{total, jantan, betina, pregnant}} profile={profile} dbCattle={safeDb} setAppToast={setAppToast} />
     </div>
   );
 }
