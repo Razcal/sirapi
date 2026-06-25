@@ -12,6 +12,11 @@ export function AuthScreen({ setProfile }) {
   const [isLoading, setIsLoading] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
 
+  // Lupa Password state
+  const [forgotPasswordOpen, setForgotPasswordOpen] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState("");
+  const [isSendingReset, setIsSendingReset] = useState(false);
+
   // Login state
   const [loginEmailOrPhone, setLoginEmailOrPhone] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
@@ -64,6 +69,25 @@ export function AuthScreen({ setProfile }) {
       setProfile(result.user);
     } else {
       dialog.alert(result.error || "Login gagal!", "Login Gagal");
+    }
+  };
+
+  const handleForgotPassword = async (e) => {
+    e.preventDefault();
+    if (!forgotEmail.trim()) {
+      return dialog.alert("Harap isi email yang terdaftar!", "Perhatian");
+    }
+
+    setIsSendingReset(true);
+    const result = await authService.requestPasswordReset(forgotEmail);
+    setIsSendingReset(false);
+
+    if (result.success) {
+      dialog.alert("Link reset password telah dikirim ke email Anda. Silakan cek kotak masuk (dan folder spam) untuk melanjutkan.", "Email Terkirim");
+      setForgotPasswordOpen(false);
+      setForgotEmail("");
+    } else {
+      dialog.alert("Gagal mengirim link reset. Jika email Anda terdaftar lewat akun lama (sebelum sistem ini diperbarui), silakan hubungi petugas/admin dinas secara langsung.", "Gagal Mengirim");
     }
   };
 
@@ -129,6 +153,7 @@ export function AuthScreen({ setProfile }) {
   const inp = "w-full border border-slate-200 rounded-xl px-4 py-3 text-sm font-medium focus:outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-50 bg-slate-50 focus:bg-white transition-all";
 
   return (
+    <>
     <div className="fixed inset-0 z-[100] bg-cream flex flex-col overflow-hidden slide-up">
       <div className="pb-6 px-6 bg-white rounded-b-[32px] shadow-sm z-10 relative" style={{ paddingTop: 'calc(env(safe-area-inset-top) + 3rem)' }}>
         <div className="flex justify-center mb-4"><div className="w-16 h-16 bg-emerald-50 rounded-full flex items-center justify-center p-3"><img src={logoTuban} alt="Logo Tuban" className="w-full h-full object-contain" /></div></div>
@@ -153,7 +178,7 @@ export function AuthScreen({ setProfile }) {
               </FF>
               <div className="flex justify-between items-center -mt-2">
                 <label className="flex items-center gap-1.5 cursor-pointer"><input type="checkbox" className="w-3.5 h-3.5 accent-emerald-600 rounded border-slate-300" checked={rememberMe} onChange={(e) => setRememberMe(e.target.checked)} /><span className="text-[11px] font-bold text-slate-500">Ingat Saya</span></label>
-                <button type="button" onClick={() => dialog.alert("Silakan hubungi petugas/admin dinas.", "Bantuan")} className="text-[11px] font-bold text-emerald-600 hover:text-emerald-700 transition-colors">Lupa Password?</button>
+                <button type="button" onClick={() => { setForgotEmail(""); setForgotPasswordOpen(true); }} className="text-[11px] font-bold text-emerald-600 hover:text-emerald-700 transition-colors">Lupa Password?</button>
               </div>
             </div>
             <button type="submit" disabled={isLoading} className="w-full flex justify-center items-center gap-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-400 text-white font-bold py-4 rounded-xl mt-4 text-sm shadow-lg shadow-emerald-500/30 transition-all">{isLoading ? "Memproses..." : "Masuk ke Aplikasi"}</button>
@@ -222,5 +247,23 @@ export function AuthScreen({ setProfile }) {
         )}
       </div>
     </div>
+
+    {forgotPasswordOpen && (
+      <div className="fixed inset-0 z-[110] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm px-4">
+        <form onSubmit={handleForgotPassword} className="bg-white w-full max-w-sm rounded-[24px] p-6 pop-in shadow-2xl">
+          <h3 className="font-black text-xl text-slate-900 mb-2 tracking-tight">Lupa Password?</h3>
+          <p className="text-xs text-slate-500 font-medium mb-5 leading-relaxed">Masukkan email yang terdaftar. Kami akan mengirimkan link untuk membuat password baru.</p>
+          <FF label="Email Terdaftar">
+            <input type="email" className={inp} placeholder="nama@email.com" value={forgotEmail} onChange={e => setForgotEmail(e.target.value)} disabled={isSendingReset} autoFocus />
+          </FF>
+          <p className="text-[10px] text-slate-400 font-medium mb-2 -mt-1 px-1 leading-relaxed">Jika akun Anda dibuat sebelum sistem ini diperbarui dan link reset tidak berhasil terkirim, silakan hubungi petugas/admin dinas secara langsung.</p>
+          <div className="flex gap-3 mt-6">
+            <button type="button" onClick={() => setForgotPasswordOpen(false)} disabled={isSendingReset} className="flex-1 py-3.5 rounded-xl border border-slate-200 text-sm font-bold text-slate-600 hover:bg-slate-50 transition-colors disabled:opacity-50">Batal</button>
+            <button type="submit" disabled={isSendingReset} className="flex-1 py-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold shadow-lg shadow-emerald-500/30 transition-all disabled:opacity-50">{isSendingReset ? "Mengirim..." : "Kirim Link Reset"}</button>
+          </div>
+        </form>
+      </div>
+    )}
+    </>
   );
 }

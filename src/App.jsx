@@ -3,6 +3,7 @@ import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
 import { toPng } from "html-to-image";
 import { AuthScreen } from "./AuthScreen";
 import { DialogSystem } from "./core/components/SharedUI";
+import { supabase } from "./core/supabaseClient";
 import logoTuban from "./Tubankab.png";
 
 /*
@@ -44,7 +45,16 @@ const GlobalStyle = () => (
     select, input, textarea { appearance: none; -webkit-appearance: none; transition: all 0.2s; }
     select:focus, input:focus, textarea:focus { border-color: #10b981 !important; box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.1); }
 
-    .splash-container { position: fixed; inset: 0; background: #000; z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: opacity 0.8s ease; overflow: hidden; }
+    .splash-container { position: fixed; inset: 0; background: linear-gradient(160deg, #15803d 0%, #064e3b 100%); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: opacity 0.6s ease; overflow: hidden; }
+    .splash-logo-wrap { animation: splashLogoIn 0.7s cubic-bezier(0.16, 1, 0.3, 1) both; }
+    .splash-title { animation: splashFadeUp 0.6s ease-out 0.35s both; }
+    .splash-subtitle { animation: splashFadeUp 0.6s ease-out 0.5s both; }
+    .splash-loader { width: 36px; height: 3px; border-radius: 999px; background: rgba(255,255,255,0.15); overflow: hidden; position: relative; animation: splashFadeUp 0.6s ease-out 0.7s both; }
+    .splash-loader::after { content: ''; position: absolute; inset: 0; width: 40%; background: #ffffff; border-radius: 999px; animation: splashLoaderSlide 1.1s ease-in-out infinite; }
+
+    @keyframes splashLogoIn { from { opacity: 0; transform: scale(0.7) translateY(10px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+    @keyframes splashFadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes splashLoaderSlide { 0% { left: -40%; } 100% { left: 100%; } }
 
     .highlight-blink {
       animation: highlight-blink-anim 1.5s ease-out 3;
@@ -1635,12 +1645,12 @@ function AcademyView() {
         <div className="bg-emerald-700 rounded-[24px] p-6 shadow-lg relative overflow-hidden">
           <div className="relative z-10">
             <div className="flex items-center gap-2 mb-4">
-              <span className="bg-emerald-900/50 text-emerald-50 px-3 py-1 rounded-lg text-[10px] font-black tracking-widest uppercase inline-block">E-Book Eksklusif</span>
-              <span className="bg-orange-500 text-white px-2 py-0.5 rounded-md text-[8px] font-black tracking-widest uppercase animate-pulse">Coming Soon</span>
+              <span className="bg-emerald-900/50 text-emerald-50 px-3 py-1 rounded-lg text-[10px] font-black tracking-widest uppercase inline-block">E-Book Edukasi</span>
+              <span className="bg-orange-500 text-white px-2 py-0.5 rounded-md text-[8px] font-black tracking-widest uppercase animate-pulse">Segera Hadir</span>
             </div>
-            <h3 className="text-xl font-black mb-2 leading-snug text-white">3 Kesalahan Fatal Peternak yang Bikin Sapi Gagal Bunting!</h3>
+            <h3 className="text-xl font-black mb-2 leading-snug text-white">Panduan Mencegah Kegagalan Kebuntingan pada Sapi</h3>
             <p className="text-xs font-medium text-emerald-100 mb-6 leading-relaxed">
-              Oleh Dokter Hewan & Pakar S2 Biologi Reproduksi. Pelajari mitos lapangan dan solusi berbasis data agar breeding sukses.
+              Disusun oleh dokter hewan dan ahli reproduksi ternak, berisi panduan teknis untuk membantu peternak meningkatkan keberhasilan program inseminasi buatan.
             </p>
             <button disabled className="w-full bg-emerald-800/50 text-emerald-200 font-black py-3.5 rounded-xl text-sm transition-colors cursor-not-allowed border border-emerald-600">
               Segera Hadir...
@@ -2100,6 +2110,126 @@ function EditProfileModal({ open, onClose, onSave, currentProfile, setAppToast }
   );
 }
 
+function ChangePasswordModal({ open, onClose, currentProfile, setAppToast }) {
+  const [oldPassword, setOldPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showOld, setShowOld] = useState(false);
+  const [showNew, setShowNew] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    if (open) {
+      setOldPassword(''); setNewPassword(''); setConfirmPassword('');
+      setShowOld(false); setShowNew(false); setIsLoading(false);
+    }
+  }, [open]);
+
+  const handleSubmit = async () => {
+    if (!oldPassword) return setAppToast({ message: "Password lama wajib diisi!", type: "error" });
+    if (!newPassword) return setAppToast({ message: "Password baru wajib diisi!", type: "error" });
+    if (newPassword.length < 6) return setAppToast({ message: "Password baru minimal 6 karakter!", type: "error" });
+    if (newPassword !== confirmPassword) return setAppToast({ message: "Konfirmasi password baru tidak cocok!", type: "error" });
+    if (newPassword === oldPassword) return setAppToast({ message: "Password baru tidak boleh sama dengan password lama!", type: "error" });
+
+    setIsLoading(true);
+    try {
+      const { authService } = await import('./core/authService');
+      const result = await authService.changePassword(currentProfile.id, oldPassword, newPassword);
+      if (!result.success) {
+        setIsLoading(false);
+        return setAppToast({ message: result.error || "Gagal mengubah password.", type: "error" });
+      }
+      setAppToast({ message: "Password berhasil diubah!", type: "success" });
+      onClose();
+    } catch (e) {
+      setAppToast({ message: "Terjadi kesalahan sistem.", type: "error" });
+    }
+    setIsLoading(false);
+  };
+
+  if (!open) return null;
+  const inp = "w-full border border-slate-200 rounded-xl px-4 py-3 text-sm font-medium focus:outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-50 bg-slate-50 focus:bg-white transition-all disabled:opacity-50";
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm px-4">
+      <div className="bg-white w-full max-w-sm rounded-[24px] p-6 pop-in shadow-2xl max-h-[90vh] overflow-y-auto">
+        <h3 className="font-black text-xl text-slate-900 mb-5 tracking-tight">Ganti Password</h3>
+        <div className="space-y-4">
+          <FF label="Password Lama">
+            <div className="relative">
+              <input type={showOld ? "text" : "password"} className={inp.replace("px-4", "pl-4 pr-12")} value={oldPassword} onChange={e => setOldPassword(e.target.value)} disabled={isLoading} placeholder="Masukkan password lama" />
+              <button type="button" onClick={() => setShowOld(!showOld)} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-emerald-600 transition-colors">{showOld ? '🙈' : '👁️'}</button>
+            </div>
+          </FF>
+          <FF label="Password Baru">
+            <div className="relative">
+              <input type={showNew ? "text" : "password"} className={inp.replace("px-4", "pl-4 pr-12")} value={newPassword} onChange={e => setNewPassword(e.target.value)} disabled={isLoading} placeholder="Minimal 6 karakter" />
+              <button type="button" onClick={() => setShowNew(!showNew)} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-emerald-600 transition-colors">{showNew ? '🙈' : '👁️'}</button>
+            </div>
+          </FF>
+          <FF label="Konfirmasi Password Baru">
+            <input type={showNew ? "text" : "password"} className={inp} value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} disabled={isLoading} placeholder="Ulangi password baru" />
+          </FF>
+        </div>
+        <div className="flex gap-3 mt-8">
+          <button onClick={onClose} className="flex-1 py-3.5 rounded-xl border border-slate-200 text-sm font-bold text-slate-600 hover:bg-slate-50 transition-colors disabled:opacity-50" disabled={isLoading}>Batal</button>
+          <button onClick={handleSubmit} className="flex-1 py-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold shadow-lg shadow-emerald-500/30 transition-all disabled:opacity-50" disabled={isLoading}>{isLoading ? 'Menyimpan...' : 'Simpan Password'}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ResetPasswordScreen({ onDone, setAppToast }) {
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPw, setShowPw] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!newPassword) return setAppToast({ message: "Password baru wajib diisi!", type: "error" });
+    if (newPassword.length < 6) return setAppToast({ message: "Password baru minimal 6 karakter!", type: "error" });
+    if (newPassword !== confirmPassword) return setAppToast({ message: "Konfirmasi password tidak cocok!", type: "error" });
+
+    setIsLoading(true);
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+
+    if (error) {
+      setIsLoading(false);
+      return setAppToast({ message: error.message || "Gagal menyimpan password baru.", type: "error" });
+    }
+
+    setAppToast({ message: "Password berhasil diperbarui! Silakan masuk kembali.", type: "success" });
+    await supabase.auth.signOut();
+    onDone();
+  };
+
+  const inp = "w-full border border-slate-200 rounded-xl px-4 py-3 text-sm font-medium focus:outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-50 bg-slate-50 focus:bg-white transition-all disabled:opacity-50";
+
+  return (
+    <div className="fixed inset-0 z-[200] flex items-center justify-center bg-cream px-4">
+      <form onSubmit={handleSubmit} className="bg-white w-full max-w-sm rounded-[24px] p-7 shadow-2xl">
+        <h2 className="text-xl font-black text-slate-900 mb-2 tracking-tight">Buat Password Baru</h2>
+        <p className="text-xs text-slate-500 font-medium mb-5 leading-relaxed">Tautan reset terverifikasi. Masukkan password baru untuk akun Anda.</p>
+        <div className="space-y-4">
+          <FF label="Password Baru">
+            <div className="relative">
+              <input type={showPw ? "text" : "password"} className={inp.replace("px-4", "pl-4 pr-12")} value={newPassword} onChange={e => setNewPassword(e.target.value)} disabled={isLoading} placeholder="Minimal 6 karakter" autoFocus />
+              <button type="button" onClick={() => setShowPw(!showPw)} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-emerald-600 transition-colors">{showPw ? '🙈' : '👁️'}</button>
+            </div>
+          </FF>
+          <FF label="Konfirmasi Password Baru">
+            <input type={showPw ? "text" : "password"} className={inp} value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} disabled={isLoading} placeholder="Ulangi password baru" />
+          </FF>
+        </div>
+        <button type="submit" disabled={isLoading} className="w-full mt-6 bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-400 text-white font-bold py-4 rounded-xl text-sm shadow-lg shadow-emerald-500/30 transition-all">{isLoading ? "Menyimpan..." : "Simpan Password Baru"}</button>
+      </form>
+    </div>
+  );
+}
+
 export default function App() {
   return (
     <ErrorBoundary>
@@ -2150,7 +2280,16 @@ function AppContent() {
   const [genderFilter, setGenderFilter] = useState("ALL");
   const [highlightedId, setHighlightedId] = useState(null);
   const [editProfileOpen, setEditProfileOpen] = useState(false);
-  
+  const [changePasswordOpen, setChangePasswordOpen] = useState(false);
+  const [recoveryMode, setRecoveryMode] = useState(false);
+
+  useEffect(() => {
+    const { data: authListener } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "PASSWORD_RECOVERY") setRecoveryMode(true);
+    });
+    return () => authListener?.subscription?.unsubscribe();
+  }, []);
+
   useEffect(() => { setTimeout(() => setHideSplashDOM(true), 2500); }, []);
   useEffect(() => { try { if (profile) localStorage.setItem("srtt_user_profile", JSON.stringify(profile)); } catch(e) {} }, [profile]);
 
@@ -2368,6 +2507,16 @@ function AppContent() {
     return searchMatch && genderMatch;
   }).sort((a, b) => (a.code || a.id).localeCompare(b.code || b.id, undefined, { numeric: true }));
 
+  if (recoveryMode) {
+    return (
+      <div className="min-h-screen bg-cream font-sans text-slate-800 relative flex flex-col">
+        <GlobalStyle />
+        <ToastNotification message={appToast?.message} type={appToast?.type} onClose={() => setAppToast(null)} />
+        <ResetPasswordScreen onDone={() => setRecoveryMode(false)} setAppToast={setAppToast} />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-cream font-sans text-slate-800 pb-20 relative flex flex-col">
       <GlobalStyle />
@@ -2378,10 +2527,12 @@ function AppContent() {
       
       {!hideSplashDOM && (
         <div className="splash-container">
-          <div className="fade-in bg-white px-8 py-4 rounded-2xl shadow-2xl shadow-white/10 text-center">
-            <h1 className="text-6xl font-black text-slate-900 tracking-tighter">SIRAPI</h1>
-            <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mt-2">BIDANG KESEHATAN HEWAN</p>
+          <div className="splash-logo-wrap bg-white rounded-[28px] p-4 shadow-2xl">
+            <img src={logoTuban} alt="Logo Tuban" className="w-16 h-auto object-contain" />
           </div>
+          <h1 className="splash-title text-5xl font-black text-white tracking-tighter mt-6">SIRAPI</h1>
+          <p className="splash-subtitle text-[10px] font-bold text-emerald-200 uppercase tracking-widest mt-2 text-center px-10">Sistem Informasi Reproduksi Sapi</p>
+          <div className="splash-loader mt-9"></div>
         </div>
       )}
 
@@ -2391,7 +2542,7 @@ function AppContent() {
              <div className="flex justify-center mb-5"><img src={logoTuban} alt="Logo Tuban" className="w-20 h-auto object-contain drop-shadow-sm" /></div>
              <p className="text-[8.5px] font-black text-emerald-600 uppercase tracking-widest mb-6 leading-snug">Dinas Ketahanan Pangan, Pertanian, dan Perikanan<br/>Kabupaten Tuban</p>
              <h1 className="text-2xl font-black text-slate-900 tracking-tight mb-1">SIRAPI</h1>
-             <p className="text-[10px] font-bold text-slate-500 mb-8 leading-relaxed whitespace-nowrap overflow-x-auto">(Portofolio Recording Observasi Veteriner, Reproduksi, dan Ternak Integrasi)</p>
+             <p className="text-[10px] font-bold text-slate-500 mb-8 leading-relaxed">(Sistem Informasi Reproduksi Sapi)</p>
              <button onClick={() => { setHasStarted(true); setShowAuthScreen(true); }} className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-4 rounded-xl text-sm shadow-lg shadow-emerald-500/30 transition-all">Mulai Sistem Pendataan</button>
            </div>
         </div>
@@ -2454,6 +2605,7 @@ function AppContent() {
                   </div>
                   <h2 className="text-2xl font-black text-slate-900 tracking-tight">{profile.name}</h2>
                   <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">{profile.alamat || profile.desa || "Tuban"} Area</p>
+                  {profile.nik && <p className="text-[10px] font-semibold text-slate-400 mt-1">NIK: {profile.nik}</p>}
                   <button onClick={() => setEditProfileOpen(true)} className="mt-4 px-6 py-2 bg-slate-100 text-slate-700 font-bold text-xs rounded-full hover:bg-slate-200 transition-colors">Edit Profil</button>
                 </div>
 
@@ -2461,7 +2613,7 @@ function AppContent() {
                   <div>
                     <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 ml-2">Pengaturan Akun</h3>
                     <div className="bg-white rounded-[20px] border border-slate-100 shadow-sm overflow-hidden">
-                      <div className="flex items-center justify-between p-4 cursor-pointer hover:bg-slate-50 transition-colors">
+                      <div onClick={() => setChangePasswordOpen(true)} className="flex items-center justify-between p-4 cursor-pointer hover:bg-slate-50 transition-colors">
                          <div className="flex items-center gap-3">
                            <div className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center text-blue-600"><svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg></div>
                            <span className="font-bold text-sm text-slate-700">Keamanan & Password</span>
@@ -2512,6 +2664,7 @@ function AppContent() {
           <ActionModal open={!!actionItem} item={actionItem} onClose={() => setActionItem(null)} onSaveRepro={handleSaveRepro} onSaveHealth={handleSaveHealth} setAppToast={setAppToast} />
           <DetailModal item={detailItem} onClose={() => setDetailItem(null)} onDeleteLog={handleDeleteLog} setAppToast={setAppToast} setAppConfirm={setAppConfirm} />
           <EditProfileModal open={editProfileOpen} onClose={() => setEditProfileOpen(false)} onSave={setProfile} currentProfile={profile} setAppToast={setAppToast} />
+          <ChangePasswordModal open={changePasswordOpen} onClose={() => setChangePasswordOpen(false)} currentProfile={profile} setAppToast={setAppToast} />
         </>
       )}
     </div>

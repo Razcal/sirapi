@@ -249,5 +249,73 @@ export const authService = {
     } catch (error) {
       return { success: false, error: error.message };
     }
+  },
+
+  // Ganti password (mendukung user Supabase Auth normal maupun fallback bcrypt)
+  changePassword: async (userId, oldPassword, newPassword) => {
+    try {
+      const trimmedOld = oldPassword.trim();
+      const trimmedNew = newPassword.trim();
+
+      if (trimmedNew.length < 6) {
+        throw new Error('Password baru minimal 6 karakter');
+      }
+
+      const { data: userRecord, error: fetchError } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', userId)
+        .single();
+
+      if (fetchError || !userRecord) throw new Error('Data pengguna tidak ditemukan');
+
+      if (userRecord.password_hash) {
+        // User fallback (bcrypt) — verifikasi password lama, lalu update hash baru
+        const isMatch = await bcrypt.compare(trimmedOld, userRecord.password_hash);
+        if (!isMatch) throw new Error('Password lama salah');
+
+        const newHash = await bcrypt.hash(trimmedNew, 10);
+        const { error: updateError } = await supabase
+          .from('users')
+          .update({ password_hash: newHash, updated_at: new Date().toISOString() })
+          .eq('id', userId);
+
+        if (updateError) throw updateError;
+      } else {
+        // User Supabase Auth normal — verifikasi password lama via re-login, lalu update password
+        const { error: verifyError } = await supabase.auth.signInWithPassword({
+          email: userRecord.email,
+          password: trimmedOld,
+        });
+        if (verifyError) throw new Error('Password lama salah');
+
+        const { error: updateError } = await supabase.auth.updateUser({ password: trimmedNew });
+        if (updateError) throw updateError;
+      }
+
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  },
+
+  // Kirim link reset password ke email — untuk kasus benar-benar lupa password
+  // (tidak perlu tahu password lama). Hanya berfungsi untuk akun Supabase Auth
+  // normal; akun fallback bcrypt (kasus rate-limit saat registrasi) tetap
+  // perlu dibantu petugas/admin karena tidak punya identitas Supabase Auth asli.
+  requestPasswordReset: async (email) => {
+    try {
+      const trimmedEmail = email.trim().toLowerCase();
+      if (!trimmedEmail) throw new Error('Email wajib diisi');
+
+      const { error } = await supabase.auth.resetPasswordForEmail(trimmedEmail, {
+        redirectTo: window.location.origin,
+      });
+
+      if (error) throw error;
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
   }
 };
