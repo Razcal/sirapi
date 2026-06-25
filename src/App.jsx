@@ -104,6 +104,17 @@ const COLOR_HEX = {
   slate: "#64748b"
 };
 
+// Ikon SVG kustom (bukan emoji) — dipakai di SmartEstrusCalendar & ActionModal.
+// Emoji dihindari karena tampilannya berbeda-beda di tiap perangkat/OS dan
+// beberapa konsep (sapi bunting, pedet) tidak punya emoji yang pas secara makna.
+const ICON_TAG = <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-violet-500"><path d="M20.59 13.41 13.42 20.58a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><circle cx="7" cy="7" r="1" fill="currentColor" stroke="none"></circle></svg>;
+const ICON_HEART_FILLED = <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" className="text-rose-500"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"></path></svg>;
+const ICON_HEART_OUTLINE = <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-rose-500"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>;
+const ICON_ALERT_TRIANGLE = <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-rose-600"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>;
+const ICON_REFRESH = <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-emerald-600"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>;
+const ICON_SEARCH = <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-blue-500"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>;
+const ICON_PIN = <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-slate-500"><path d="M12 21s-7-7.5-7-12a7 7 0 0 1 14 0c0 4.5-7 12-7 12z"></path><circle cx="12" cy="9" r="2.5"></circle></svg>;
+
 // UI COMPONENT BARU: IN-APP TOAST NOTIFICATION (PENGGANTI ALERT)
 function ToastNotification({ message, type = "error", onClose }) {
   if (!message) return null;
@@ -607,7 +618,7 @@ function SmartEstrusCalendar({ item }) {
     summaryItems.push({ icon: "🌱", label: "Trimester 1", dateText: `${fmtDate(conceptionDate.toISOString().split("T")[0])} – ${fmtDate(t1End.toISOString().split("T")[0])}`, dot: "bg-blue-300", desc: "Hari ke-0 s/d ke-94 kebuntingan. Fokus hijauan berkualitas dan jaga kondisi tubuh." });
     summaryItems.push({ icon: "🌿", label: "Trimester 2", dateText: `${fmtDate(t2Start.toISOString().split("T")[0])} – ${fmtDate(t2End.toISOString().split("T")[0])}`, dot: "bg-amber-300", desc: "Hari ke-95 s/d ke-189 kebuntingan. Tambahkan konsentrat dan suplemen Kalsium/Fosfor untuk tulang janin." });
     summaryItems.push({ icon: "🌾", label: "Trimester 3", dateText: `${fmtDate(t3Start.toISOString().split("T")[0])} – ${fmtDate(hplDate.toISOString().split("T")[0])}`, dot: "bg-rose-300", desc: "Hari ke-190 hingga perkiraan lahir. Fase krusial — siapkan pakan penguat dan rencana kering kandang." });
-    summaryItems.push({ icon: "👶", label: "Perkiraan Lahir (HPL)", dateText: fmtDate(hplDate.toISOString().split("T")[0]), dot: "bg-violet-600", desc: "Estimasi tanggal kelahiran (kebuntingan normal ±283 hari). Siapkan kandang beranak menjelang tanggal ini." });
+    summaryItems.push({ icon: ICON_TAG, label: "Perkiraan Lahir (HPL)", dateText: fmtDate(hplDate.toISOString().split("T")[0]), dot: "bg-violet-600", desc: "Estimasi tanggal kelahiran (kebuntingan normal ±283 hari). Siapkan kandang beranak menjelang tanggal ini." });
   } else {
     if (anchor) {
       let anchorLabel = "Kejadian Terakhir";
@@ -617,7 +628,7 @@ function SmartEstrusCalendar({ item }) {
       else if (phase === "BRED") { anchorDesc = "Tanggal Inseminasi Buatan (IB) terakhir yang tercatat — acuan menghitung jadwal evaluasi birahi berikutnya."; }
       else if (phase === "POSTPARTUM" || phase === "OPEN") { anchorDesc = "Tanggal kejadian terakhir (bisa berupa melahirkan, IB, hasil pemeriksaan kebuntingan negatif, atau terapi medis) — acuan memprediksi jadwal birahi berikutnya."; }
       summaryItems.push({
-        icon: phase === "ABORTUS_PENDING" ? "🚨" : phase === "CALF" ? "🐄" : "📌",
+        icon: phase === "ABORTUS_PENDING" ? ICON_ALERT_TRIANGLE : phase === "CALF" ? ICON_TAG : ICON_PIN,
         label: anchorLabel,
         dateText: fmtDate(anchor.toISOString().split("T")[0]),
         dot: anchorColorClass.split(' ')[0],
@@ -653,7 +664,7 @@ function SmartEstrusCalendar({ item }) {
     keyEvent = { block: chosen, isOngoing, isPast, daysUntilStart };
   }
 
-  const phaseIcon = phase === "BRED" ? "🔍" : phase === "PREGNANT" ? "🤰" : phase === "CALF" ? "🐄" : phase === "ABORTUS_PENDING" ? "🚨" : "🔄";
+  const phaseIcon = phase === "BRED" ? ICON_SEARCH : phase === "PREGNANT" ? ICON_HEART_FILLED : phase === "CALF" ? ICON_TAG : phase === "ABORTUS_PENDING" ? ICON_ALERT_TRIANGLE : ICON_REFRESH;
 
   // Fungsi untuk mengekstrak info hari saat diklik
   const getDayInfo = (date) => {
@@ -1165,8 +1176,8 @@ function ActionModal({ open, item, onClose, onSaveRepro, onSaveHealth, setAppToa
         </div>
 
         <div className="flex bg-slate-100 p-1.5 rounded-2xl mb-6">
-          <button onClick={() => setTab("KESEHATAN")} className={`flex-1 py-2.5 text-xs font-bold rounded-xl ${tab === "KESEHATAN" ? "bg-white shadow-sm text-slate-800" : "text-slate-500"}`}>🩺 Medis</button>
-          <button onClick={() => { if(activeHealth) setAppToast({message: "Sapi dalam perawatan. Selesaikan di tab Medis.", type: "error"}); else if(isJantan) setAppToast({message: "Menu Reproduksi khusus sapi betina", type: "error"}); else setTab("REPRO"); }} className={`flex-1 py-2.5 text-xs font-bold rounded-xl ${tab === "REPRO" ? "bg-white shadow-sm text-slate-800" : "text-slate-500"} ${activeHealth || isJantan ? "opacity-50" : ""}`}>🧬 Reproduksi</button>
+          <button onClick={() => setTab("KESEHATAN")} className={`flex-1 py-2.5 text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 ${tab === "KESEHATAN" ? "bg-white shadow-sm text-slate-800" : "text-slate-500"}`}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"></path></svg> Medis</button>
+          <button onClick={() => { if(activeHealth) setAppToast({message: "Sapi dalam perawatan. Selesaikan di tab Medis.", type: "error"}); else if(isJantan) setAppToast({message: "Menu Reproduksi khusus sapi betina", type: "error"}); else setTab("REPRO"); }} className={`flex-1 py-2.5 text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 ${tab === "REPRO" ? "bg-white shadow-sm text-slate-800" : "text-slate-500"} ${activeHealth || isJantan ? "opacity-50" : ""}`}>{ICON_HEART_OUTLINE} Reproduksi</button>
         </div>
 
         {tab === "REPRO" && !activeHealth && (
