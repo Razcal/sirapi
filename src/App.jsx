@@ -228,17 +228,17 @@ function analyzeCattle(item) {
         const sisaHariPkb = 60 - daysSinceLastIB;
         res.color = "slate"; res.statusLabel = "SUSPECT BUNTING";
         if (daysSinceLastIB < 18) {
-          res.advice = `Hari ke-${daysSinceLastIB} pasca IB. Pantau kemungkinan birahi kembali pada hari ke-18 sampai ke-24 (siklus birahi normal). Jika sapi tidak menunjukkan birahi pada periode tersebut, kemungkinan bunting cukup besar. Pemeriksaan kebuntingan (PKB) hanya boleh dilakukan oleh petugas/dokter hewan yang berkompeten — jangan diperiksa sendiri.`;
+          res.advice = `Hari ke-${daysSinceLastIB} pasca IB. Pantau kemungkinan birahi kembali pada hari ke-18 sampai ke-24 (siklus birahi normal). Jika sapi tidak menunjukkan birahi pada periode tersebut, kemungkinan bunting cukup besar. Pemeriksaan kebuntingan hanya boleh dilakukan oleh petugas/dokter hewan yang berkompeten — jangan diperiksa sendiri.`;
         } else {
-          res.advice = `Hari ke-${daysSinceLastIB} pasca IB. Sapi tidak menunjukkan birahi kembali, indikasi bunting cukup baik. Pemeriksaan Kebuntingan (PKB) oleh petugas/dokter hewan dapat dilakukan mulai hari ke-60. Tersisa ${sisaHariPkb} hari menuju jadwal PKB.`;
+          res.advice = `Hari ke-${daysSinceLastIB} pasca IB. Sapi tidak menunjukkan birahi kembali, indikasi bunting cukup baik. Pemeriksaan kebuntingan oleh petugas/dokter hewan dapat dilakukan mulai hari ke-60. Tersisa ${sisaHariPkb} hari menuju jadwal pemeriksaan kebuntingan.`;
         }
       }
-      else { res.color = "orange"; res.statusLabel = "WAKTUNYA PKB"; res.isUrgent = true; res.advice = `Hari ke-${daysSinceLastIB} pasca IB. Jadwal Pemeriksaan Kebuntingan (PKB) telah tiba. Segera hubungi petugas/dokter hewan untuk melakukan PKB (hanya boleh dilakukan oleh tenaga terlatih), lalu laporkan hasilnya melalui menu Reproduksi.`; res.adviceColor = "text-orange-900 bg-orange-50 border border-orange-200 font-bold shadow-sm"; }
-    } 
+      else { res.color = "orange"; res.statusLabel = "Waktunya Pemeriksaan Kebuntingan"; res.isUrgent = true; res.advice = `Hari ke-${daysSinceLastIB} pasca IB. Jadwal pemeriksaan kebuntingan telah tiba. Segera hubungi petugas/dokter hewan untuk melakukan pemeriksaan kebuntingan (hanya boleh dilakukan oleh tenaga terlatih), lalu laporkan hasilnya melalui menu Reproduksi.`; res.adviceColor = "text-orange-900 bg-orange-50 border border-orange-200 font-bold shadow-sm"; }
+    }
     else if (phase === "PREGNANT") {
       if (!item.conceptionDate) {
-         res.color = "orange"; res.statusLabel = "BUNTING (BELUM PKB)"; res.isUrgent = true;
-         res.advice = (item.asal_usul_sapi || item.origin) === 'PASAR' ? `Sapi diduga bunting (asal pengadaan pasar) — belum dikonfirmasi. Segera minta petugas/dokter hewan melakukan Pemeriksaan Kebuntingan (PKB) untuk konfirmasi dan estimasi usia kebuntingan.` : `Sapi diduga bunting (hasil breeding kandang sendiri) — belum dikonfirmasi. Segera minta petugas/dokter hewan melakukan Pemeriksaan Kebuntingan (PKB) untuk konfirmasi.`;
+         res.color = "orange"; res.statusLabel = "Bunting (Belum Diperiksa)"; res.isUrgent = true;
+         res.advice = (item.asal_usul_sapi || item.origin) === 'PASAR' ? `Sapi diduga bunting (asal pengadaan pasar) — belum dikonfirmasi. Segera minta petugas/dokter hewan melakukan pemeriksaan kebuntingan untuk konfirmasi dan estimasi usia kebuntingan.` : `Sapi diduga bunting (hasil breeding kandang sendiri) — belum dikonfirmasi. Segera minta petugas/dokter hewan melakukan pemeriksaan kebuntingan untuk konfirmasi.`;
          res.adviceColor = "text-orange-900 bg-orange-50 border border-orange-200 font-semibold shadow-sm";
       }
       else {
@@ -328,7 +328,7 @@ function buildHistory(item) {
     });
 
     (item.pkbLog || []).forEach((log, i) => history.push({ 
-      type: 'pkbLog', originalIndex: i, date: log.date, label: `Pemeriksaan Kebuntingan (PKB)`, 
+      type: 'pkbLog', originalIndex: i, date: log.date, label: `Pemeriksaan Kebuntingan`,
       desc: log.result === "POSITIVE"
         ? "Hasil positif (bunting). Pertahankan asupan nutrisi protein dan energi untuk mendukung pertumbuhan janin secara optimal."
         : "Hasil negatif (tidak bunting). Segera laporkan ke petugas/dokter hewan untuk evaluasi pakan dan kondisi hormonal sapi secara mendalam.",
@@ -518,7 +518,7 @@ function SmartEstrusCalendar({ item }) {
       title = "Kebuntingan"; subtitle = "Pantauan Trimester & HPL";
       anchorColorClass = "bg-blue-500";
     } else {
-      title = "Kebuntingan"; subtitle = "Belum PKB Presisi";
+      title = "Kebuntingan"; subtitle = "Belum Diperiksa Presisi";
     }
   }
   else if (phase === "CALF") {
@@ -553,7 +553,7 @@ function SmartEstrusCalendar({ item }) {
        let dates = [];
        if (item.calvingDate) dates.push({ d: item.calvingDate, c: "bg-violet-500", l: "Melahirkan" });
        (item.therapyLog || []).forEach(d => dates.push({ d, c: "bg-emerald-500", l: "Terapi Medis" }));
-       (item.pkbLog || []).filter(l => l.result === "NEGATIVE").forEach(l => dates.push({ d: l.date, c: "bg-rose-500", l: "PKB Negatif" }));
+       (item.pkbLog || []).filter(l => l.result === "NEGATIVE").forEach(l => dates.push({ d: l.date, c: "bg-rose-500", l: "Pemeriksaan Kebuntingan Negatif" }));
        (item.ibLog || []).forEach(l => dates.push({ d: l.date || l, c: "bg-blue-500", l: "Inseminasi Buatan" }));
        if (item.abortusDate) dates.push({ d: item.abortusDate, c: "bg-rose-600", l: "Keguguran" });
        
@@ -602,7 +602,7 @@ function SmartEstrusCalendar({ item }) {
       if (phase === "CALF") { anchorLabel = "Tanggal Lahir"; anchorDesc = "Tanggal lahir sapi, dipakai untuk menghitung target usia siap kawin (18-24 bulan)."; }
       else if (phase === "ABORTUS_PENDING") { anchorLabel = "Tanggal Keguguran"; anchorDesc = "Tanggal sapi mengalami keguguran (abortus). Status darurat, menunggu penanganan petugas medis."; }
       else if (phase === "BRED") { anchorDesc = "Tanggal Inseminasi Buatan (IB) terakhir yang tercatat — acuan menghitung jadwal evaluasi birahi berikutnya."; }
-      else if (phase === "POSTPARTUM" || phase === "OPEN") { anchorDesc = "Tanggal kejadian terakhir (bisa berupa melahirkan, IB, hasil PKB negatif, atau terapi medis) — acuan memprediksi jadwal birahi berikutnya."; }
+      else if (phase === "POSTPARTUM" || phase === "OPEN") { anchorDesc = "Tanggal kejadian terakhir (bisa berupa melahirkan, IB, hasil pemeriksaan kebuntingan negatif, atau terapi medis) — acuan memprediksi jadwal birahi berikutnya."; }
       summaryItems.push({
         icon: phase === "ABORTUS_PENDING" ? "🚨" : phase === "CALF" ? "🐄" : "📌",
         label: anchorLabel,
@@ -1016,7 +1016,7 @@ function AssetRecordCard({ item, onEdit, onOpenAction, onOpenDetail, onDelete, h
           {needsPKBWarning && (
             <div className="mt-3 p-3 bg-orange-50 border border-orange-200 rounded-lg pop-in">
               <p className="text-[11px] text-orange-800 font-semibold leading-relaxed">
-                <strong>⚠️ {item.asal_usul_sapi === 'PASAR' ? 'Sapi bunting pasar.' : 'Sapi bunting kandang.'}</strong> Wajib lapor hasil PKB Dokter.
+                <strong>⚠️ {item.asal_usul_sapi === 'PASAR' ? 'Sapi bunting pasar.' : 'Sapi bunting kandang.'}</strong> Wajib lapor hasil pemeriksaan kebuntingan ke dokter.
               </p>
             </div>
           )}
@@ -1167,8 +1167,8 @@ function ActionModal({ open, item, onClose, onSaveRepro, onSaveHealth, setAppToa
                 ) : (
                   <>
                     <option value="IB">Inseminasi Buatan (IB)</option>
-                    <option value="NEGATIVE">PKB: Negatif (-)</option>
-                    <option value="POSITIVE">PKB: Positif (+)</option>
+                    <option value="NEGATIVE">Pemeriksaan Kebuntingan: Negatif (-)</option>
+                    <option value="POSITIVE">Pemeriksaan Kebuntingan: Positif (+)</option>
                     <option value="CALVED">Kelahiran Normal (Partus)</option>
                     <option value="ABORTUS">Keguguran (Abortus)</option>
                     <option value="TERAPI">Terapi Hormon / Medis Repro</option>
@@ -1212,7 +1212,7 @@ function ActionModal({ open, item, onClose, onSaveRepro, onSaveHealth, setAppToa
                           <input type="number" className={`${inp} bg-white`} value={pregMonth} onChange={e => setPregMonth(e.target.value)} placeholder="Contoh: 3" autoFocus />
                         </FF>
                         <p className="text-[10px] text-emerald-800 leading-relaxed font-semibold mt-1">
-                          💡 Masukkan bulan kebuntingan hasil rabaan PKB.
+                          💡 Masukkan bulan kebuntingan hasil rabaan pemeriksaan dokter.
                         </p>
                       </>
                     );
@@ -1328,15 +1328,6 @@ function ShareSummaryModal({ open, onClose, stats, profile, setAppToast }) {
   );
 }
 
-const REPRO_STATUS_LABELS = {
-  OPEN: "Kosong (Siap Kawin)",
-  BRED: "Sudah Kawin",
-  PREGNANT: "Bunting",
-  POSTPARTUM: "Pasca Melahirkan",
-  CALF: "Pedet / Dara",
-  ABORTUS_PENDING: "Lapor Petugas"
-};
-
 const REPRO_STATUS_COLORS = {
   OPEN: "#f59e0b",
   BRED: "#3b82f6",
@@ -1345,8 +1336,6 @@ const REPRO_STATUS_COLORS = {
   CALF: "#6366f1",
   ABORTUS_PENDING: "#e11d48"
 };
-
-const REPRO_STATUS_ORDER = ["CALF", "OPEN", "BRED", "PREGNANT", "POSTPARTUM", "ABORTUS_PENDING"];
 
 function ReproStatusChart({ dbCattle }) {
   const safeDb = Array.isArray(dbCattle) ? dbCattle : [];
@@ -1377,18 +1366,13 @@ function ReproStatusChart({ dbCattle }) {
     if (analysis?.isUrgent) detailCounts[detailLabel].isUrgent = true;
   });
 
-  const presentStatuses = Object.keys(counts);
-  const orderedStatuses = [
-    ...REPRO_STATUS_ORDER.filter(s => presentStatuses.includes(s)),
-    ...presentStatuses.filter(s => !REPRO_STATUS_ORDER.includes(s))
-  ];
+  const pregnantCount = counts["PREGNANT"] || 0;
+  const notPregnantCount = total - pregnantCount;
 
-  const chartData = orderedStatuses.map(status => ({
-    name: status,
-    label: REPRO_STATUS_LABELS[status] || status,
-    value: counts[status],
-    color: REPRO_STATUS_COLORS[status] || "#94a3b8"
-  }));
+  const chartData = [
+    { name: "PREGNANT", label: "Bunting", value: pregnantCount, color: "#10b981" },
+    { name: "NOT_PREGNANT", label: "Tidak Bunting", value: notPregnantCount, color: "#94a3b8" }
+  ].filter(d => d.value > 0);
 
   const detailRows = Object.entries(detailCounts)
     .map(([label, info]) => ({ label, ...info }))
@@ -1461,6 +1445,10 @@ function ReproStatusChart({ dbCattle }) {
           <span className={`text-[8px] font-black uppercase tracking-wide text-center leading-tight ${kandangColor}`}>{kandangLabel}</span>
         </div>
       </div>
+
+      <p className="text-[10px] font-medium text-slate-400 leading-relaxed mt-3 bg-slate-50 rounded-lg px-3 py-2">
+        💡 Persentase dihitung dari total <strong className="text-slate-600">{total} ekor</strong> sapi betina. <strong className="text-emerald-600">Bunting</strong> = sudah terkonfirmasi pemeriksaan kebuntingan positif. <strong className="text-slate-600">Tidak Bunting</strong> mencakup pedet/dara, kosong, sudah kawin (tunggu pemeriksaan kebuntingan), dan pasca melahirkan — lihat rincian lengkapnya di bawah.
+      </p>
 
       <div className="mt-5 pt-4 border-t border-slate-100">
         <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Rincian Kondisi Detail</p>
@@ -1857,7 +1845,7 @@ function AddModal({ open, onClose, onSave, editItem, setAppToast }) {
                 )}
                 
                 {!isUnderage && origin === 'KANDANG' && (
-                  <option value="BRED">Sudah Kawin (Belum PKB)</option>
+                  <option value="BRED">Sudah Kawin (Belum Diperiksa)</option>
                 )}
                 
                 {!isUnderage && origin === 'PASAR' && (
@@ -1885,7 +1873,7 @@ function AddModal({ open, onClose, onSave, editItem, setAppToast }) {
                 <div className="pop-in mt-3 p-3 bg-rose-50 border border-rose-200 rounded-xl shadow-sm">
                   <p className="text-[10px] font-black text-rose-800 mb-1.5 uppercase tracking-widest flex items-center gap-1">🚨 Wajib Pemeriksaan Medis</p>
                   <p className="text-[11px] text-rose-700 font-bold leading-relaxed">
-                    Peternak tidak bisa memastikan sapi pasar kosong atau bunting hanya dari fisik. <strong>Wajib laporkan ke petugas medis/dokter hewan</strong> untuk dilakukan PKB (Periksa Kebuntingan) agar tidak salah penanganan!
+                    Peternak tidak bisa memastikan sapi pasar kosong atau bunting hanya dari fisik. <strong>Wajib laporkan ke petugas medis/dokter hewan</strong> untuk dilakukan pemeriksaan kebuntingan agar tidak salah penanganan!
                   </p>
                 </div>
               )}
