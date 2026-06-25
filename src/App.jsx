@@ -246,7 +246,7 @@ function analyzeCattle(item) {
     else if (phase === "OPEN") {
       const daysSinceAbortus = item.abortusDate ? daysDiff(item.abortusDate) : 999;
       if (item.abortusDate && daysSinceAbortus <= 45) {
-        res.statusLabel = "PEMULIHAN ABORTUS"; res.color = "rose"; res.isUrgent = true;
+        res.statusLabel = "Pemulihan Pasca Keguguran"; res.color = "rose"; res.isUrgent = true;
         res.advice = `Hari ke-${daysSinceAbortus} masa pemulihan rahim pasca keguguran. IB tidak boleh dilakukan sebelum rahim pulih sepenuhnya (kurang lebih 45 hari). Amati bila ada keputihan abnormal atau demam, lalu segera laporkan ke petugas — gejala tersebut dapat mengindikasikan Endometritis pasca-abortus yang perlu pemeriksaan lebih lanjut.`;
         res.adviceColor = "text-rose-900 bg-rose-50 border border-rose-200 font-bold shadow-sm";
       }
@@ -260,7 +260,7 @@ function analyzeCattle(item) {
       else if (suspectSistaGap > 0) { res.color = "rose"; res.statusLabel = "Gangguan Reproduksi: Birahi Tidak Normal"; res.isUrgent = true; res.needsVet = true; res.advice = `Ditemukan jarak antar IB hanya ${suspectSistaGap} hari, padahal siklus birahi normal sapi adalah 18-24 hari. Pola birahi yang terlalu sering dan pendek seperti ini diduga mengarah pada Sista Folikuler (Nymphomania) — namun ini baru indikasi awal, bukan diagnosa pasti. Wajib laporkan ke petugas/dokter hewan untuk pemeriksaan per-rektal/USG ovarium secara mendalam.`; res.adviceColor = "text-rose-800 bg-rose-50 border border-rose-200 font-bold shadow-sm"; }
       else if (daysSinceLastIB < 60) {
         const sisaHariPkb = 60 - daysSinceLastIB;
-        res.color = "slate"; res.statusLabel = "SUSPECT BUNTING";
+        res.color = "slate"; res.statusLabel = "Diduga Bunting";
         if (daysSinceLastIB < 18) {
           res.advice = `Hari ke-${daysSinceLastIB} pasca IB. Pantau kemungkinan birahi kembali pada hari ke-18 sampai ke-24 (siklus birahi normal). Jika sapi tidak menunjukkan birahi pada periode tersebut, kemungkinan bunting cukup besar. Pemeriksaan kebuntingan hanya boleh dilakukan oleh petugas/dokter hewan yang berkompeten — jangan diperiksa sendiri.`;
         } else {
@@ -287,7 +287,7 @@ function analyzeCattle(item) {
          else if (pregDays <= 189) nutrisi = "Nutrisi Trimester 2: Tambahkan konsentrat berenergi tinggi. Suplementasi Kalsium (Ca) dan Fosfor (P) penting untuk pertumbuhan tulang janin.";
          else nutrisi = "Nutrisi Trimester 3: Fase krusial pertumbuhan janin. Berikan pakan penguat dan lakukan kering kandang bila sapi masih diperah.";
 
-         if (pregDays >= 285) { res.color = "rose"; res.statusLabel = "ANCAMAN DISTOKIA"; res.isUrgent = true; res.advice = `Usia kebuntingan sudah lanjut (hari ke-${pregDays}), mendekati waktu kelahiran. Siapkan kontak tenaga medis untuk antisipasi kesulitan melahirkan (distokia). ${nutrisi}`; res.adviceColor = "text-rose-900 bg-rose-50 border border-rose-200 font-bold shadow-sm"; }
+         if (pregDays >= 285) { res.color = "rose"; res.statusLabel = "Ancaman Kesulitan Melahirkan"; res.isUrgent = true; res.advice = `Usia kebuntingan sudah lanjut (hari ke-${pregDays}), mendekati waktu kelahiran. Siapkan kontak tenaga medis untuk antisipasi kesulitan melahirkan (distokia). ${nutrisi}`; res.adviceColor = "text-rose-900 bg-rose-50 border border-rose-200 font-bold shadow-sm"; }
          else if (l <= 60 && l > 21) { res.color = "amber"; res.statusLabel = "KERING KANDANG"; res.isUrgent = true; res.advice = `${txtHPL} Hentikan pemerahan susu segera (kering kandang) agar kelenjar susu pulih sebelum melahirkan. ${nutrisi}`; res.adviceColor = "text-amber-900 bg-amber-50 border border-amber-200 font-semibold shadow-sm"; }
          else { res.color = "emerald"; res.statusLabel = "BUNTING AKTIF"; res.advice = `${txtHPL} ${nutrisi}`; }
       }
@@ -295,8 +295,8 @@ function analyzeCattle(item) {
     else if (phase === "POSTPARTUM") {
       const d = daysDiff(item.calvingDate);
       if (d <= 21) { res.statusLabel = "PUERPERIUM (NIFAS)"; res.color = "rose"; res.isUrgent = true; res.advice = `Hari ke-${d} pasca melahirkan. Masa nifas normal berlangsung 2-3 minggu. Amati tanda bahaya berikut dan segera laporkan ke petugas/dokter hewan bila ditemukan — bukan untuk didiagnosa sendiri: (1) Lokia berbau busuk (kemungkinan Metritis/Endometritis); (2) Plasenta belum lepas lebih dari 24 jam (kemungkinan Retensio Plasenta); (3) Demam tinggi atau nafsu makan menurun. Diagnosa pasti memerlukan pemeriksaan oleh petugas.`; res.adviceColor = "text-rose-900 bg-rose-50 border border-rose-200 font-semibold shadow-sm"; }
-      else if (d <= 45) { res.statusLabel = "INVOLUSI UTERUS"; res.color = "blue"; res.advice = `Hari ke-${d} pasca melahirkan. Rahim sedang dalam proses involusi (pemulihan), berlangsung sekitar 4-6 minggu. IB tidak boleh dilakukan pada periode ini. Amati tanda birahi pertama — sapi normal kembali birahi 3-6 minggu setelah melahirkan.`; }
-      else { res.statusLabel = "BREEDING WINDOW"; res.color = "emerald"; res.advice = `Hari ke-${d} pasca melahirkan. Sapi telah siap menerima IB kembali. Lakukan IB segera saat tanda birahi muncul (3A: Abang, Abuh, Anget). Jangan menunda agar calving interval tetap ideal (12-13 bulan).`; }
+      else if (d <= 45) { res.statusLabel = "Pemulihan Rahim Pasca Melahirkan"; res.color = "blue"; res.advice = `Hari ke-${d} pasca melahirkan. Rahim sedang dalam proses involusi (pemulihan), berlangsung sekitar 4-6 minggu. IB tidak boleh dilakukan pada periode ini. Amati tanda birahi pertama — sapi normal kembali birahi 3-6 minggu setelah melahirkan.`; }
+      else { res.statusLabel = "Siap Dikawinkan Kembali"; res.color = "emerald"; res.advice = `Hari ke-${d} pasca melahirkan. Sapi telah siap menerima IB kembali. Lakukan IB segera saat tanda birahi muncul (3A: Abang, Abuh, Anget). Jangan menunda agar calving interval tetap ideal (12-13 bulan).`; }
     }
     return res;
   } catch (error) {
@@ -352,7 +352,7 @@ function buildHistory(item) {
 
       history.push({
         type: 'ibLog', originalIndex: i, date: d,
-        label: `Inseminasi Buatan (IB) ke-${i + 1} ${isSuspect ? "⚠️ (SUSPECT)" : ""}`,
+        label: `Inseminasi Buatan (IB) ke-${i + 1} ${isSuspect ? "⚠️ (Jarak Terlalu Dekat)" : ""}`,
         desc: isSuspect
           ? "Jarak antar IB kurang dari 18 hari, padahal siklus birahi normal sapi 18-24 hari. Pola ini diduga mengarah pada Sista Folikuler (Nymphomania), namun ini baru indikasi awal — perlu pemeriksaan mendalam oleh petugas/dokter hewan untuk konfirmasi."
           : "Tindakan memasukkan semen beku ke dalam saluran reproduksi sapi. Amati kemungkinan birahi kembali dalam 18-24 hari ke depan.",
@@ -932,7 +932,7 @@ function DetailModal({ item, onClose, onDeleteLog, setAppToast, setAppConfirm })
         <div className="flex justify-between items-center p-6 border-b border-slate-100 pb-4">
           <div>
             <h3 className="font-black text-3xl text-slate-900 tracking-tight">{item.code || item.id}</h3>
-            <p className="text-xs font-semibold text-slate-500 uppercase tracking-widest mt-1">{itemGender} • {item.ras || item.jenis_ras} • {item.status_reproduksi || item.phase}</p>
+            <p className="text-xs font-semibold text-slate-500 uppercase tracking-widest mt-1">{itemGender} • {item.ras || item.jenis_ras} • {analysis.statusLabel}</p>
           </div>
           <button onClick={onClose} className="bg-slate-100 w-10 h-10 rounded-full flex items-center justify-center font-bold text-slate-500 hover:bg-slate-200 transition-colors">✕</button>
         </div>
@@ -944,12 +944,11 @@ function DetailModal({ item, onClose, onDeleteLog, setAppToast, setAppConfirm })
               </div>
               <div>
                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Status Terakhir</p>
-                <p className="text-sm font-black text-emerald-600 uppercase">{item.status_reproduksi || item.phase || "OPEN"}</p>
+                <p className="text-sm font-black text-emerald-600">{analysis.statusLabel}</p>
               </div>
           </div>
 
-
-          <h4 className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-6 ml-2">Recording Kronologis Lengkap</h4>
+          <h4 className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-6 ml-2">Riwayat Kronologis Lengkap</h4>
           <div className="relative">
             <div className="timeline-main-line"></div>
             {history.length === 0 ? (
@@ -1852,13 +1851,18 @@ function AddModal({ open, onClose, onSave, editItem, setAppToast }) {
         jenis_ras: ras,
         asal_usul_sapi: origin,
         tanggal_lahir: calculatedBirthDate,
-        status_reproduksi: gender === "JANTAN" ? "N/A" : phase,
         jumlah_beranak: gender === 'BETINA' ? Number(parity) : 0,
-        ibLog: requiresMatingDate && lastMatingDate ? [{ date: lastMatingDate, isSuspect: false }] : []
       };
 
-      if (phase === 'PREGNANT' && origin === 'KANDANG' && lastMatingDate) {
-        cattleData.conceptionDate = lastMatingDate;
+      // Status reproduksi & riwayat kawin hanya disimpan saat MENDAFTARKAN sapi baru.
+      // Saat edit data sapi yang sudah ada, status/riwayat sengaja TIDAK disertakan agar
+      // tidak menimpa riwayat yang sudah tercatat — perubahan status wajib lewat "Catat Kondisi".
+      if (!editItem) {
+        cattleData.status_reproduksi = gender === "JANTAN" ? "N/A" : phase;
+        cattleData.ibLog = requiresMatingDate && lastMatingDate ? [{ date: lastMatingDate, isSuspect: false }] : [];
+        if (phase === 'PREGNANT' && origin === 'KANDANG' && lastMatingDate) {
+          cattleData.conceptionDate = lastMatingDate;
+        }
       }
 
       if (editItem) {
@@ -1928,9 +1932,17 @@ function AddModal({ open, onClose, onSave, editItem, setAppToast }) {
             </div>
           )}
 
-          {gender === "BETINA" && (
+          {gender === "BETINA" && editItem && (
+            <div className="mt-2 mb-2 p-4 bg-slate-50 rounded-xl border border-slate-200">
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Status Reproduksi Saat Ini</p>
+              <p className="text-sm font-black text-slate-700 mb-2">{analyzeCattle(editItem).statusLabel}</p>
+              <p className="text-[11px] text-slate-500 font-medium leading-relaxed">Untuk mengubah status (kawin, pemeriksaan kebuntingan, kelahiran, sakit, dll), gunakan tombol <strong>"Catat Kondisi"</strong> di kartu sapi. Edit di sini hanya untuk memperbaiki data identitas sapi.</p>
+            </div>
+          )}
+
+          {gender === "BETINA" && !editItem && (
             <FF label="Status Reproduksi Saat Ini">
-              <select className={inp} value={phase} onChange={e => { 
+              <select className={inp} value={phase} onChange={e => {
                 setPhase(e.target.value);
                 
                 if (origin === 'PASAR' && !isUnderage && (e.target.value === 'OPEN' || e.target.value === 'PREGNANT')) {
