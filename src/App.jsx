@@ -170,7 +170,7 @@ function CustomConfirm({ open, title, message, onConfirm, onCancel, confirmText 
   ========================================
 */
 function analyzeCattle(item) {
-  if (!item) return { color: "slate", statusLabel: "ERROR", advice: "Data tidak valid", isUrgent: false, adviceColor: "text-slate-600 bg-slate-50" };
+  if (!item) return { color: "slate", statusLabel: "DATA TIDAK VALID", advice: "Data tidak valid", isUrgent: false, adviceColor: "text-slate-600 bg-slate-50" };
 
   try {
     const today = new Date();
@@ -300,7 +300,7 @@ function analyzeCattle(item) {
     }
     return res;
   } catch (error) {
-    return { color: "rose", statusLabel: "DATA ERROR", advice: "Format tanggal atau riwayat sapi ini tidak valid.", isUrgent: true, adviceColor: "text-rose-900 bg-rose-50" };
+    return { color: "rose", statusLabel: "DATA TIDAK VALID", advice: "Format tanggal atau riwayat sapi ini tidak valid.", isUrgent: true, adviceColor: "text-rose-900 bg-rose-50" };
   }
 }
 
@@ -400,13 +400,13 @@ function buildHistory(item) {
     });
 
     if (birthDate) history.push({ 
-      type: 'birthDate', originalIndex: 0, date: birthDate, label: "Pencatatan Aset Awal", 
+      type: 'birthDate', originalIndex: 0, date: birthDate, label: "Pendaftaran Ternak",
       desc: origin === "KANDANG" ? "Ternak hasil breeding mandiri." : "Ternak masuk dari pengadaan pasar luar.", 
       colorDot: "bg-slate-300", rawDate: new Date(birthDate) 
     }); 
 
     const analysis = analyzeCattle(item);
-    if (analysis && analysis.advice && analysis.statusLabel !== "ERROR" && analysis.statusLabel !== "DATA ERROR") {
+    if (analysis && analysis.advice && analysis.statusLabel !== "DATA TIDAK VALID") {
       history.push({
         type: 'systemAlert', 
         date: todayStr(),
@@ -871,27 +871,26 @@ function CalendarView({ dbCattle, profile }) {
         <div className="flex flex-col items-center justify-center px-6 text-center mt-16">
           <div className="text-5xl mb-3">📅</div>
           <p className="font-black text-slate-700 text-sm">Belum Ada Data Sapi Betina</p>
-          <p className="text-xs font-medium text-slate-400 mt-1.5 max-w-xs">Tambahkan data ternak betina di tab Populasi untuk mulai memantau kalender siklus reproduksi.</p>
+          <p className="text-xs font-medium text-slate-400 mt-1.5 max-w-xs">Tambahkan data ternak betina lewat tombol "Tambah Ternak" di Beranda untuk mulai memantau kalender siklus reproduksi.</p>
         </div>
       ) : (
         <>
           <div className="px-5 mb-2">
             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Pilih Sapi ({femaleCattle.length} Ekor)</p>
-            <div className="flex gap-2 overflow-x-auto pb-2 -mx-1 px-1" style={{ scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' }}>
-              {femaleCattle.map(c => {
-                const a = analyzeCattle(c);
-                const isActive = c.id === selectedId;
-                return (
-                  <button
-                    key={c.id}
-                    onClick={() => setSelectedId(c.id)}
-                    className={`shrink-0 flex items-center gap-2 pl-3 pr-3.5 py-2.5 rounded-2xl border transition-all ${isActive ? "bg-emerald-600 border-emerald-600 text-white shadow-md shadow-emerald-500/20" : "bg-white border-slate-200 text-slate-600 hover:border-slate-300"}`}
-                  >
-                    {a.isUrgent && <span className={`w-2 h-2 rounded-full shrink-0 ${isActive ? "bg-white" : "bg-rose-500"} animate-pulse`}></span>}
-                    <span className="text-xs font-black whitespace-nowrap">{c.code || c.id}</span>
-                  </button>
-                );
-              })}
+            <div className="relative">
+              <select
+                value={selectedId || ""}
+                onChange={(e) => setSelectedId(e.target.value)}
+                className="w-full border border-slate-200 rounded-2xl pl-4 pr-10 py-3.5 text-sm font-black text-slate-700 bg-white focus:outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-50 appearance-none"
+              >
+                {femaleCattle.map(c => {
+                  const a = analyzeCattle(c);
+                  return (
+                    <option key={c.id} value={c.id}>{a.isUrgent ? "⚠️ " : ""}{c.code || c.id} — {a.statusLabel}</option>
+                  );
+                })}
+              </select>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-slate-400"><polyline points="6 9 12 15 18 9"></polyline></svg>
             </div>
           </div>
 
@@ -1040,14 +1039,11 @@ function AssetRecordCard({ item, onEdit, onOpenAction, onOpenDetail, onDelete, h
         <div className="space-y-1.5 text-xs text-slate-600">
           <p><span className="font-semibold text-slate-800">Tanggal Lahir:</span> {(item.tanggal_lahir || item.birthDate) ? new Date(item.tanggal_lahir || item.birthDate).toLocaleDateString('id-ID') : 'Tidak ada'}</p>
           <p><span className="font-semibold text-slate-800">Usia:</span> {getAge(item.tanggal_lahir || item.birthDate)}</p>
-          {item.status_reproduksi && item.status_reproduksi !== "N/A" && (
-            <p><span className="font-semibold text-slate-800">Status Reproduksi:</span> {item.status_reproduksi}</p>
-          )}
-          
+
           {needsPKBWarning && (
             <div className="mt-3 p-3 bg-orange-50 border border-orange-200 rounded-lg pop-in">
               <p className="text-[11px] text-orange-800 font-semibold leading-relaxed">
-                <strong>⚠️ {item.asal_usul_sapi === 'PASAR' ? 'Sapi bunting pasar.' : 'Sapi bunting kandang.'}</strong> Wajib lapor hasil pemeriksaan kebuntingan ke dokter.
+                <strong>⚠️ Diduga bunting ({item.asal_usul_sapi === 'PASAR' ? 'asal pasar' : 'dari kandang sendiri'}).</strong> Belum dikonfirmasi — wajib lapor ke petugas untuk pemeriksaan kebuntingan.
               </p>
             </div>
           )}
@@ -1059,7 +1055,7 @@ function AssetRecordCard({ item, onEdit, onOpenAction, onOpenDetail, onDelete, h
         </div>
       </div>
       <div className="bg-slate-50/50 px-5 py-4 flex gap-3 border-t border-slate-100">
-        <button onClick={(e) => { e.stopPropagation(); if(onOpenAction) onOpenAction(item); }} className="flex-1 bg-emerald-700 text-white py-2.5 rounded-xl text-xs font-bold hover:bg-emerald-800 shadow-sm transition-colors">Lapor Aksi Terpadu</button>
+        <button onClick={(e) => { e.stopPropagation(); if(onOpenAction) onOpenAction(item); }} className="flex-1 bg-emerald-700 text-white py-2.5 rounded-xl text-xs font-bold hover:bg-emerald-800 shadow-sm transition-colors">Lapor Aksi</button>
         {onEdit && <button onClick={(e) => { e.stopPropagation(); onEdit(item); }} className="bg-white border border-slate-200 text-slate-600 px-3 py-2.5 rounded-xl text-xs font-bold hover:bg-slate-50 shadow-sm transition-colors">Edit</button>}
         {onDelete && <button onClick={(e) => { e.stopPropagation(); onDelete(item.id); }} className="bg-rose-50 border border-rose-200 text-rose-600 px-3 py-2.5 rounded-xl text-xs font-bold hover:bg-rose-100 shadow-sm transition-colors">Hapus</button>}
       </div>
@@ -1107,7 +1103,7 @@ function ActionModal({ open, item, onClose, onSaveRepro, onSaveHealth, setAppToa
           if (recentCount >= 2) {
             setMedicalWarning(`⚠️ Gangguan Reproduksi: Birahi Tidak Normal. Sapi minta kawin >2 kali dalam satu siklus. SEGERA HUBUNGI PETUGAS!`);
           } else {
-            setMedicalWarning(`⚠️ WARNING: Berisiko Birahi Panjang (Delayed Ovulation). Sapi masih bisa di-IB, namun wajib dipantau intensif kondisi lendirnya.`);
+            setMedicalWarning(`⚠️ Perhatian: Jarak birahi lebih panjang dari biasanya. Sapi masih bisa di-IB, namun amati kondisi lendirnya lebih sering.`);
           }
         } else if (diff <= 0) {
           setMedicalWarning(`❌ TANGGAL TIDAK VALID: Harus setelah tanggal ${fmtDate(lastIBDate)}`);
@@ -1118,9 +1114,9 @@ function ActionModal({ open, item, onClose, onSaveRepro, onSaveHealth, setAppToa
       if (item?.conceptionDate) {
         const diffDays = Math.floor((new Date(dRepro) - new Date(item.conceptionDate)) / 86400000);
         if (diffDays < 265) {
-          setMedicalWarning(`❌ KELAHIRAN MUSTAHIL: Usia kandungan baru ${diffDays} hari! Sapi normal melahirkan di kisaran 265-295 hari. Jika sapi mengalami keguguran, silakan ubah 'Jenis Aksi' menjadi Keguguran (Abortus).`);
+          setMedicalWarning(`❌ Tanggal Tidak Sesuai: Usia kandungan baru ${diffDays} hari, padahal sapi normal melahirkan di kisaran 265-295 hari. Jika sapi mengalami keguguran, silakan ubah 'Jenis Aksi' menjadi Keguguran.`);
         } else if (diffDays > 300) {
-          setMedicalWarning(`⚠️ WARNING: Usia kandungan mencapai ${diffDays} hari (Melebihi batas normal). Waspada distokia.`);
+          setMedicalWarning(`⚠️ Perhatian: Usia kandungan sudah ${diffDays} hari, melebihi batas normal. Waspada risiko kesulitan melahirkan (distokia).`);
         } else {
           setMedicalWarning(null);
         }
@@ -1131,9 +1127,9 @@ function ActionModal({ open, item, onClose, onSaveRepro, onSaveHealth, setAppToa
     else if (resRepro === "ABORTUS" && dRepro) {
        if (item?.conceptionDate) {
           const diffDays = Math.floor((new Date(dRepro) - new Date(item.conceptionDate)) / 86400000);
-          setMedicalWarning(`⚠️ INFO PENTING: Sapi akan dicatat mengalami keguguran di usia kandungan ${diffDays} hari. Sistem akan menyalakan alarm darurat Lapor Petugas.`);
+          setMedicalWarning(`⚠️ Info: Sapi akan dicatat mengalami keguguran di usia kandungan ${diffDays} hari. Status akan berubah jadi darurat dan Anda akan diminta segera melapor ke petugas.`);
        } else {
-          setMedicalWarning(`⚠️ INFO PENTING: Sapi akan dicatat mengalami keguguran. Sistem akan menyalakan alarm darurat Lapor Petugas.`);
+          setMedicalWarning(`⚠️ Info: Sapi akan dicatat mengalami keguguran. Status akan berubah jadi darurat dan Anda akan diminta segera melapor ke petugas.`);
        }
     }
     else {
@@ -1200,9 +1196,9 @@ function ActionModal({ open, item, onClose, onSaveRepro, onSaveHealth, setAppToa
                     <option value="IB">Inseminasi Buatan (IB)</option>
                     <option value="NEGATIVE">Pemeriksaan Kebuntingan: Negatif (-)</option>
                     <option value="POSITIVE">Pemeriksaan Kebuntingan: Positif (+)</option>
-                    <option value="CALVED">Kelahiran Normal (Partus)</option>
-                    <option value="ABORTUS">Keguguran (Abortus)</option>
-                    <option value="TERAPI">Terapi Hormon / Medis Repro</option>
+                    <option value="CALVED">Kelahiran Normal</option>
+                    <option value="ABORTUS">Keguguran</option>
+                    <option value="TERAPI">Sudah Mendapatkan Terapi Medis</option>
                   </>
                 )}
               </select>
@@ -1295,7 +1291,7 @@ function ActionModal({ open, item, onClose, onSaveRepro, onSaveHealth, setAppToa
                 <div className="mb-4">
                   <p className="text-[10px] font-black text-emerald-800 uppercase tracking-widest mb-1">Status Perawatan</p>
                   <p className="text-xs font-bold text-emerald-700 leading-relaxed">
-                    💡 INSTRUKSI: Wajib pantau lendir vulva setiap hari. Jika sudah diobati & lendir bening elastis, klik konfirmasi di bawah untuk membuka akses IB kembali.
+                    💡 Catatan: Pantau lendir vulva setiap hari. Jika sudah diobati dan lendirnya kembali bening serta elastis, ketuk tombol konfirmasi di bawah agar sapi bisa di-IB kembali.
                   </p>
                 </div>
                 <button onClick={() => submitHealth('SEMBUH')} className="w-full bg-emerald-600 text-white font-bold py-4 rounded-xl text-sm shadow-lg hover:bg-emerald-700">✅ KONFIRMASI SEMBUH</button>
@@ -1565,7 +1561,7 @@ Menunjukkan seberapa banyak sapi yang butuh penanganan mendesak dari petugas. Se
   );
 }
 
-function DashboardView({ dbCattle, profile, onAdviceClick, setAppToast }) {
+function DashboardView({ dbCattle, profile, onAdviceClick, setAppToast, onAddNew }) {
  const safeDb = Array.isArray(dbCattle) ? dbCattle : [];
   const total = safeDb.length;
   const jantan = safeDb.filter(i => i && (i.jenis_kelamin === "JANTAN" || i.gender === "JANTAN")).length;
@@ -1597,12 +1593,20 @@ function DashboardView({ dbCattle, profile, onAdviceClick, setAppToast }) {
                  <p className="text-xs font-semibold text-slate-400">Selamat Datang,</p>
                  <h2 className="text-xl font-black mt-0.5">{profile?.name || "Peternak"}</h2>
                </div>
-               <button onClick={() => setShareModalOpen(true)} className="bg-white/10 text-white text-xs font-bold px-4 py-2 rounded-full hover:bg-white/20 transition-colors shrink-0">Bagikan</button>
+               {total > 0 && <button onClick={() => setShareModalOpen(true)} className="bg-white/10 text-white text-xs font-bold px-4 py-2 rounded-full hover:bg-white/20 transition-colors shrink-0">Bagikan</button>}
              </div>
              <p className="text-[11px] font-bold text-slate-400 mt-4">Total Ternak: <span className="text-white">{total} Ekor</span> ({jantan} Jantan &middot; {betina} Betina)</p>
           </div>
           <div className="p-5">
-            <ReproStatusChart dbCattle={safeDb} />
+            {total === 0 ? (
+              <div className="text-center py-6">
+                <div className="w-16 h-16 bg-emerald-50 rounded-2xl flex items-center justify-center mx-auto mb-4 text-emerald-600">{ICON_COW}</div>
+                <p className="font-black text-slate-700 text-sm">Belum Ada Data Sapi</p>
+                <p className="text-xs font-medium text-slate-400 mt-1.5 max-w-xs mx-auto">Ketuk tombol hijau "Tambah Ternak" di pojok kanan bawah untuk mendaftarkan sapi pertama Anda.</p>
+              </div>
+            ) : (
+              <ReproStatusChart dbCattle={safeDb} />
+            )}
           </div>
         </div>
 
@@ -1626,6 +1630,10 @@ function DashboardView({ dbCattle, profile, onAdviceClick, setAppToast }) {
         </div>
       </div>
       <ShareSummaryModal open={shareModalOpen} onClose={() => setShareModalOpen(false)} stats={{total, jantan, betina, pregnant}} profile={profile} dbCattle={safeDb} setAppToast={setAppToast} />
+      <button onClick={onAddNew} className="fixed bottom-24 right-5 z-40 h-10 pl-3 pr-3.5 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white shadow-xl shadow-emerald-600/40 flex items-center gap-1.5 transition-all active:scale-95">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="shrink-0"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+        <span className="text-xs font-bold whitespace-nowrap">Tambah Ternak</span>
+      </button>
     </div>
   );
 }
@@ -1884,7 +1892,7 @@ function AddModal({ open, onClose, onSave, editItem, setAppToast }) {
   return (
     <div className="fixed inset-0 z-50 flex items-end bg-slate-900/60 backdrop-blur-sm p-0 sm:p-4 sm:items-center">
       <div className="bg-white w-full max-w-md mx-auto rounded-t-[32px] sm:rounded-[32px] p-6 slide-up shadow-2xl max-h-[90vh] overflow-y-auto">
-        <div className="flex justify-between items-center mb-6"><p className="font-black text-2xl text-slate-900 tracking-tight">{editItem ? "Edit Aset" : "Input Sapi Baru"}</p><button onClick={onClose} className="bg-slate-100 w-9 h-9 rounded-full flex items-center justify-center font-bold text-slate-500 hover:bg-slate-200">✕</button></div>
+        <div className="flex justify-between items-center mb-6"><p className="font-black text-2xl text-slate-900 tracking-tight">{editItem ? "Edit Data Sapi" : "Input Sapi Baru"}</p><button onClick={onClose} className="bg-slate-100 w-9 h-9 rounded-full flex items-center justify-center font-bold text-slate-500 hover:bg-slate-200">✕</button></div>
         <div className="space-y-2">
           <FF label="Kode Sapi / Tag"><input className={inp} value={id} onChange={e => setId(e.target.value)} placeholder="Cth: L-01" /></FF>
           <div className="flex gap-4 mb-4"><div className="flex-1"><FF label="Jenis Kelamin"><select className={inp} value={gender} onChange={e => setGender(e.target.value)}><option value="BETINA">Betina</option><option value="JANTAN">Jantan</option></select></FF></div><div className="flex-1"><FF label="Jenis Ras"><select className={inp} value={ras} onChange={e => setRas(e.target.value)}><option>SIMENTAL SPSI</option><option>Limosin SPLI</option><option>PO SPPO</option><option>Brahman</option></select></FF></div></div>
@@ -2099,11 +2107,6 @@ function EditProfileModal({ open, onClose, onSave, currentProfile, setAppToast }
 const ICON_HOME = <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L2 12h3v8h6v-6h2v6h6v-8h3z"></path></svg>;
 const ICON_COW = <svg width="28" height="28" viewBox="0 0 100 100" fill="currentColor"><path d="M85.9,46.1c-1.9-2.2-4.1-4-6.5-5.3c0,0-11-6-11.4-6.3c-0.1,0-0.1-0.1-0.2-0.1c-1.3-1-3.1-1.3-4.7-0.7 c-0.7,0.3-1.4,0.7-1.9,1.3c-2.3,2.4-5.3,4.6-8.3,4.6c-2.6,0-5.1-1.6-7-4.1c-1.7-2.3-3.6-3.8-5.6-4.6c-0.1,0-0.2-0.1-0.3-0.1 C38,30.3,36.1,30.7,34.8,32c-0.1,0.1-0.1,0.1-0.2,0.1C33,33.5,22,41.4,22,41.4c-2.2,1.6-3.7,3.9-4,6.4c-0.3,2.5,0.7,5,2.6,6.6 c0.1,0.1,0.1,0.1,0.2,0.1c0.1,0,0.1,0,0.2,0.1c2.1,1.5,4.7,2.1,7.2,1.7c1.3-0.2,2.5-0.7,3.6-1.5c0.1-0.1,0.2-0.1,0.3-0.2 c2-1.9,4.5-2.8,7.1-2.8c2.9,0,5.6,1.2,7.4,3.1c1.8,1.9,4.1,3,6.6,3c2,0,3.9-0.8,5.3-2.2c0.1-0.1,0.1-0.1,0.2-0.1 c1.8-2,4.6-3,7.3-2.6c1.1,0.2,2.2,0.6,3.2,1.2c0.1,0.1,0.1,0.1,0.2,0.1c1.9,1.1,4.1,1.4,6.1,0.8c2-0.6,3.8-2,5-3.8 C86.7,50,86.9,48,85.9,46.1z M52.5,41.4c0,2.1-1.7,3.8-3.8,3.8c-2.1,0-3.8-1.7-3.8-3.8c0-2.1,1.7-3.8,3.8-3.8C50.8,37.6,52.5,39.3,52.5,41.4 z"></path></svg>;
 const ICON_CALENDAR = <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M9 11H7v2h2v-2zm4 0h-2v2h2v-2zm4 0h-2v2h2v-2zm2-7h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 1.99 2H19c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V9h14v11z"></path></svg>;
-const ICON_PHONE = <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>;
-const ICON_PLUS = <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>;
-const ICON_PROFILE_CARD = <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"></rect><circle cx="9" cy="10" r="2"></circle><path d="M5 17c0-1.7 1.8-3 4-3s4 1.3 4 3"></path><line x1="14" y1="8" x2="18" y2="8"></line><line x1="14" y1="12" x2="18" y2="12"></line></svg>;
-const ICON_PULSE = <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"></path></svg>;
-const ICON_SHARE = <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line></svg>;
 const ICON_BOOK = <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3L1 9l4 2.18v6L12 21l7-3.82v-6l2-1.09V17h2V9L12 3zm6.82 6L12 12.72 5.18 9 12 5.28 18.82 9zM17 15.99l-5 2.73-5-2.73v-3.72L12 15l5-2.73v3.72z"></path></svg>;
 const ICON_CHART = <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a9 9 0 1 1-9-9"></path><path d="M21 12a9 9 0 0 0-9-9v9z"></path></svg>;
 
@@ -2113,19 +2116,12 @@ function OnboardingTutorial({ open, onClose }) {
   useEffect(() => { if (open) setStep(0); }, [open]);
 
   const slides = [
-    { icon: ICON_HOME, title: "Selamat Datang di SIRAPI", desc: "Aplikasi ini membantu Anda mencatat dan memantau kondisi reproduksi sapi — mulai dari kawin, bunting, melahirkan, hingga kesehatan — semua dalam satu tempat. Mari pelajari fitur-fiturnya langkah demi langkah." },
-    { icon: ICON_COW, title: "Tab Populasi: Daftar Sapi Anda", desc: "Tab kedua di menu bawah. Semua sapi yang Anda miliki tercatat di sini, lengkap dengan kode dan status terkininya.", steps: ["Gunakan kolom pencarian untuk mencari sapi berdasarkan kode", "Gunakan filter jenis kelamin untuk melihat jantan/betina saja", "Ketuk salah satu kartu sapi untuk membuka detail lengkapnya"] },
-    { icon: ICON_PLUS, title: "Menambah Sapi Baru", desc: "Di tab Populasi, ketuk tombol tambah untuk mendaftarkan sapi baru.", steps: ["Isi kode/nama sapi, jenis kelamin, dan jenis ras", "Pilih asal usul sapi (lahir di kandang sendiri atau dibeli dari pasar)", "Isi tanggal lahir (atau perkiraan umur jika dari pasar)", "Ketuk Simpan — sapi langsung muncul di daftar Populasi"] },
-    { icon: ICON_HEART_OUTLINE, title: "Melapor Kawin (Inseminasi Buatan)", desc: "Buka detail sapi betina, lalu pilih tab Reproduksi.", steps: ["Pilih jenis aksi 'Kawin (IB)'", "Isi tanggal pelaksanaan IB", "Ketuk Simpan — status sapi otomatis berubah menjadi 'Sudah Kawin'"] },
-    { icon: ICON_SEARCH, title: "Melapor Pemeriksaan Kebuntingan", desc: "Sekitar 60 hari setelah kawin, petugas akan memeriksa kebuntingan sapi Anda.", steps: ["Buka kembali tab Reproduksi pada sapi tersebut", "Pilih hasil pemeriksaan: Bunting atau Tidak Bunting", "Jika Bunting, sistem otomatis menghitung perkiraan tanggal lahir (HPL)"] },
-    { icon: ICON_TAG, title: "Melapor Kelahiran", desc: "Saat sapi melahirkan, catat segera agar data tetap akurat.", steps: ["Buka tab Reproduksi sapi yang bunting", "Pilih aksi 'Lapor Melahirkan'", "Isi tanggal kelahiran — anak sapi bisa langsung didaftarkan sebagai pedet baru"] },
-    { icon: ICON_PULSE, title: "Melapor Sapi Sakit", desc: "Buka detail sapi, lalu pilih tab Medis (di sebelah tab Reproduksi).", steps: ["Ketuk 'Lapor Gejala' dan jelaskan kondisi sapi", "Status berubah menjadi 'Menunggu Dokter'", "Petugas akan menindaklanjuti dan mencatat diagnosa serta tindakan"] },
-    { icon: ICON_CALENDAR, title: "Tab Kalender: Prediksi Birahi", desc: "Tab ketiga di menu bawah. Pilih salah satu sapi betina untuk melihat kalender prediksinya.", steps: ["Sistem otomatis menghitung jadwal birahi berikutnya", "Jadwal pemeriksaan kebuntingan juga ditampilkan", "Perkiraan tanggal lahir (HPL) muncul untuk sapi yang sedang bunting", "Setiap istilah pada kalender disertai keterangan singkat di bawahnya"] },
-    { icon: ICON_CHART, title: "Tab Beranda: Grafik Distribusi", desc: "Tab pertama di menu bawah. Grafik donat menunjukkan populasi sapi betina dalam 3 kategori.", steps: ["Bunting — sudah diperiksa petugas, hasil positif", "Belum Bunting — sudah di-IB, belum diperiksa", "Tidak Bunting — pedet, kosong, atau pasca melahirkan", "Ketuk badge kondisi di pojok kanan atas untuk lihat keterangannya"] },
-    { icon: ICON_PHONE, title: "Saran & Hubungi Petugas", desc: "Masih di tab Beranda, gulir ke bawah untuk melihat kartu Saran & Peringatan.", steps: ["Setiap sapi yang butuh perhatian akan muncul di sini dengan saran otomatis", "Sapi yang butuh penanganan medis akan menampilkan tombol 'Hubungi Petugas'", "Ketuk tombol tersebut untuk langsung membuka percakapan WhatsApp"] },
-    { icon: ICON_SHARE, title: "Membagikan Laporan", desc: "Di tab Beranda, ketuk tombol Bagikan untuk membuat ringkasan bergambar.", steps: ["Sistem membuat gambar grafik ringkasan populasi sapi Anda", "Ketuk 'Bagikan sebagai Gambar' untuk mengirim ke WhatsApp atau platform lain"] },
-    { icon: ICON_BOOK, title: "Tab Akademi", desc: "Tab keempat di menu bawah. Berisi materi edukasi seputar reproduksi dan kesehatan sapi, serta jadwal live konsultasi dengan petugas." },
-    { icon: ICON_PROFILE_CARD, title: "Tab Profil", desc: "Tab terakhir di menu bawah. Kelola data diri Anda di sini.", steps: ["Edit Profil — ubah data diri Anda", "Keamanan & Password — ganti password akun Anda", "Bantuan — buka kembali Cara Pakai Aplikasi atau tutorial ini kapan saja"] },
+    { icon: ICON_HOME, title: "Selamat Datang di SIRAPI", desc: "Aplikasi ini membantu Anda mencatat dan memantau kondisi reproduksi sapi — mulai dari kawin, bunting, melahirkan, hingga kesehatan. Berikut gambaran singkat tiap menu di bawah." },
+    { icon: ICON_CHART, title: "Tab Beranda", desc: "Ringkasan kondisi seluruh sapi Anda, saran otomatis untuk yang butuh perhatian, dan tombol hijau 'Tambah Ternak' untuk mendaftarkan sapi baru." },
+    { icon: ICON_COW, title: "Tab Rekam Medis", desc: "Daftar lengkap sapi Anda beserta riwayat medis dan reproduksinya. Ketuk salah satu sapi untuk melapor kawin, pemeriksaan kebuntingan, kelahiran, atau sakit." },
+    { icon: ICON_CALENDAR, title: "Tab Kalender", desc: "Prediksi otomatis jadwal birahi, jadwal pemeriksaan kebuntingan, dan perkiraan tanggal lahir untuk setiap sapi betina." },
+    { icon: ICON_BOOK, title: "Tab Akademi & Profil", desc: "Akademi berisi materi edukasi peternakan. Profil untuk mengelola data diri, keamanan akun, dan membuka kembali panduan ini kapan saja." },
+    { icon: ICON_HEART_OUTLINE, title: "Butuh Panduan Lebih Detail?", desc: "Buka Profil > Bantuan > 'Cara Pakai Aplikasi' untuk panduan langkah-demi-langkah setiap fitur, lengkap dan bisa dibaca ulang kapan saja." },
   ];
 
   if (!open) return null;
@@ -2175,12 +2171,12 @@ function HelpGuideScreen({ open, onClose }) {
   const [openSection, setOpenSection] = useState(0);
 
   const sections = [
-    { title: "Menambah Data Sapi Baru", body: "Buka tab Populasi, lalu ketuk tombol tambah. Isi data sapi (kode, jenis kelamin, ras, asal usul, tanggal lahir/masuk), lalu simpan." },
-    { title: "Melaporkan Kawin (Inseminasi Buatan)", body: "Ketuk salah satu sapi betina di tab Populasi, pilih tab Reproduksi, lalu pilih aksi 'Kawin (IB)' dan isi tanggalnya. Status sapi otomatis berubah menjadi sudah kawin." },
+    { title: "Menambah Data Sapi Baru", body: "Di tab Beranda, ketuk tombol hijau 'Tambah Ternak' di pojok kanan bawah. Isi data sapi (kode, jenis kelamin, ras, asal usul, tanggal lahir/masuk), lalu simpan." },
+    { title: "Melaporkan Kawin (Inseminasi Buatan)", body: "Ketuk salah satu sapi betina di tab Rekam Medis, pilih tab Reproduksi, lalu pilih aksi 'Kawin (IB)' dan isi tanggalnya. Status sapi otomatis berubah menjadi sudah kawin." },
     { title: "Melaporkan Pemeriksaan Kebuntingan", body: "Sekitar 60 hari setelah kawin, petugas akan memeriksa kebuntingan. Catat hasilnya lewat tab Reproduksi pada sapi tersebut — pilih hasil Bunting atau Tidak Bunting." },
     { title: "Melaporkan Kelahiran", body: "Saat sapi melahirkan, buka tab Reproduksi sapi tersebut, pilih aksi 'Lapor Melahirkan', lalu isi tanggal kelahirannya." },
     { title: "Melaporkan Sapi Sakit", body: "Buka detail sapi, pilih tab Medis, lalu catat gejala yang muncul. Petugas akan menindaklanjuti laporan tersebut." },
-    { title: "Membaca Kalender Birahi", body: "Tab Kalender menunjukkan perkiraan jadwal birahi, jadwal pemeriksaan kebuntingan, dan perkiraan tanggal lahir untuk setiap sapi betina, dihitung otomatis dari data yang Anda masukkan." },
+    { title: "Membaca Kalender Birahi", body: "Tab Kalender menunjukkan perkiraan jadwal birahi, jadwal pemeriksaan kebuntingan, dan perkiraan tanggal lahir. Ketuk menu dropdown 'Pilih Sapi' di bagian atas untuk beralih ke sapi betina lain — semua dihitung otomatis dari data yang Anda masukkan." },
     { title: "Memahami Tab Beranda", body: "Tab Beranda menampilkan ringkasan status reproduksi seluruh sapi dan daftar sapi yang butuh perhatian segera, lengkap dengan tombol hubungi petugas." },
     { title: "Menghubungi Petugas", body: "Setiap saran yang membutuhkan tindak lanjut akan menampilkan tombol 'Hubungi Petugas' — ketuk untuk langsung membuka percakapan WhatsApp dengan petugas." },
   ];
@@ -2679,19 +2675,23 @@ function AppContent() {
           </div>
 
           <div className="flex-1">
-            {nav === "dashboard" && <DashboardView dbCattle={safeDb} onAdviceClick={handleAdviceClick} profile={profile} setAppToast={setAppToast} />}
+            {nav === "dashboard" && <DashboardView dbCattle={safeDb} onAdviceClick={handleAdviceClick} profile={profile} setAppToast={setAppToast} onAddNew={() => { setEditItem(null); setAddOpen(true); }} />}
             {nav === "assets" && (
               <div className="pb-28 fade-in bg-cream">
                 <div className="sticky top-0 z-30 bg-slate-50/90 backdrop-blur-md px-5 py-4 border-b border-slate-200">
-                   <div className="flex justify-between items-center">
-                    <div><h2 className="font-black text-xl text-slate-900">Database Aset</h2><p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{filteredCattle.length} dari {safeDb.length} Ekor</p></div>
-                   <button onClick={() => { setEditItem(null); setAddOpen(true); }} className="bg-emerald-600 text-white px-4 py-2 rounded-xl text-xs font-bold shadow-md shadow-emerald-500/20 hover:bg-emerald-700 transition-colors">+ Ternak Baru</button>
-                   </div>
+                   <div><h2 className="font-black text-xl text-slate-900">Rekam Medis</h2><p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{filteredCattle.length} dari {safeDb.length} Ekor</p></div>
                    <div className="mt-4 relative">
-                     <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
-                       <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-                     </span>
-                     <input type="text" placeholder="Cari Kode Sapi..." className="w-full border border-slate-200 rounded-xl pl-12 pr-4 py-3 text-sm font-medium focus:outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-50 bg-white transition-all" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
+                     <select
+                       value={searchQuery}
+                       onChange={(e) => setSearchQuery(e.target.value)}
+                       className="w-full border border-slate-200 rounded-xl pl-4 pr-10 py-3 text-sm font-bold text-slate-700 bg-white focus:outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-50 appearance-none"
+                     >
+                       <option value="">Semua Sapi</option>
+                       {[...safeDb].filter(c => c && c.id).sort((a, b) => (a.code || a.id).localeCompare(b.code || b.id, undefined, { numeric: true })).map(c => (
+                         <option key={c.id} value={c.code || c.id}>{c.code || c.id}</option>
+                       ))}
+                     </select>
+                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-slate-400"><polyline points="6 9 12 15 18 9"></polyline></svg>
                    </div>
                    <div className="mt-3 p-1 bg-slate-200 rounded-xl flex gap-1">
                       <button onClick={() => setGenderFilter("ALL")} className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${genderFilter === 'ALL' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>Semua</button>
@@ -2701,7 +2701,15 @@ function AppContent() {
                 </div>
                 <div className="p-5 space-y-4 mt-2">
                   {filteredCattle.map((item) => item ? <AssetRecordCard key={item.id || Math.random()} item={item} onEdit={(i) => {setEditItem(i); setAddOpen(true);}} onOpenAction={setActionItem} onDelete={handleDeleteRequest} onOpenDetail={setDetailItem} highlightedId={highlightedId} setHighlightedId={setHighlightedId} /> : null)}
-                  {searchQuery && filteredCattle.length === 0 && <p className="text-center text-slate-500 font-medium pt-10">Sapi dengan kode "{searchQuery}" tidak ditemukan.</p>}
+                  {safeDb.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center text-center pt-16 px-6">
+                      <div className="w-16 h-16 bg-emerald-50 rounded-2xl flex items-center justify-center mb-4 text-emerald-600">{ICON_COW}</div>
+                      <p className="font-black text-slate-700 text-sm">Belum Ada Data Sapi</p>
+                      <p className="text-xs font-medium text-slate-400 mt-1.5 max-w-xs">Tambahkan sapi pertama Anda lewat tombol hijau "Tambah Ternak" di tab Beranda.</p>
+                    </div>
+                  ) : (
+                    searchQuery && filteredCattle.length === 0 && <p className="text-center text-slate-500 font-medium pt-10">Sapi dengan kode "{searchQuery}" tidak ditemukan.</p>
+                  )}
                 </div>
               </div>
             )}
@@ -2783,7 +2791,7 @@ function AppContent() {
           
           <div className="nav-bar">
             <button onClick={() => setNav("dashboard")} className={`nav-item ${nav === "dashboard" ? "active" : ""}`}><span className="nav-icon"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 2L2 12h3v8h6v-6h2v6h6v-8h3z"/></svg></span><span>Beranda</span></button>
-            <button onClick={() => setNav("assets")} className={`nav-item ${nav === "assets" ? "active" : ""}`}><span className="nav-icon"><svg viewBox="0 0 100 100" className="w-6 h-6 fill-current"><path d="M85.9,46.1c-1.9-2.2-4.1-4-6.5-5.3c0,0-11-6-11.4-6.3c-0.1,0-0.1-0.1-0.2-0.1c-1.3-1-3.1-1.3-4.7-0.7 c-0.7,0.3-1.4,0.7-1.9,1.3c-2.3,2.4-5.3,4.6-8.3,4.6c-2.6,0-5.1-1.6-7-4.1c-1.7-2.3-3.6-3.8-5.6-4.6c-0.1,0-0.2-0.1-0.3-0.1 C38,30.3,36.1,30.7,34.8,32c-0.1,0.1-0.1,0.1-0.2,0.1C33,33.5,22,41.4,22,41.4c-2.2,1.6-3.7,3.9-4,6.4c-0.3,2.5,0.7,5,2.6,6.6 c0.1,0.1,0.1,0.1,0.2,0.1c0.1,0,0.1,0,0.2,0.1c2.1,1.5,4.7,2.1,7.2,1.7c1.3-0.2,2.5-0.7,3.6-1.5c0.1-0.1,0.2-0.1,0.3-0.2 c2-1.9,4.5-2.8,7.1-2.8c2.9,0,5.6,1.2,7.4,3.1c1.8,1.9,4.1,3,6.6,3c2,0,3.9-0.8,5.3-2.2c0.1-0.1,0.1-0.1,0.2-0.1 c1.8-2,4.6-3,7.3-2.6c1.1,0.2,2.2,0.6,3.2,1.2c0.1,0.1,0.1,0.1,0.2,0.1c1.9,1.1,4.1,1.4,6.1,0.8c2-0.6,3.8-2,5-3.8 C86.7,50,86.9,48,85.9,46.1z M52.5,41.4c0,2.1-1.7,3.8-3.8,3.8c-2.1,0-3.8-1.7-3.8-3.8c0-2.1,1.7-3.8,3.8-3.8C50.8,37.6,52.5,39.3,52.5,41.4 z"/></svg></span><span>Populasi</span></button>
+            <button onClick={() => setNav("assets")} className={`nav-item ${nav === "assets" ? "active" : ""}`}><span className="nav-icon"><svg viewBox="0 0 100 100" className="w-6 h-6 fill-current"><path d="M85.9,46.1c-1.9-2.2-4.1-4-6.5-5.3c0,0-11-6-11.4-6.3c-0.1,0-0.1-0.1-0.2-0.1c-1.3-1-3.1-1.3-4.7-0.7 c-0.7,0.3-1.4,0.7-1.9,1.3c-2.3,2.4-5.3,4.6-8.3,4.6c-2.6,0-5.1-1.6-7-4.1c-1.7-2.3-3.6-3.8-5.6-4.6c-0.1,0-0.2-0.1-0.3-0.1 C38,30.3,36.1,30.7,34.8,32c-0.1,0.1-0.1,0.1-0.2,0.1C33,33.5,22,41.4,22,41.4c-2.2,1.6-3.7,3.9-4,6.4c-0.3,2.5,0.7,5,2.6,6.6 c0.1,0.1,0.1,0.1,0.2,0.1c0.1,0,0.1,0,0.2,0.1c2.1,1.5,4.7,2.1,7.2,1.7c1.3-0.2,2.5-0.7,3.6-1.5c0.1-0.1,0.2-0.1,0.3-0.2 c2-1.9,4.5-2.8,7.1-2.8c2.9,0,5.6,1.2,7.4,3.1c1.8,1.9,4.1,3,6.6,3c2,0,3.9-0.8,5.3-2.2c0.1-0.1,0.1-0.1,0.2-0.1 c1.8-2,4.6-3,7.3-2.6c1.1,0.2,2.2,0.6,3.2,1.2c0.1,0.1,0.1,0.1,0.2,0.1c1.9,1.1,4.1,1.4,6.1,0.8c2-0.6,3.8-2,5-3.8 C86.7,50,86.9,48,85.9,46.1z M52.5,41.4c0,2.1-1.7,3.8-3.8,3.8c-2.1,0-3.8-1.7-3.8-3.8c0-2.1,1.7-3.8,3.8-3.8C50.8,37.6,52.5,39.3,52.5,41.4 z"/></svg></span><span>Rekam Medis</span></button>
             <button onClick={() => setNav("calendar")} className={`nav-item ${nav === "calendar" ? "active" : ""}`}><span className="nav-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M9 11H7v2h2v-2zm4 0h-2v2h2v-2zm4 0h-2v2h2v-2zm2-7h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 1.99 2H19c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V9h14v11z"/></svg></span><span>Kalender</span></button>
             <button onClick={() => setNav("academy")} className={`nav-item ${nav === "academy" ? "active" : ""}`}><span className="nav-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M12 3L1 9l4 2.18v6L12 21l7-3.82v-6l2-1.09V17h2V9L12 3zm6.82 6L12 12.72 5.18 9 12 5.28 18.82 9zM17 15.99l-5 2.73-5-2.73v-3.72L12 15l5-2.73v3.72z"/></svg></span><span>Akademi</span></button>
             <button onClick={() => setNav("profile")} className={`nav-item ${nav === "profile" ? "active" : ""}`}><span className="nav-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg></span><span>Profil</span></button>
