@@ -838,7 +838,7 @@ function SmartEstrusCalendar({ item }) {
 }
 
 // KOMPONEN TAB BARU: KALENDER REPRODUKSI (Daftar Sapi Betina + Kalender per-Ekor)
-function CalendarView({ dbCattle }) {
+function CalendarView({ dbCattle, profile }) {
   const femaleCattle = (dbCattle || []).filter(c => c && (c.jenis_kelamin || c.gender) !== "JANTAN");
   const [selectedId, setSelectedId] = useState(null);
 
@@ -857,6 +857,8 @@ function CalendarView({ dbCattle }) {
 
   const selected = femaleCattle.find(c => c.id === selectedId) || null;
   const selectedAnalysis = selected ? analyzeCattle(selected) : null;
+  const ownerName = profile?.name || "Peternak";
+  const waLink = selected ? `https://wa.me/6281555863186?text=${encodeURIComponent(`Halo Petugas, saya ${ownerName}. Tolong periksa sapi saya (Kode: ${selected.code || selected.id}). Kasus: ${selectedAnalysis?.statusLabel} - Butuh Penanganan Darurat.`)}` : "";
 
   return (
     <div className="pb-28 fade-in bg-cream min-h-screen">
@@ -904,6 +906,12 @@ function CalendarView({ dbCattle }) {
               </div>
             )}
             {selected && <SmartEstrusCalendar item={selected} />}
+
+            {selectedAnalysis?.needsVet && (
+              <a href={waLink} target="_blank" rel="noopener noreferrer" className="block w-full bg-[#25D366] text-white font-black py-4 rounded-2xl text-center text-sm shadow-lg animate-pulse mt-4 border-2 border-emerald-400">
+                🚨 HUBUNGI PETUGAS MEDIS (WA)
+              </a>
+            )}
           </div>
         </>
       )}
@@ -917,10 +925,6 @@ function DetailModal({ item, onClose, onDeleteLog, setAppToast, setAppConfirm })
   const itemGender = item.jenis_kelamin || item.gender;
 
   const analysis = analyzeCattle(item);
-  const profileStr = localStorage.getItem('srtt_user_profile');
-  const profile = profileStr ? JSON.parse(profileStr) : null;
-  const ownerName = profile?.name || "Peternak";
-  const waLink = `https://wa.me/6281555863186?text=${encodeURIComponent(`Halo Petugas, saya ${ownerName}. Tolong periksa sapi saya (Kode: ${item.code || item.id}). Kasus: ${analysis.statusLabel} - Butuh Penanganan Darurat.`)}`;
 
   return (
     <div className="fixed inset-0 z-50 flex items-end bg-slate-900/60 backdrop-blur-sm" onClick={onClose}>
@@ -945,11 +949,6 @@ function DetailModal({ item, onClose, onDeleteLog, setAppToast, setAppConfirm })
               </div>
           </div>
 
-          {analysis.needsVet && (
-             <a href={waLink} target="_blank" rel="noopener noreferrer" className="block w-full bg-[#25D366] text-white font-black py-4 rounded-2xl text-center text-sm shadow-lg animate-pulse mb-6 border-2 border-emerald-400">
-               🚨 HUBUNGI PETUGAS MEDIS (WA)
-             </a>
-          )}
 
           <h4 className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-6 ml-2">Recording Kronologis Lengkap</h4>
           <div className="relative">
@@ -2706,7 +2705,7 @@ function AppContent() {
                 </div>
               </div>
             )}
-            {nav === "calendar" && <CalendarView dbCattle={safeDb} />}
+            {nav === "calendar" && <CalendarView dbCattle={safeDb} profile={profile} />}
             {nav === "academy" && <AcademyView />}
             {nav === "profile" && (
               <div className="pb-32 fade-in bg-cream min-h-screen">
