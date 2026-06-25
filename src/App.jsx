@@ -1428,6 +1428,7 @@ function ShareSummaryModal({ open, onClose, stats, profile, dbCattle, setAppToas
 }
 
 function ReproStatusChart({ dbCattle }) {
+  const [kandangInfoOpen, setKandangInfoOpen] = useState(false);
   const safeDb = Array.isArray(dbCattle) ? dbCattle : [];
   const femaleCattle = safeDb.filter(item => item && (item.jenis_kelamin || item.gender) !== "JANTAN");
   const total = femaleCattle.length;
@@ -1490,8 +1491,23 @@ function ReproStatusChart({ dbCattle }) {
 
   return (
     <div className="bg-white rounded-[28px] border border-slate-100 shadow-sm p-5">
-      <h3 className="font-black text-slate-800 text-base mb-1">Distribusi Status Reproduksi</h3>
-      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4">Populasi Betina Aktif</p>
+      <div className="flex items-start justify-between gap-3 mb-4">
+        <div>
+          <h3 className="font-black text-slate-800 text-base mb-1">Distribusi Status Reproduksi</h3>
+          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Populasi Betina Aktif</p>
+        </div>
+        <div className="relative shrink-0">
+          <button onClick={() => setKandangInfoOpen(!kandangInfoOpen)} className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-full ${kandangBg}`}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={kandangColor}>{kandangIcon}</svg>
+            <span className={`text-[9px] font-black uppercase tracking-wide whitespace-nowrap ${kandangColor}`}>{kandangLabel}</span>
+          </button>
+          {kandangInfoOpen && (
+            <div className="absolute right-0 top-full mt-2 w-56 bg-slate-800 text-white text-[10px] font-medium leading-relaxed rounded-xl p-3 shadow-xl z-20">
+              Status ini dihitung dari persentase sapi dengan kondisi mendesak (perlu penanganan petugas) dari total populasi betina: <strong>Kondisi Baik</strong> (0%), <strong>Cukup Baik</strong> (&gt;0%), <strong>Waspada</strong> (&gt;10%), <strong>Kritis</strong> (&gt;30%).
+            </div>
+          )}
+        </div>
+      </div>
 
       <div className="flex items-center gap-4">
         <div className="relative shrink-0" style={{ width: 140, height: 140 }}>
@@ -1529,13 +1545,6 @@ function ReproStatusChart({ dbCattle }) {
             })}
           </tbody>
         </table>
-
-        <div className="flex flex-col items-center justify-center shrink-0 w-14 gap-1.5">
-          <div className={`w-9 h-9 rounded-full flex items-center justify-center ${kandangBg}`}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={kandangColor}>{kandangIcon}</svg>
-          </div>
-          <span className={`text-[8px] font-black uppercase tracking-wide text-center leading-tight ${kandangColor}`}>{kandangLabel}</span>
-        </div>
       </div>
 
       <div className="text-[10px] font-medium text-slate-400 leading-relaxed mt-3 bg-slate-50 rounded-lg px-3 py-2 space-y-1">
