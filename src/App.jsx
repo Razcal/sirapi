@@ -1368,7 +1368,7 @@ function ShareSummaryModal({ open, onClose, stats, profile, dbCattle, setAppToas
 
             {totalFemale > 0 && (
               <div className="flex items-center gap-3 bg-white/5 rounded-2xl p-4 mb-4">
-                <div style={{ width: 90, height: 90 }} className="shrink-0">
+                <div className="relative shrink-0" style={{ width: 90, height: 90 }}>
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie data={shareChartData} dataKey="value" innerRadius={26} outerRadius={42} paddingAngle={3}>
@@ -1378,6 +1378,10 @@ function ShareSummaryModal({ open, onClose, stats, profile, dbCattle, setAppToas
                       </Pie>
                     </PieChart>
                   </ResponsiveContainer>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                    <p className="text-lg font-black text-white leading-none">{totalFemale}</p>
+                    <p className="text-[6px] font-bold text-slate-400 uppercase tracking-wide mt-0.5">Ekor</p>
+                  </div>
                 </div>
                 <div className="flex-1 space-y-1.5 min-w-0">
                   {shareChartData.map((entry, index) => (
