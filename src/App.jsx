@@ -1434,11 +1434,7 @@ function ReproStatusChart({ dbCattle }) {
   const total = femaleCattle.length;
 
   if (total === 0) {
-    return (
-      <div className="bg-white rounded-[28px] border border-slate-100 shadow-sm p-5 text-center">
-        <p className="text-xs font-bold text-slate-400">Belum ada data sapi betina untuk ditampilkan.</p>
-      </div>
-    );
+    return <p className="text-xs font-bold text-slate-400 text-center py-2">Belum ada data sapi betina untuk ditampilkan.</p>;
   }
 
   const counts = {};
@@ -1490,7 +1486,7 @@ function ReproStatusChart({ dbCattle }) {
   }
 
   return (
-    <div className="bg-white rounded-[28px] border border-slate-100 shadow-sm p-5">
+    <div>
       <div className="flex items-start justify-between gap-3 mb-4">
         <div>
           <h3 className="font-black text-slate-800 text-base mb-1">Distribusi Status Reproduksi</h3>
@@ -1597,21 +1593,21 @@ function DashboardView({ dbCattle, profile, onAdviceClick, setAppToast }) {
   return (
     <div className="fade-in pb-28 pt-2">
       <div className="px-5 space-y-6">
-        <div className="bg-slate-900 rounded-[32px] p-6 text-white shadow-xl relative overflow-hidden border border-slate-800">
-           <div className="flex justify-between items-start relative z-10">
-             <div>
-               <p className="text-xs font-semibold text-slate-400">Selamat Datang,</p>
-               <h2 className="text-xl font-black mt-0.5">{profile?.name || "Peternak"}</h2>
+        <div className="bg-white rounded-[32px] shadow-xl border border-slate-100 overflow-hidden">
+          <div className="bg-slate-900 px-6 pt-6 pb-5 text-white relative overflow-hidden">
+             <div className="flex justify-between items-start relative z-10">
+               <div>
+                 <p className="text-xs font-semibold text-slate-400">Selamat Datang,</p>
+                 <h2 className="text-xl font-black mt-0.5">{profile?.name || "Peternak"}</h2>
+               </div>
+               <button onClick={() => setShareModalOpen(true)} className="bg-white/10 text-white text-xs font-bold px-4 py-2 rounded-full hover:bg-white/20 transition-colors shrink-0">Bagikan</button>
              </div>
-             <button onClick={() => setShareModalOpen(true)} className="bg-white/10 text-white text-xs font-bold px-4 py-2 rounded-full hover:bg-white/20 transition-colors">Bagikan</button>
-           </div>
-           <div className="mt-5 flex gap-4 border-t border-white/10 pt-4">
-              <div className="flex-1"><p className="text-[10px] font-bold uppercase text-slate-400 tracking-widest">Total Aset</p><p className="font-black text-2xl">{total} <span className="text-base font-medium">Ekor</span></p></div>
-              <div className="flex-1"><p className="text-[10px] font-bold uppercase text-slate-400 tracking-widest">Indukan Bunting</p><p className="font-black text-2xl text-emerald-400">{pregnant} <span className="text-base font-medium">Ekor</span></p></div>
-           </div>
+             <p className="text-[11px] font-bold text-slate-400 mt-4">Total Ternak: <span className="text-white">{total} Ekor</span> ({jantan} Jantan &middot; {betina} Betina)</p>
+          </div>
+          <div className="p-5">
+            <ReproStatusChart dbCattle={safeDb} />
+          </div>
         </div>
-
-        <ReproStatusChart dbCattle={safeDb} />
 
         <div>
           <button onClick={() => setAdviceOpen(o => !o)} className="flex items-center justify-between w-full mb-4 ml-1">
@@ -2002,7 +1998,6 @@ function AddModal({ open, onClose, onSave, editItem, setAppToast }) {
 
 function EditProfileModal({ open, onClose, onSave, currentProfile, setAppToast }) {
   const [name, setName] = useState(currentProfile?.name || '');
-  const [nik, setNik] = useState(currentProfile?.nik || '');
   const [address, setAddress] = useState(currentProfile?.alamat || currentProfile?.desa || '');
   const [photo, setPhoto] = useState(currentProfile?.photo || '');
   const [isLoading, setIsLoading] = useState(false);
@@ -2011,7 +2006,6 @@ function EditProfileModal({ open, onClose, onSave, currentProfile, setAppToast }
   useEffect(() => {
     if (open && currentProfile) {
       setName(currentProfile.name || '');
-      setNik(currentProfile.nik || '');
       setAddress(currentProfile.alamat || currentProfile.desa || '');
       setPhoto(currentProfile.photo || '');
     }
@@ -2037,8 +2031,6 @@ function EditProfileModal({ open, onClose, onSave, currentProfile, setAppToast }
 
   const handleSave = async () => {
     if (!name.trim()) return setAppToast({message: "Nama Pemilik wajib diisi!", type: "error"});
-    if (!nik.trim()) return setAppToast({message: "NIK wajib diisi untuk keperluan pendataan Dinas!", type: "error"});
-    if (!/^\d{16}$/.test(nik.trim())) return setAppToast({message: "NIK harus terdiri dari 16 digit angka sesuai KTP!", type: "error"});
     if (!address.trim()) return setAppToast({message: "Alamat wajib diisi!", type: "error"});
 
     setIsLoading(true);
@@ -2047,7 +2039,7 @@ function EditProfileModal({ open, onClose, onSave, currentProfile, setAppToast }
 
       // Update user profile
       const updateResult = await profileService.updateUserProfile(currentProfile.id, {
-        name: name.trim(), nik: nik.trim(), photo: photo || null, alamat: address.trim()
+        name: name.trim(), photo: photo || null, alamat: address.trim()
       });
 
       if (!updateResult.success) {
@@ -2094,18 +2086,6 @@ function EditProfileModal({ open, onClose, onSave, currentProfile, setAppToast }
           <FF label="Nama Lengkap (Sesuai KTP)">
             <input className={inp} value={name} onChange={e => setName(e.target.value)} disabled={isLoading} />
           </FF>
-          <FF label="NIK (Sesuai KTP)">
-            <input
-              type="text"
-              inputMode="numeric"
-              className={inp}
-              value={nik}
-              onChange={e => setNik(e.target.value.replace(/\D/g, '').slice(0, 16))}
-              placeholder="16 digit NIK KTP"
-              maxLength={16}
-              disabled={isLoading}
-            />
-          </FF>
           <FF label="Alamat Lengkap">
             <textarea className={inp + " h-24 resize-none"} value={address} onChange={e => setAddress(e.target.value)} disabled={isLoading} />
           </FF>
@@ -2148,7 +2128,7 @@ function OnboardingTutorial({ open, onClose }) {
     { icon: ICON_PHONE, title: "Saran & Hubungi Petugas", desc: "Masih di tab Beranda, gulir ke bawah untuk melihat kartu Saran & Peringatan.", steps: ["Setiap sapi yang butuh perhatian akan muncul di sini dengan saran otomatis", "Sapi yang butuh penanganan medis akan menampilkan tombol 'Hubungi Petugas'", "Ketuk tombol tersebut untuk langsung membuka percakapan WhatsApp"] },
     { icon: ICON_SHARE, title: "Membagikan Laporan", desc: "Di tab Beranda, ketuk tombol Bagikan untuk membuat ringkasan bergambar.", steps: ["Sistem membuat gambar grafik ringkasan populasi sapi Anda", "Ketuk 'Bagikan sebagai Gambar' untuk mengirim ke WhatsApp atau platform lain"] },
     { icon: ICON_BOOK, title: "Tab Akademi", desc: "Tab keempat di menu bawah. Berisi materi edukasi seputar reproduksi dan kesehatan sapi, serta jadwal live konsultasi dengan petugas." },
-    { icon: ICON_PROFILE_CARD, title: "Tab Profil", desc: "Tab terakhir di menu bawah. Kelola data diri Anda di sini.", steps: ["Edit Profil — ubah data diri dan NIK", "Keamanan & Password — ganti password akun Anda", "Bantuan — buka kembali Cara Pakai Aplikasi atau tutorial ini kapan saja"] },
+    { icon: ICON_PROFILE_CARD, title: "Tab Profil", desc: "Tab terakhir di menu bawah. Kelola data diri Anda di sini.", steps: ["Edit Profil — ubah data diri Anda", "Keamanan & Password — ganti password akun Anda", "Bantuan — buka kembali Cara Pakai Aplikasi atau tutorial ini kapan saja"] },
   ];
 
   if (!open) return null;
@@ -2738,7 +2718,6 @@ function AppContent() {
                   </div>
                   <h2 className="text-2xl font-black text-slate-900 tracking-tight">{profile.name}</h2>
                   <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">{profile.alamat || profile.desa || "Tuban"} Area</p>
-                  {profile.nik && <p className="text-[10px] font-semibold text-slate-400 mt-1">NIK: {profile.nik}</p>}
                   <button onClick={() => setEditProfileOpen(true)} className="mt-4 px-6 py-2 bg-slate-100 text-slate-700 font-bold text-xs rounded-full hover:bg-slate-200 transition-colors">Edit Profil</button>
                 </div>
 

@@ -71,7 +71,6 @@ export const authService = {
         email: trimmedEmail,
         phone: trimmedPhone,
         name: profileData.name,
-        nik: profileData.nik,
         kecamatan: profileData.kecamatan,
         desa: profileData.desa,
         dusun: profileData.dusun,
