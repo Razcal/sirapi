@@ -3,7 +3,6 @@ import { dialog } from "./core/helpers";
 import { TUBAN_DATA } from "./core/constants";
 import { FF } from "./core/components/SharedUI";
 import { authService } from "./core/authService";
-import { saveUserToStorage } from "./core/supabaseClient";
 import logoTuban from "./Tubankab.png";
 
 export function AuthScreen({ setProfile }) {
@@ -25,6 +24,7 @@ export function AuthScreen({ setProfile }) {
   const [passwordMatch, setPasswordMatch] = useState(null);
   const [profileData, setProfileData] = useState({
     name: "",
+    nik: "",
     kecamatan: "Tuban",
     desa: "Baturetno",
     rt: "",
@@ -61,7 +61,6 @@ export function AuthScreen({ setProfile }) {
 
     if (result.success) {
       dialog.alert(`Selamat datang kembali, ${result.user.name}!`, "Sukses");
-      saveUserToStorage(result.user);
       setProfile(result.user);
     } else {
       dialog.alert(result.error || "Login gagal!", "Login Gagal");
@@ -72,8 +71,13 @@ export function AuthScreen({ setProfile }) {
     e.preventDefault();
     
     // Validasi wajib diisi
-    if (!registerEmail || !registerPhone || !registerPassword || !confirmPassword || !profileData.name || !profileData.rt || !profileData.rw) {
-      return dialog.alert("Harap lengkapi semua kolom yang wajib!", "Perhatian");
+    if (!registerEmail || !registerPhone || !registerPassword || !confirmPassword || !profileData.name || !profileData.nik || !profileData.rt || !profileData.rw) {
+      return dialog.alert("Harap lengkapi semua kolom yang wajib, termasuk NIK!", "Perhatian");
+    }
+
+    // Validasi format NIK (wajib 16 digit angka, sesuai data Dinas)
+    if (!/^\d{16}$/.test(profileData.nik)) {
+      return dialog.alert("NIK harus terdiri dari 16 digit angka sesuai KTP!", "NIK Tidak Valid");
     }
 
     // Validasi format email
@@ -106,14 +110,15 @@ export function AuthScreen({ setProfile }) {
       setRegisterPassword("");
       setConfirmPassword("");
       setPasswordMatch(null);
-      setProfileData({ 
-        name: "", 
-        kecamatan: "Tuban", 
-        desa: "Baturetno", 
-        rt: "", 
-        rw: "", 
-        dusun: "", 
-        photo: null 
+      setProfileData({
+        name: "",
+        nik: "",
+        kecamatan: "Tuban",
+        desa: "Baturetno",
+        rt: "",
+        rw: "",
+        dusun: "",
+        photo: null
       });
       setIsLogin(true);
     } else {
@@ -124,7 +129,7 @@ export function AuthScreen({ setProfile }) {
   const inp = "w-full border border-slate-200 rounded-xl px-4 py-3 text-sm font-medium focus:outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-50 bg-slate-50 focus:bg-white transition-all";
 
   return (
-    <div className="fixed inset-0 z-[100] bg-slate-50 flex flex-col overflow-hidden slide-up">
+    <div className="fixed inset-0 z-[100] bg-cream flex flex-col overflow-hidden slide-up">
       <div className="pb-6 px-6 bg-white rounded-b-[32px] shadow-sm z-10 relative" style={{ paddingTop: 'calc(env(safe-area-inset-top) + 3rem)' }}>
         <div className="flex justify-center mb-4"><div className="w-16 h-16 bg-emerald-50 rounded-full flex items-center justify-center p-3"><img src={logoTuban} alt="Logo Tuban" className="w-full h-full object-contain" /></div></div>
         <h1 className="text-2xl font-black text-center text-slate-900 tracking-tight">SIRAPI</h1>
@@ -196,6 +201,18 @@ export function AuthScreen({ setProfile }) {
             <div className="h-px bg-slate-200 my-6"></div>
             <p className="text-[11px] font-black text-slate-800 uppercase tracking-widest mb-4">Profil Identitas Peternak</p>
             <FF label="Nama Lengkap Pemilik"><input className={inp} value={profileData.name} onChange={e => setProfileData({...profileData, name: e.target.value})} placeholder="Nama lengkap" /></FF>
+            <FF label="NIK (Sesuai KTP)">
+              <input
+                type="text"
+                inputMode="numeric"
+                className={inp}
+                value={profileData.nik}
+                onChange={e => setProfileData({...profileData, nik: e.target.value.replace(/\D/g, '').slice(0, 16)})}
+                placeholder="16 digit NIK KTP"
+                maxLength={16}
+              />
+            </FF>
+            <p className="text-[10px] text-slate-500 -mt-2 mb-3 px-1 font-medium">💡 NIK wajib diisi untuk keperluan pendataan resmi Dinas Ketahanan Pangan.</p>
             <FF label="Kecamatan"><select className={inp} value={profileData.kecamatan} onChange={e => handleKecamatanChange(e.target.value)}>{Object.keys(TUBAN_DATA).map(k => <option key={k} value={k}>{k}</option>)}</select></FF>
             <FF label="Desa / Kelurahan"><select className={inp} value={profileData.desa} onChange={e => setProfileData({...profileData, desa: e.target.value})}>{(TUBAN_DATA[profileData.kecamatan] || []).map(d => <option key={d} value={d}>{d}</option>)}</select></FF>
             <FF label="Dusun (Opsional)"><input type="text" className={inp} value={profileData.dusun} onChange={e => setProfileData({...profileData, dusun: e.target.value})} placeholder="Nama dusun (opsional)" /></FF>

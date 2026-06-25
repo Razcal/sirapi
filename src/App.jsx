@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from "react";
+import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
 import { AuthScreen } from "./AuthScreen";
+import { DialogSystem } from "./core/components/SharedUI";
 import logoTuban from "./Tubankab.png";
 
 /*
@@ -24,12 +26,12 @@ const GlobalStyle = () => (
     @keyframes popIn { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
     
     /* MODERNISED NAV-BAR */
-    .nav-bar { position: fixed; bottom: 0; left: 0; right: 0; background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(16px); border-top: 1px solid #e2e8f0; display: flex; justify-content: space-around; padding: 12px 0 max(12px, env(safe-area-inset-bottom)); z-index: 50; box-shadow: 0 -8px 32px rgba(0,0,0,0.06); }
-    .nav-item { display: flex; flex-direction: column; align-items: center; font-size: 10px; color: #94a3b8; font-weight: 800; gap: 6px; transition: all 0.3s ease; width: 25%; }
-    .nav-item.active { color: #10b981; }
-    
+    .nav-bar { position: fixed; bottom: 0; left: 0; right: 0; background: rgba(250, 246, 236, 0.95); backdrop-filter: blur(16px); border-top: 1px solid #e8dfc8; display: flex; justify-content: space-around; padding: 12px 0 max(12px, env(safe-area-inset-bottom)); z-index: 50; box-shadow: 0 -8px 32px rgba(0,0,0,0.06); }
+    .nav-item { display: flex; flex-direction: column; align-items: center; font-size: 10px; color: #94a3b8; font-weight: 800; gap: 6px; transition: all 0.3s ease; width: 20%; }
+    .nav-item.active { color: #15803d; }
+
     .nav-icon { width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; transition: all 0.3s ease; }
-    .nav-item.active .nav-icon { transform: translateY(-3px) scale(1.1); filter: drop-shadow(0 4px 6px rgba(16,185,129,0.3)); }
+    .nav-item.active .nav-icon { transform: translateY(-3px) scale(1.1); filter: drop-shadow(0 4px 6px rgba(21,128,61,0.3)); }
 
     .timeline-line { width: 2px; background: #f1f5f9; position: absolute; top: 14px; bottom: 10px; left: 3px; }
     .timeline-item:last-child .timeline-line { display: none; }
@@ -152,21 +154,21 @@ function analyzeCattle(item) {
        res.isUrgent = true;
        if (activeIllness.status === "MENUNGGU_DOKTER") {
            res.statusLabel = "MENUNGGU DOKTER"; res.color = "orange";
-           res.advice = `Gejala/Keluhan: ${activeIllness.gejala}. Segera panggil tenaga medis!`;
+           res.advice = `Gejala yang dilaporkan: ${activeIllness.gejala}. Segera hubungi tenaga medis untuk pemeriksaan lebih lanjut.`;
            res.adviceColor = "text-orange-900 bg-orange-50 border border-orange-200 font-bold shadow-sm";
            res.needsVet = true;
        } else if (activeIllness.status === "DIRAWAT") {
            res.statusLabel = "DALAM PERAWATAN"; res.color = "rose";
-           res.advice = `Diagnosa: ${activeIllness.diagnosa}. (Tindakan: ${activeIllness.tindakan}).`;
+           res.advice = `Diagnosa dokter: ${activeIllness.diagnosa}. Tindakan yang diberikan: ${activeIllness.tindakan}.`;
            res.adviceColor = "text-rose-900 bg-rose-50 border border-rose-200 font-bold shadow-sm";
        }
        return res; 
     }
 
     if (isJantan) {
-        if (umurHari < 180) { res.statusLabel = "PEDET JANTAN"; res.color = "violet"; res.advice = "Fokus susu & pakan pemula. Jaga kebersihan kandang dari diare/scours."; } 
-        else if (umurHari < 730) { res.statusLabel = "JANTAN BAKALAN"; res.color = "blue"; res.advice = "Fase penggemukan (Feedlot). Tingkatkan pakan konsentrat energi tinggi."; } 
-        else { res.statusLabel = "PEJANTAN DEWASA"; res.color = "emerald"; res.advice = "Bobot panen optimal. Siap untuk dipasarkan atau dijadikan pejantan pemacek."; }
+        if (umurHari < 180) { res.statusLabel = "PEDET JANTAN"; res.color = "violet"; res.advice = "Fokus pemberian susu dan pakan pemula (starter). Jaga kebersihan kandang untuk mencegah diare (scours)."; }
+        else if (umurHari < 730) { res.statusLabel = "JANTAN BAKALAN"; res.color = "blue"; res.advice = "Fase penggemukan (feedlot). Tingkatkan porsi pakan konsentrat berenergi tinggi."; }
+        else { res.statusLabel = "PEJANTAN DEWASA"; res.color = "emerald"; res.advice = "Bobot badan telah mencapai usia panen optimal. Siap dipasarkan atau dipertahankan sebagai pejantan pemacek."; }
         return res;
     }
 
@@ -177,18 +179,18 @@ function analyzeCattle(item) {
     }).sort((a,b) => new Date(a) - new Date(b));
 
     const lastIB = logIBDates.length > 0 ? logIBDates[logIBDates.length - 1] : null;
-    const prevIB = logIBDates.length > 1 ? logIBDates[logIBDates.length - 2] : null;
     const daysSinceLastIB = lastIB ? daysDiff(lastIB) : 0;
 
-    let cycles = 1; let diffPrevLast = 0;
-    if (prevIB && lastIB) diffPrevLast = Math.floor((new Date(lastIB) - new Date(prevIB))/86400000);
-    
+    let cycles = 1;
+    let suspectSistaGap = 0;
+
     if (logIBDates.length > 1) {
       let tempLast = new Date(logIBDates[0]);
       for (let i = 1; i < logIBDates.length; i++) {
-         let diff = Math.floor((new Date(logIBDates[i]) - tempLast) / 86400000);
-         if (diff >= 15) cycles++; 
-         tempLast = new Date(logIBDates[i]);
+        const diff = Math.floor((new Date(logIBDates[i]) - tempLast) / 86400000);
+        if (diff > 0 && diff < 18 && suspectSistaGap === 0) suspectSistaGap = diff;
+        if (diff >= 18) cycles++;
+        tempLast = new Date(logIBDates[i]);
       }
     }
 
@@ -197,60 +199,70 @@ function analyzeCattle(item) {
     if (phase === "ABORTUS_PENDING") {
       res.statusLabel = "LAPOR PETUGAS"; 
       res.color = "rose"; res.isUrgent = true; res.needsVet = true;
-      res.advice = `KONDISI DARURAT: Sapi mengalami keguguran. Segera lapor petugas medis untuk penanganan dan pembersihan rahim.`; 
+      res.advice = `Kondisi darurat: sapi mengalami keguguran (abortus). Segera laporkan ke petugas medis untuk penanganan dan pembersihan rahim guna mencegah Endometritis pasca-abortus.`;
       res.adviceColor = "text-rose-900 bg-rose-50 border border-rose-200 font-black shadow-sm"; 
     }
     else if (phase === "CALF") {
-      if (!item.calvingDate && umurHari > 1095) { res.statusLabel = "AWAS: KEMAJIRAN ABSOLUT"; res.color = "rose"; res.isUrgent = true; res.advice = `Sapi Dara > 3 tahun belum birahi. Suspect Hipoplasia Ovarium akut.`; res.adviceColor = "text-rose-900 bg-rose-50 border border-rose-200 font-bold shadow-sm"; } 
-      else if (umurHari > 730) { res.statusLabel = "AWAS: DARA TERLAMBAT KAWIN"; res.color = "orange"; res.isUrgent = true; res.advice = `Umur > 2 tahun belum di-IB. Panggil dokter.`; res.adviceColor = "text-orange-900 bg-orange-50 border border-orange-200 font-bold shadow-sm"; } 
-      else if (umurHari >= 540) { res.statusLabel = "DARA SIAP KAWIN"; res.color = "emerald"; res.advice = "Usia ideal IB (18-24 bulan). Pantau birahi."; } 
-      else { res.statusLabel = "DARA PERTUMBUHAN"; res.color = "blue"; res.advice = "Masa Pra-pubertas. Kejar bobot harian ideal."; }
+      if (!item.calvingDate && umurHari > 1095) { res.statusLabel = "AWAS: SUSPECT ANESTRUS PUBERTAS"; res.color = "rose"; res.isUrgent = true; res.needsVet = true; res.advice = `Sapi dara berusia lebih dari 3 tahun belum pernah menunjukkan tanda birahi maupun menerima IB. Ini baru indikasi awal (suspect), diduga Anestrus akibat Hipoplasia Ovarium, gangguan hormonal, atau kekurangan nutrisi kronis — namun penyebab pasti belum dapat dipastikan tanpa pemeriksaan. Wajib laporkan ke petugas/dokter hewan untuk pemeriksaan ginekologi mendalam terhadap fungsi ovarium.`; res.adviceColor = "text-rose-900 bg-rose-50 border border-rose-200 font-bold shadow-sm"; }
+      else if (umurHari > 730) { res.statusLabel = "AWAS: DARA TERLAMBAT IB"; res.color = "orange"; res.isUrgent = true; res.advice = `Sapi dara berusia lebih dari 2 tahun belum pernah menerima IB. Usia ideal IB pertama adalah 18-24 bulan (Noakes et al., 2019). Amati tanda birahi secara rutin pagi dan sore. Jika belum pernah menunjukkan tanda birahi, laporkan ke petugas agar dilakukan pemeriksaan lebih lanjut terhadap fungsi ovarium.`; res.adviceColor = "text-orange-900 bg-orange-50 border border-orange-200 font-bold shadow-sm"; }
+      else if (umurHari >= 540) { res.statusLabel = "DARA SIAP KAWIN"; res.color = "emerald"; res.advice = `Usia ${Math.floor(umurHari/30)} bulan — usia ideal untuk IB pertama (18-24 bulan). Amati tanda birahi: gelisah, sering menaiki sapi lain, vulva membengkak dan kemerahan, serta keluar lendir bening dari vulva. Lakukan IB saat sapi menunjukkan birahi aktif.`; }
+      else if (umurHari >= 365) { res.statusLabel = "DARA PRA-BIRAHI"; res.color = "violet"; res.advice = `Usia ${Math.floor(umurHari/30)} bulan. Pubertas pada sapi betina umumnya terjadi pada usia 6-12 bulan, namun IB pertama disarankan pada usia 18-24 bulan agar pertumbuhan tubuh optimal. Fokuskan pada pencapaian bobot badan ideal.`; }
+      else { res.statusLabel = "DARA PERTUMBUHAN"; res.color = "blue"; res.advice = `Usia ${Math.floor(umurHari/30)} bulan. Masa pra-pubertas. Berikan pakan lengkap (hijauan dan konsentrat) untuk mencapai target pertumbuhan bobot badan ideal sebelum IB pertama.`; }
     } 
     else if (phase === "OPEN") {
       const daysSinceAbortus = item.abortusDate ? daysDiff(item.abortusDate) : 999;
-      if (item.abortusDate && daysSinceAbortus <= 45) { 
-        res.statusLabel = "PEMULIHAN ABORTUS"; res.color = "rose"; res.isUrgent = true; 
-        res.advice = `Masa pemulihan rahim pasca keguguran (Hari ke-${daysSinceAbortus}). DILARANG suntik IB sebelum rahim pulih total (±45 hari).`; 
-        res.adviceColor = "text-rose-900 bg-rose-50 border border-rose-200 font-bold shadow-sm"; 
+      if (item.abortusDate && daysSinceAbortus <= 45) {
+        res.statusLabel = "PEMULIHAN ABORTUS"; res.color = "rose"; res.isUrgent = true;
+        res.advice = `Hari ke-${daysSinceAbortus} masa pemulihan rahim pasca keguguran. IB tidak boleh dilakukan sebelum rahim pulih sepenuhnya (kurang lebih 45 hari). Amati bila ada keputihan abnormal atau demam, lalu segera laporkan ke petugas — gejala tersebut dapat mengindikasikan Endometritis pasca-abortus yang perlu pemeriksaan lebih lanjut.`;
+        res.adviceColor = "text-rose-900 bg-rose-50 border border-rose-200 font-bold shadow-sm";
       }
-      else if (item.calvingDate && daysOpen > 150 && !hasIbAfterCalving) { res.statusLabel = "AWAS: SUSPECT PYOMETRA"; res.color = "rose"; res.isUrgent = true; res.advice = `Kosong > 5 bulan. Waspada penumpukan nanah rahim.`; res.adviceColor = "text-rose-800 bg-rose-50 border border-rose-200 font-bold shadow-sm"; } 
-      else if (item.calvingDate && daysOpen > 120) { res.statusLabel = "AWAS: KOSONG > 120 HARI"; res.color = "rose"; res.isUrgent = true; res.advice = `Kosong ${daysOpen} hari pasca melahirkan.`; res.adviceColor = "text-rose-800 bg-rose-50 border border-rose-200 font-bold shadow-sm"; } 
-      else { res.statusLabel = "SIAP IB"; res.color = "amber"; res.advice = "Fase Kosong. Pantau tanda 3A (Abang, Abuh, Anget)."; }
+      else if (item.calvingDate && daysOpen > 150 && !hasIbAfterCalving) { res.statusLabel = "AWAS: SUSPECT PYOMETRA"; res.color = "rose"; res.isUrgent = true; res.needsVet = true; res.advice = `Sapi kosong selama ${daysOpen} hari pasca melahirkan tanpa pernah menerima IB. Ini baru indikasi awal (suspect), kemungkinan Pyometra (penumpukan nanah dalam rahim akibat korpus luteum persisten) atau Anestrus berkepanjangan — bukan diagnosa pasti. Wajib laporkan ke petugas/dokter hewan untuk pemeriksaan rahim dan ovarium secara mendalam.`; res.adviceColor = "text-rose-800 bg-rose-50 border border-rose-200 font-bold shadow-sm"; }
+      else if (item.calvingDate && daysOpen > 120) { res.statusLabel = "AWAS: KOSONG > 120 HARI"; res.color = "rose"; res.isUrgent = true; res.advice = `Sapi kosong selama ${daysOpen} hari pasca melahirkan. Idealnya jarak antar kelahiran (calving interval) tidak lebih dari 12-13 bulan. Segera laporkan ke petugas untuk evaluasi status nutrisi, kondisi tubuh, dan fungsi ovarium sapi secara mendalam.`; res.adviceColor = "text-rose-800 bg-rose-50 border border-rose-200 font-bold shadow-sm"; }
+      else if (item.calvingDate && daysOpen > 60 && !hasIbAfterCalving) { res.statusLabel = "WASPADA: BIRAHI TERTUNDA"; res.color = "orange"; res.isUrgent = true; res.advice = `Sudah ${daysOpen} hari pasca melahirkan namun belum ada IB tercatat. Sapi normal menunjukkan birahi kembali dalam 3-6 minggu (21-42 hari) setelah melahirkan (Noakes et al., 2019). Kemungkinan penyebab (belum pasti, perlu pemeriksaan petugas): (1) Anestrus Postpartum — ovarium belum aktif kembali, atau (2) Birahi Senyap (Silent Heat) — ovarium sebenarnya sudah berovulasi normal namun tanda birahi belum teramati. Tetap amati pagi dan sore, namun segera laporkan ke petugas agar dilakukan pemeriksaan ovarium lebih lanjut untuk memastikan kondisi sebenarnya.`; res.adviceColor = "text-orange-900 bg-orange-50 border border-orange-200 font-bold shadow-sm"; }
+      else { res.statusLabel = "SIAP IB"; res.color = "amber"; res.advice = "Fase kosong, sapi siap menerima IB. Amati tanda birahi (3A: Abang, Abuh, Anget) disertai kegelisahan dan kecenderungan menaiki sapi lain. Lakukan IB tepat saat sapi menunjukkan birahi aktif."; }
     } 
     else if (phase === "BRED") {
-      if (cycles >= 3) { res.color = "rose"; res.statusLabel = "REPEAT BREEDER"; res.isUrgent = true; res.advice = `Gagal pada ${cycles} siklus. Butuh terapi medis.`; res.adviceColor = "text-rose-800 bg-rose-50 border border-rose-200 font-bold shadow-sm"; } 
-      else if (diffPrevLast > 0 && diffPrevLast < 15) { res.color = "rose"; res.statusLabel = "⚠️ SUSPECT SISTA OVARIUM"; res.isUrgent = true; res.advice = `PERINGATAN MEDIS: Jarak antar IB sangat tidak normal (< 15 hari). Terdeteksi indikasi gangguan siklus birahi (Suspect Sista Ovarium).`; res.adviceColor = "text-rose-800 bg-rose-50 border border-rose-200 font-bold shadow-sm"; } 
-      else if (daysSinceLastIB < 60) { res.color = "slate"; res.statusLabel = "SUSPECT BUNTING"; res.advice = `H+${daysSinceLastIB} pasca IB. Jangan dirogoh manual!`; } 
-      else { res.color = "orange"; res.statusLabel = "WAKTUNYA PKB"; res.isUrgent = true; res.advice = `JADWAL PKB! Lapor hasil via menu Reproduksi.`; res.adviceColor = "text-orange-900 bg-orange-50 border border-orange-200 font-bold shadow-sm"; }
+      if (cycles >= 4) { res.color = "rose"; res.statusLabel = "REPEAT BREEDER"; res.isUrgent = true; res.needsVet = true; res.advice = `Sapi telah menjalani ${cycles - 1} kali IB dengan siklus birahi normal (jarak 18-24 hari) namun gagal bunting, dan kini memasuki IB ke-${cycles}. Status sementara: Repeat Breeder. Kemungkinan penyebab (belum pasti): gangguan ovarium, endometritis subklinis, ketidaktepatan waktu IB, atau kualitas semen/teknik IB — penyebab sebenarnya hanya bisa dipastikan lewat pemeriksaan. Wajib laporkan ke petugas/dokter hewan untuk pemeriksaan mendalam sebelum IB berikutnya.`; res.adviceColor = "text-rose-800 bg-rose-50 border border-rose-200 font-bold shadow-sm"; }
+      else if (suspectSistaGap > 0) { res.color = "rose"; res.statusLabel = "⚠️ SUSPECT SISTA FOLIKULER (NYMPHOMANIA)"; res.isUrgent = true; res.needsVet = true; res.advice = `Ditemukan jarak antar IB hanya ${suspectSistaGap} hari, padahal siklus birahi normal sapi adalah 18-24 hari. Pola birahi yang terlalu sering dan pendek seperti ini diduga mengarah pada Sista Folikuler (Nymphomania) — namun ini baru indikasi awal, bukan diagnosa pasti. Wajib laporkan ke petugas/dokter hewan untuk pemeriksaan per-rektal/USG ovarium secara mendalam.`; res.adviceColor = "text-rose-800 bg-rose-50 border border-rose-200 font-bold shadow-sm"; }
+      else if (daysSinceLastIB < 60) {
+        const sisaHariPkb = 60 - daysSinceLastIB;
+        res.color = "slate"; res.statusLabel = "SUSPECT BUNTING";
+        if (daysSinceLastIB < 18) {
+          res.advice = `Hari ke-${daysSinceLastIB} pasca IB. Pantau kemungkinan birahi kembali pada hari ke-18 sampai ke-24 (siklus birahi normal). Jika sapi tidak menunjukkan birahi pada periode tersebut, kemungkinan bunting cukup besar. Pemeriksaan kebuntingan (PKB) hanya boleh dilakukan oleh petugas/dokter hewan yang berkompeten — jangan diperiksa sendiri.`;
+        } else {
+          res.advice = `Hari ke-${daysSinceLastIB} pasca IB. Sapi tidak menunjukkan birahi kembali, indikasi bunting cukup baik. Pemeriksaan Kebuntingan (PKB) oleh petugas/dokter hewan dapat dilakukan mulai hari ke-60. Tersisa ${sisaHariPkb} hari menuju jadwal PKB.`;
+        }
+      }
+      else { res.color = "orange"; res.statusLabel = "WAKTUNYA PKB"; res.isUrgent = true; res.advice = `Hari ke-${daysSinceLastIB} pasca IB. Jadwal Pemeriksaan Kebuntingan (PKB) telah tiba. Segera hubungi petugas/dokter hewan untuk melakukan PKB (hanya boleh dilakukan oleh tenaga terlatih), lalu laporkan hasilnya melalui menu Reproduksi.`; res.adviceColor = "text-orange-900 bg-orange-50 border border-orange-200 font-bold shadow-sm"; }
     } 
     else if (phase === "PREGNANT") {
-      if (!item.conceptionDate) { 
-         res.color = "orange"; res.statusLabel = "BUNTING (BELUM PKB)"; res.isUrgent = true; 
-         res.advice = (item.asal_usul_sapi || item.origin) === 'PASAR' ? `Sapi bunting pasar. Wajib lapor hasil PKB Dokter.` : `Sapi bunting kandang. Wajib lapor hasil PKB Dokter.`; 
-         res.adviceColor = "text-orange-900 bg-orange-50 border border-orange-200 font-semibold shadow-sm"; 
-      } 
+      if (!item.conceptionDate) {
+         res.color = "orange"; res.statusLabel = "BUNTING (BELUM PKB)"; res.isUrgent = true;
+         res.advice = (item.asal_usul_sapi || item.origin) === 'PASAR' ? `Sapi diduga bunting (asal pengadaan pasar) — belum dikonfirmasi. Segera minta petugas/dokter hewan melakukan Pemeriksaan Kebuntingan (PKB) untuk konfirmasi dan estimasi usia kebuntingan.` : `Sapi diduga bunting (hasil breeding kandang sendiri) — belum dikonfirmasi. Segera minta petugas/dokter hewan melakukan Pemeriksaan Kebuntingan (PKB) untuk konfirmasi.`;
+         res.adviceColor = "text-orange-900 bg-orange-50 border border-orange-200 font-semibold shadow-sm";
+      }
       else {
-         const hpl = new Date(item.conceptionDate); 
-         if (isNaN(hpl.getTime())) throw new Error("Invalid date"); 
+         const hpl = new Date(item.conceptionDate);
+         if (isNaN(hpl.getTime())) throw new Error("Invalid date");
          hpl.setMonth(hpl.getMonth() + 9); hpl.setDate(hpl.getDate() + 10);
          const l = Math.ceil((hpl - today) / 86400000); const pregDays = daysDiff(item.conceptionDate);
-         let txtHPL = `HPL: ${fmtDate(hpl.toISOString().split("T")[0])} (±${l} hr).`;
+         let txtHPL = `Perkiraan tanggal lahir: ${fmtDate(hpl.toISOString().split("T")[0])} (±${l} hari).`;
 
          let nutrisi = "";
-         if (pregDays <= 94) nutrisi = "Nutrisi Trim 1: Fokus hijauan kualitas tinggi & mineral mix. Jaga kondisi tubuh, hindari pakan berjamur.";
-         else if (pregDays <= 189) nutrisi = "Nutrisi Trim 2: Tambah konsentrat energi. Suplemen Kalsium (Ca) & Fosfor (P) sangat penting untuk tulang janin.";
-         else nutrisi = "Nutrisi Trim 3: Fase krusial! Berikan pakan penguat. Kering-kandangkan sapi jika masih diperah.";
+         if (pregDays <= 94) nutrisi = "Nutrisi Trimester 1: Fokus pemberian hijauan berkualitas tinggi dan mineral mix. Jaga kondisi tubuh ideal, hindari pakan berjamur.";
+         else if (pregDays <= 189) nutrisi = "Nutrisi Trimester 2: Tambahkan konsentrat berenergi tinggi. Suplementasi Kalsium (Ca) dan Fosfor (P) penting untuk pertumbuhan tulang janin.";
+         else nutrisi = "Nutrisi Trimester 3: Fase krusial pertumbuhan janin. Berikan pakan penguat dan lakukan kering kandang bila sapi masih diperah.";
 
-         if (pregDays >= 285) { res.color = "rose"; res.statusLabel = "ANCAMAN DISTOKIA"; res.isUrgent = true; res.advice = `KANDUNGAN TUA! Siagakan tenaga medis. ${nutrisi}`; res.adviceColor = "text-rose-900 bg-rose-50 border border-rose-200 font-bold shadow-sm"; } 
-         else if (l <= 60 && l > 21) { res.color = "amber"; res.statusLabel = "KERING KANDANG"; res.isUrgent = true; res.advice = `${txtHPL} Segera hentikan perah susu! ${nutrisi}`; res.adviceColor = "text-amber-900 bg-amber-50 border border-amber-200 font-semibold shadow-sm"; } 
+         if (pregDays >= 285) { res.color = "rose"; res.statusLabel = "ANCAMAN DISTOKIA"; res.isUrgent = true; res.advice = `Usia kebuntingan sudah lanjut (hari ke-${pregDays}), mendekati waktu kelahiran. Siapkan kontak tenaga medis untuk antisipasi kesulitan melahirkan (distokia). ${nutrisi}`; res.adviceColor = "text-rose-900 bg-rose-50 border border-rose-200 font-bold shadow-sm"; }
+         else if (l <= 60 && l > 21) { res.color = "amber"; res.statusLabel = "KERING KANDANG"; res.isUrgent = true; res.advice = `${txtHPL} Hentikan pemerahan susu segera (kering kandang) agar kelenjar susu pulih sebelum melahirkan. ${nutrisi}`; res.adviceColor = "text-amber-900 bg-amber-50 border border-amber-200 font-semibold shadow-sm"; }
          else { res.color = "emerald"; res.statusLabel = "BUNTING AKTIF"; res.advice = `${txtHPL} ${nutrisi}`; }
       }
     } 
     else if (phase === "POSTPARTUM") {
       const d = daysDiff(item.calvingDate);
-      if (d <= 14) { res.statusLabel = "PUERPERIUM (NIFAS)"; res.color = "rose"; res.isUrgent = true; res.advice = `Waspada Lokia bau busuk / Retensio Secundinarum.`; res.adviceColor = "text-rose-900 bg-rose-50 border border-rose-200 font-semibold shadow-sm"; } 
-      else if (d <= 45) { res.statusLabel = "INVOLUSI UTERUS"; res.color = "blue"; res.advice = `Rahim sedang pemulihan. DILARANG suntik IB.`; } 
-      else { res.statusLabel = "BREEDING WINDOW"; res.color = "emerald"; res.advice = `Sapi siap di-IB kembali.`; }
+      if (d <= 21) { res.statusLabel = "PUERPERIUM (NIFAS)"; res.color = "rose"; res.isUrgent = true; res.advice = `Hari ke-${d} pasca melahirkan. Masa nifas normal berlangsung 2-3 minggu. Amati tanda bahaya berikut dan segera laporkan ke petugas/dokter hewan bila ditemukan — bukan untuk didiagnosa sendiri: (1) Lokia berbau busuk (kemungkinan Metritis/Endometritis); (2) Plasenta belum lepas lebih dari 24 jam (kemungkinan Retensio Plasenta); (3) Demam tinggi atau nafsu makan menurun. Diagnosa pasti memerlukan pemeriksaan oleh petugas.`; res.adviceColor = "text-rose-900 bg-rose-50 border border-rose-200 font-semibold shadow-sm"; }
+      else if (d <= 45) { res.statusLabel = "INVOLUSI UTERUS"; res.color = "blue"; res.advice = `Hari ke-${d} pasca melahirkan. Rahim sedang dalam proses involusi (pemulihan), berlangsung sekitar 4-6 minggu. IB tidak boleh dilakukan pada periode ini. Amati tanda birahi pertama — sapi normal kembali birahi 3-6 minggu setelah melahirkan.`; }
+      else { res.statusLabel = "BREEDING WINDOW"; res.color = "emerald"; res.advice = `Hari ke-${d} pasca melahirkan. Sapi telah siap menerima IB kembali. Lakukan IB segera saat tanda birahi muncul (3A: Abang, Abuh, Anget). Jangan menunda agar calving interval tetap ideal (12-13 bulan).`; }
     }
     return res;
   } catch (error) {
@@ -298,18 +310,18 @@ function buildHistory(item) {
 
       if (prevIbDate) {
          const diff = Math.floor((new Date(d) - new Date(prevIbDate)) / 86400000);
-         if (diff > 0 && diff < 15) {
-             isSuspect = true; 
+         if (diff > 0 && diff < 18) {
+             isSuspect = true;
          }
       }
       prevIbDate = d;
 
-      history.push({ 
-        type: 'ibLog', originalIndex: i, date: d, 
-        label: `Inseminasi Buatan (IB) ke-${i + 1} ${isSuspect ? "⚠️ (SUSPECT)" : ""}`, 
-        desc: isSuspect 
-          ? "PERINGATAN MEDIS: Jarak antar IB sangat tidak normal (< 15 hari). Terdeteksi indikasi gangguan siklus birahi (Suspect Sista Ovarium)." 
-          : "Tindakan memasukkan semen beku ke dalam saluran reproduksi. Pantau birahi kembali dalam 18-21 hari ke depan.", 
+      history.push({
+        type: 'ibLog', originalIndex: i, date: d,
+        label: `Inseminasi Buatan (IB) ke-${i + 1} ${isSuspect ? "⚠️ (SUSPECT)" : ""}`,
+        desc: isSuspect
+          ? "Jarak antar IB kurang dari 18 hari, padahal siklus birahi normal sapi 18-24 hari. Pola ini diduga mengarah pada Sista Folikuler (Nymphomania), namun ini baru indikasi awal — perlu pemeriksaan mendalam oleh petugas/dokter hewan untuk konfirmasi."
+          : "Tindakan memasukkan semen beku ke dalam saluran reproduksi sapi. Amati kemungkinan birahi kembali dalam 18-24 hari ke depan.",
         colorDot: isSuspect ? "bg-orange-600" : "bg-blue-500", 
         rawDate: new Date(d) 
       }); 
@@ -317,9 +329,9 @@ function buildHistory(item) {
 
     (item.pkbLog || []).forEach((log, i) => history.push({ 
       type: 'pkbLog', originalIndex: i, date: log.date, label: `Pemeriksaan Kebuntingan (PKB)`, 
-      desc: log.result === "POSITIVE" 
-        ? "HASIL POSITIF. Jaga asupan nutrisi protein dan energi untuk pertumbuhan janin yang optimal." 
-        : "HASIL NEGATIF. Sapi tidak bunting, segera lakukan evaluasi pakan dan hormon oleh petugas.", 
+      desc: log.result === "POSITIVE"
+        ? "Hasil positif (bunting). Pertahankan asupan nutrisi protein dan energi untuk mendukung pertumbuhan janin secara optimal."
+        : "Hasil negatif (tidak bunting). Segera laporkan ke petugas/dokter hewan untuk evaluasi pakan dan kondisi hormonal sapi secara mendalam.",
       colorDot: log.result === "POSITIVE" ? "bg-emerald-500" : "bg-rose-500", rawDate: new Date(log.date) 
     })); 
 
@@ -342,14 +354,14 @@ function buildHistory(item) {
     }));
 
     (item.healthLog || []).forEach((l, i) => {
-      history.push({ type: 'healthLog', date: l.date, label: "Panggilan Medis (Lapor Gejala)", desc: `Keluhan: ${l.gejala}`, colorDot: "bg-orange-400", rawDate: new Date(l.date) });
-      
+      history.push({ type: 'healthLog', originalIndex: i, date: l.date, label: "Panggilan Medis (Lapor Gejala)", desc: `Keluhan: ${l.gejala}`, colorDot: "bg-orange-400", rawDate: new Date(l.date) });
+
       if (l.diagnosa) {
-          history.push({ type: 'healthLog', date: l.tanggalDiperiksa || l.date, label: "Hasil Pemeriksaan Dokter", desc: `Diagnosa: ${l.diagnosa}. Tindakan Medis: ${l.tindakan}`, colorDot: "bg-rose-500", rawDate: new Date(l.tanggalDiperiksa || l.date) });
+          history.push({ type: 'healthLog', originalIndex: i, date: l.tanggalDiperiksa || l.date, label: "Hasil Pemeriksaan Dokter", desc: `Diagnosa: ${l.diagnosa}. Tindakan Medis: ${l.tindakan}`, colorDot: "bg-rose-500", rawDate: new Date(l.tanggalDiperiksa || l.date) });
       }
 
       if (l.status === "SEMBUH" && l.tanggalSembuh) {
-          history.push({ type: 'healthLog', date: l.tanggalSembuh, label: "Konfirmasi Kesembuhan", desc: `Sapi dinyatakan sembuh total dari penyakit (${l.diagnosa || l.gejala}).`, colorDot: "bg-emerald-500", rawDate: new Date(l.tanggalSembuh) });
+          history.push({ type: 'healthLog', originalIndex: i, date: l.tanggalSembuh, label: "Konfirmasi Kesembuhan", desc: `Sapi dinyatakan sembuh total dari penyakit (${l.diagnosa || l.gejala}).`, colorDot: "bg-emerald-500", rawDate: new Date(l.tanggalSembuh) });
       }
     });
 
@@ -375,7 +387,7 @@ function buildHistory(item) {
   } catch(e) { return []; }
 }
 
-function AdviceCard({ item, analysis, onClick }) {
+function AdviceCard({ item, analysis, onClick, ownerName }) {
   if (!item || !analysis) return null;
 
   const history = buildHistory(item);
@@ -383,14 +395,16 @@ function AdviceCard({ item, analysis, onClick }) {
 
   const mainText = latestLog ? latestLog.desc : analysis.advice;
   const titleText = latestLog ? latestLog.label : analysis.statusLabel;
-  
-  const colorBg = latestLog && latestLog.colorDot 
+
+  const colorBg = latestLog && latestLog.colorDot
     ? latestLog.colorDot.replace('500', '100').replace('600', '100').replace('400', '100')
     : (COLOR[analysis.color] ? COLOR[analysis.color].bg : "bg-slate-100");
-    
+
   const icon = analysis.isUrgent ? '⚠️' : '💡';
 
   if (!mainText || mainText.trim() === '') return null;
+
+  const waLink = `https://wa.me/6281555863186?text=${encodeURIComponent(`Halo Petugas, saya ${ownerName || "Peternak"}. Tolong periksa sapi saya (Kode: ${item.code || item.id}). Kasus: ${analysis.statusLabel} - Butuh Penanganan Darurat.`)}`;
 
   return (
     <div onClick={() => onClick(item)} className="bg-white p-4 rounded-2xl shadow-sm flex items-start gap-3 cursor-pointer hover:bg-slate-50/70 transition-colors border border-slate-100 hover:border-slate-200">
@@ -402,19 +416,32 @@ function AdviceCard({ item, analysis, onClick }) {
            <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Sapi {item.code || item.id || "N/A"}</p>
            {analysis.isUrgent && <span className="flex h-2.5 w-2.5 relative"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span><span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-rose-500"></span></span>}
         </div>
-        
+
         <h4 className="font-black text-sm text-slate-800 mb-1 leading-snug">
           {titleText.replace(/⚠️|🚨|💡|✅/g, '').trim()}
         </h4>
         <p className="text-xs font-medium text-slate-600 leading-relaxed">
           {mainText}
         </p>
-        
-        <div className="mt-3 flex items-center gap-1.5 border-t border-slate-100 pt-2">
-           <div className={`w-2 h-2 rounded-full ${latestLog ? latestLog.colorDot : 'bg-slate-300'}`}></div>
-           <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
-             {latestLog ? `Status Terkini • ${fmtDate(latestLog.date)}` : 'Saran Otomatis Sistem'}
-           </p>
+
+        <div className="mt-3 flex items-center justify-between gap-2 border-t border-slate-100 pt-2">
+           <div className="flex items-center gap-1.5 min-w-0">
+             <div className={`w-2 h-2 rounded-full shrink-0 ${latestLog ? latestLog.colorDot : 'bg-slate-300'}`}></div>
+             <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest truncate">
+               {latestLog ? `Status Terkini • ${fmtDate(latestLog.date)}` : 'Saran Otomatis Sistem'}
+             </p>
+           </div>
+           {analysis.needsVet && (
+             <a
+               href={waLink}
+               target="_blank"
+               rel="noopener noreferrer"
+               onClick={(e) => e.stopPropagation()}
+               className="flex items-center gap-1 bg-[#25D366] text-white text-[9px] font-bold px-2.5 py-1.5 rounded-full shrink-0 hover:bg-[#1ea952] transition-colors shadow-sm"
+             >
+               📞 Petugas
+             </a>
+           )}
         </div>
       </div>
     </div>
@@ -445,9 +472,8 @@ function SmartEstrusCalendar({ item }) {
   let targetBlocks = []; // Format baru: Array of Blocks { start, end, bg, text, label }
   let title = "Kalender Pintar"; 
   let subtitle = "Pemantauan Siklus";
-  let anchorColorClass = "bg-slate-500"; 
-  let legendTargetColor = "bg-emerald-500"; // Default
-  
+  let anchorColorClass = "bg-slate-500";
+
   let displayMonthDate = new Date(today);
   displayMonthDate.setDate(1); 
   
@@ -464,17 +490,16 @@ function SmartEstrusCalendar({ item }) {
       // Blok Masa Pantau 1 (H+19 s/d H+22)
       const t1Start = new Date(anchor); t1Start.setDate(t1Start.getDate() + 19);
       const t1End = new Date(anchor); t1End.setDate(t1End.getDate() + 22);
-      targetBlocks.push({ start: t1Start, end: t1End, bg: "bg-orange-500 shadow-md", text: "text-white font-black", label: "Masa Evaluasi Birahi (Siklus 1). Pantau vulva!" });
+      targetBlocks.push({ start: t1Start, end: t1End, bg: "bg-amber-500", text: "text-white font-bold", label: "Masa Evaluasi Birahi (Siklus 1). Pantau vulva!" });
 
       // Blok Masa Pantau 2 (H+40 s/d H+43)
       const t2Start = new Date(anchor); t2Start.setDate(t2Start.getDate() + 40);
       const t2End = new Date(anchor); t2End.setDate(t2End.getDate() + 43);
-      targetBlocks.push({ start: t2Start, end: t2End, bg: "bg-orange-400 shadow-sm", text: "text-white font-bold", label: "Masa Evaluasi Birahi (Siklus 2)" });
+      targetBlocks.push({ start: t2Start, end: t2End, bg: "bg-amber-200", text: "text-amber-900 font-bold", label: "Masa Evaluasi Birahi (Siklus 2)" });
 
       title = "Evaluasi IB"; subtitle = "Masa Pantau Birahi";
       anchorColorClass = "bg-blue-500"; // Sinkron dengan warna IB di Kronologis
-      legendTargetColor = "bg-orange-500"; 
-      displayMonthDate = new Date(anchor); 
+      displayMonthDate = new Date(anchor);
       displayMonthDate.setDate(1);
     }
   } 
@@ -488,11 +513,10 @@ function SmartEstrusCalendar({ item }) {
       // Range HPL: 7 Hari (H-3 sampai H+3)
       const hplStart = new Date(hplDate); hplStart.setDate(hplStart.getDate() - 3);
       const hplEnd = new Date(hplDate); hplEnd.setDate(hplEnd.getDate() + 3);
-      targetBlocks.push({ start: hplStart, end: hplEnd, bg: "bg-violet-600 animate-pulse shadow-lg shadow-violet-500/30", text: "text-white font-black", label: "RANGE HPL (Perkiraan Lahir). Siapkan Kandang!" });
+      targetBlocks.push({ start: hplStart, end: hplEnd, bg: "bg-violet-500", text: "text-white font-bold", label: "RANGE HPL (Perkiraan Lahir). Siapkan Kandang!" });
 
       title = "Kebuntingan"; subtitle = "Pantauan Trimester & HPL";
-      anchorColorClass = "bg-blue-500"; 
-      legendTargetColor = "bg-violet-600";
+      anchorColorClass = "bg-blue-500";
     } else {
       title = "Kebuntingan"; subtitle = "Belum PKB Presisi";
     }
@@ -504,11 +528,10 @@ function SmartEstrusCalendar({ item }) {
       const kawinStart = new Date(anchor); kawinStart.setDate(kawinStart.getDate() + 540);
       const kawinEnd = new Date(kawinStart); kawinEnd.setDate(kawinEnd.getDate() + 7); // Range 1 minggu
       
-      targetBlocks.push({ start: kawinStart, end: kawinEnd, bg: "bg-emerald-500 shadow-md", text: "text-white font-bold", label: "Fase Awal Dara Siap Kawin (Usia 18 Bulan)" });
+      targetBlocks.push({ start: kawinStart, end: kawinEnd, bg: "bg-emerald-500", text: "text-white font-bold", label: "Fase Awal Dara Siap Kawin (Usia 18 Bulan)" });
       
       title = "Pertumbuhan"; subtitle = "Target Siap Kawin";
-      anchorColorClass = "bg-slate-300"; 
-      legendTargetColor = "bg-emerald-500";
+      anchorColorClass = "bg-slate-300";
       const diffKawin = Math.floor((kawinStart - today)/86400000);
       displayMonthDate = diffKawin <= 90 ? new Date(kawinStart) : new Date(today);
       displayMonthDate.setDate(1);
@@ -552,52 +575,110 @@ function SmartEstrusCalendar({ item }) {
       const nextCycleStart = new Date(anchor); nextCycleStart.setDate(nextCycleStart.getDate() + (cycles * 21) - 1);
       const nextCycleEnd = new Date(nextCycleStart); nextCycleEnd.setDate(nextCycleEnd.getDate() + 2); // 3 Hari Range
       
-      targetBlocks.push({ start: nextCycleStart, end: nextCycleEnd, bg: "bg-emerald-500 shadow-md", text: "text-white font-bold", label: "Prediksi Masa Subur (Siklus Birahi)" });
+      targetBlocks.push({ start: nextCycleStart, end: nextCycleEnd, bg: "bg-emerald-500", text: "text-white font-bold", label: "Prediksi Masa Subur (Siklus Birahi)" });
       
       title = "Siklus Birahi"; subtitle = "Saran Jadwal IB Optimal";
-      legendTargetColor = "bg-emerald-500";
     } else {
       title = "Fase Kosong"; subtitle = "Pantau Birahi";
     }
   }
 
-  // Fungsi untuk mengekstrak info hari saat di klik
+  // 2. RINGKASAN TANGGAL PENTING (teks, agar informasi tetap jelas tanpa harus memindai kalender)
+  let summaryItems = []; // { icon, label, dateText, dot, desc }
+  if (isPregnant && conceptionDate && hplDate) {
+    const t1End = new Date(conceptionDate); t1End.setDate(t1End.getDate() + 94);
+    const t2Start = new Date(t1End); t2Start.setDate(t2Start.getDate() + 1);
+    const t2End = new Date(conceptionDate); t2End.setDate(t2End.getDate() + 189);
+    const t3Start = new Date(t2End); t3Start.setDate(t3Start.getDate() + 1);
+    summaryItems.push({ icon: "💉", label: "Tanggal Konsepsi (IB Berhasil)", dateText: fmtDate(conceptionDate.toISOString().split("T")[0]), dot: "bg-blue-500", desc: "Tanggal pembuahan yang dipakai sebagai dasar perhitungan usia kebuntingan dan perkiraan tanggal lahir (HPL)." });
+    summaryItems.push({ icon: "🌱", label: "Trimester 1", dateText: `${fmtDate(conceptionDate.toISOString().split("T")[0])} – ${fmtDate(t1End.toISOString().split("T")[0])}`, dot: "bg-blue-300", desc: "Hari ke-0 s/d ke-94 kebuntingan. Fokus hijauan berkualitas dan jaga kondisi tubuh." });
+    summaryItems.push({ icon: "🌿", label: "Trimester 2", dateText: `${fmtDate(t2Start.toISOString().split("T")[0])} – ${fmtDate(t2End.toISOString().split("T")[0])}`, dot: "bg-amber-300", desc: "Hari ke-95 s/d ke-189 kebuntingan. Tambahkan konsentrat dan suplemen Kalsium/Fosfor untuk tulang janin." });
+    summaryItems.push({ icon: "🌾", label: "Trimester 3", dateText: `${fmtDate(t3Start.toISOString().split("T")[0])} – ${fmtDate(hplDate.toISOString().split("T")[0])}`, dot: "bg-rose-300", desc: "Hari ke-190 hingga perkiraan lahir. Fase krusial — siapkan pakan penguat dan rencana kering kandang." });
+    summaryItems.push({ icon: "👶", label: "Perkiraan Lahir (HPL)", dateText: fmtDate(hplDate.toISOString().split("T")[0]), dot: "bg-violet-600", desc: "Estimasi tanggal kelahiran (kebuntingan normal ±283 hari). Siapkan kandang beranak menjelang tanggal ini." });
+  } else {
+    if (anchor) {
+      let anchorLabel = "Kejadian Terakhir";
+      let anchorDesc = "Tanggal tindakan/peristiwa terakhir yang tercatat untuk sapi ini — dipakai sistem sebagai acuan menghitung prediksi siklus berikutnya.";
+      if (phase === "CALF") { anchorLabel = "Tanggal Lahir"; anchorDesc = "Tanggal lahir sapi, dipakai untuk menghitung target usia siap kawin (18-24 bulan)."; }
+      else if (phase === "ABORTUS_PENDING") { anchorLabel = "Tanggal Keguguran"; anchorDesc = "Tanggal sapi mengalami keguguran (abortus). Status darurat, menunggu penanganan petugas medis."; }
+      else if (phase === "BRED") { anchorDesc = "Tanggal Inseminasi Buatan (IB) terakhir yang tercatat — acuan menghitung jadwal evaluasi birahi berikutnya."; }
+      else if (phase === "POSTPARTUM" || phase === "OPEN") { anchorDesc = "Tanggal kejadian terakhir (bisa berupa melahirkan, IB, hasil PKB negatif, atau terapi medis) — acuan memprediksi jadwal birahi berikutnya."; }
+      summaryItems.push({
+        icon: phase === "ABORTUS_PENDING" ? "🚨" : phase === "CALF" ? "🐄" : "📌",
+        label: anchorLabel,
+        dateText: fmtDate(anchor.toISOString().split("T")[0]),
+        dot: anchorColorClass.split(' ')[0],
+        desc: anchorDesc
+      });
+    }
+    targetBlocks.forEach(b => {
+      const cleanLabel = b.label.split('.')[0].trim();
+      let desc = "Rentang tanggal penting yang diprediksi sistem berdasarkan siklus reproduksi sapi.";
+      if (cleanLabel.includes("Siklus 1")) desc = "Jendela hari ke-19 s/d ke-22 pasca IB. Jika sapi TIDAK menunjukkan birahi di periode ini, kemungkinan besar bunting. Jika BIRAHI muncul kembali, berarti IB sebelumnya gagal — perlu IB ulang.";
+      else if (cleanLabel.includes("Siklus 2")) desc = "Jendela hari ke-40 s/d ke-43 pasca IB (siklus birahi kedua). Pemantauan tambahan untuk memastikan kebuntingan benar-benar terjadi.";
+      else if (cleanLabel.includes("RANGE HPL")) desc = "Rentang ±3 hari dari perkiraan tanggal lahir. Siapkan kandang beranak dan amati tanda-tanda akan melahirkan.";
+      else if (cleanLabel.includes("Prediksi Masa Subur")) desc = "Perkiraan jendela waktu sapi akan menunjukkan birahi kembali (siklus normal 18-24 hari). Amati tanda birahi pada periode ini untuk menentukan waktu IB yang tepat.";
+      else if (cleanLabel.includes("Dara Siap Kawin")) desc = "Target usia ideal sapi dara untuk menerima IB pertama kali (18-24 bulan).";
+      summaryItems.push({
+        icon: "🎯",
+        label: cleanLabel,
+        dateText: `${fmtDate(b.start.toISOString().split("T")[0])} – ${fmtDate(b.end.toISOString().split("T")[0])}`,
+        dot: b.bg.split(' ')[0],
+        desc
+      });
+    });
+  }
+
+  // 3. KARTU COUNTDOWN — event terdekat yang paling relevan, ditampilkan paling atas
+  let keyEvent = null;
+  if (targetBlocks.length > 0) {
+    const upcoming = targetBlocks.filter(b => b.end >= today).sort((a, b) => a.start - b.start);
+    const chosen = upcoming.length > 0 ? upcoming[0] : targetBlocks[targetBlocks.length - 1];
+    const isOngoing = today >= chosen.start && today <= chosen.end;
+    const isPast = chosen.end < today;
+    const daysUntilStart = Math.floor((chosen.start - today) / 86400000);
+    keyEvent = { block: chosen, isOngoing, isPast, daysUntilStart };
+  }
+
+  const phaseIcon = phase === "BRED" ? "🔍" : phase === "PREGNANT" ? "🤰" : phase === "CALF" ? "🐄" : phase === "ABORTUS_PENDING" ? "🚨" : "🔄";
+
+  // Fungsi untuk mengekstrak info hari saat diklik
   const getDayInfo = (date) => {
-    let info = { bg: "text-slate-600 hover:bg-slate-50 rounded-md", text: "font-medium text-[10.5px]", border: "", label: "" };
+    let info = { bg: "text-slate-500 hover:bg-slate-100 rounded-md", text: "font-semibold text-[11px]", border: "", label: "" };
     const isAnchor = anchor && date.getTime() === anchor.getTime();
     const isToday = date.getTime() === today.getTime();
-    
+
     // Trimester Check (Base layer)
     if (isPregnant && conceptionDate && hplDate && date >= conceptionDate && date <= hplDate) {
        const daysPreg = Math.floor((date - conceptionDate) / 86400000);
-       if (daysPreg <= 94) { info.bg = "bg-blue-50 text-blue-700 rounded-md"; info.text = "font-bold text-[10.5px]"; info.label = "Masa Kebuntingan Trimester 1"; } 
-       else if (daysPreg <= 189) { info.bg = "bg-amber-50 text-amber-700 rounded-md"; info.text = "font-bold text-[10.5px]"; info.label = "Masa Kebuntingan Trimester 2"; } 
-       else { info.bg = "bg-rose-50 text-rose-700 rounded-md"; info.text = "font-bold text-[10.5px]"; info.label = "Masa Kebuntingan Trimester 3"; } 
+       if (daysPreg <= 94) { info.bg = "bg-blue-100 text-blue-700 rounded-md"; info.text = "font-bold text-[11px]"; info.label = "Masa Kebuntingan Trimester 1"; }
+       else if (daysPreg <= 189) { info.bg = "bg-amber-100 text-amber-700 rounded-md"; info.text = "font-bold text-[11px]"; info.label = "Masa Kebuntingan Trimester 2"; }
+       else { info.bg = "bg-rose-100 text-rose-700 rounded-md"; info.text = "font-bold text-[11px]"; info.label = "Masa Kebuntingan Trimester 3"; }
     }
 
     // Target Block Check (Menimpa trimester)
     for (let block of targetBlocks) {
       if (date >= block.start && date <= block.end) {
          info.bg = block.bg + " rounded-md";
-         info.text = block.text + " text-[10.5px]";
+         info.text = block.text + " text-[11px]";
          info.label = block.label;
       }
     }
 
     // Anchor Check (Menimpa target)
     if (isAnchor) {
-       info.bg = anchorColorClass.includes("slate-300") ? `${anchorColorClass} text-slate-800 shadow-sm rounded-md` : `${anchorColorClass} text-white shadow-sm rounded-md`; 
-       info.text = "font-bold text-[10.5px]";
+       info.bg = anchorColorClass.includes("slate-300") ? `${anchorColorClass} text-slate-800 rounded-md` : `${anchorColorClass} text-white rounded-md`;
+       info.text = "font-bold text-[11px]";
        info.label = "Tanggal Kejadian / Tindakan Terakhir";
     }
-    
+
     if (isToday && !info.label) {
        info.label = "Hari Ini";
     }
 
     if (isToday && !isAnchor && !targetBlocks.some(b => date >= b.start && date <= b.end)) {
-       info.border = "border-2 border-emerald-400 bg-white text-emerald-700 rounded-md shadow-sm";
-       info.text = "font-black text-[10.5px]";
+       info.border = "border border-emerald-400 bg-white text-emerald-700 rounded-md";
+       info.text = "font-black text-[11px]";
     }
 
     return info;
@@ -611,105 +692,192 @@ function SmartEstrusCalendar({ item }) {
     }
   };
 
-  const renderMonthGrid = (mOffset) => {
-    const renderDate = new Date(displayMonthDate);
-    renderDate.setMonth(renderDate.getMonth() + mOffset);
-    const year = renderDate.getFullYear();
-    const month = renderDate.getMonth();
-
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
-    const firstDay = new Date(year, month, 1).getDay(); 
-
-    const days = [];
-    for (let i = 0; i < firstDay; i++) days.push(null);
-    for (let i = 1; i <= daysInMonth; i++) days.push(new Date(year, month, i));
-
-    const monthNames = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
-
-    return (
-      <div key={mOffset} className="min-w-[210px] flex-1 bg-white border border-slate-200/60 rounded-2xl p-3.5 shadow-sm snap-center shrink-0">
-         <p className="text-center text-[10px] font-black text-slate-800 uppercase tracking-widest mb-3.5">{monthNames[month]} {year}</p>
-         <div className="grid grid-cols-7 gap-1 text-center mb-2">
-           {['Mg','Sn','Sl','Rb','Km','Jm','Sb'].map(d => <div key={d} className="text-[8px] font-black text-slate-400 uppercase">{d}</div>)}
-         </div>
-         <div className="grid grid-cols-7 gap-1">
-           {days.map((date, i) => {
-              if (!date) return <div key={`empty-${i}`} className="aspect-square"></div>;
-              
-              const info = getDayInfo(date);
-              
-              return (
-                <div key={i} onClick={(e) => { e.stopPropagation(); handleDayClick(date, info); }} className={`flex justify-center items-center aspect-square transition-all cursor-pointer hover:scale-110 active:scale-95 ${info.bg} ${info.border}`}>
-                  <span className={info.text}>{date.getDate()}</span>
-                </div>
-              );
-           })}
-         </div>
-      </div>
-    );
-  };
+  const monthNames = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+  const viewDate = new Date(displayMonthDate);
+  viewDate.setMonth(viewDate.getMonth() + offset);
+  const viewYear = viewDate.getFullYear();
+  const viewMonth = viewDate.getMonth();
+  const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
+  const firstDay = new Date(viewYear, viewMonth, 1).getDay();
+  const monthDays = [];
+  for (let i = 0; i < firstDay; i++) monthDays.push(null);
+  for (let i = 1; i <= daysInMonth; i++) monthDays.push(new Date(viewYear, viewMonth, i));
+  const isAtReferenceMonth = offset === 0;
 
   return (
-    <div className="bg-slate-100 rounded-3xl border border-slate-200/80 p-4 shadow-inner mb-6 pop-in overflow-hidden w-full">
-      <div className="flex justify-between items-end mb-4 px-1">
-         <div>
-           <h4 className="font-black text-slate-800 text-sm tracking-tight leading-none">{title}</h4>
-           <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mt-1.5">{subtitle}</p>
-         </div>
-         <div className="flex items-center gap-1.5 bg-white rounded-lg p-1 border border-slate-200 shadow-sm">
-            <button onClick={(e) => { e.stopPropagation(); setOffset(o => o - 1); }} className="w-7 h-7 rounded-md bg-slate-50 text-slate-600 flex items-center justify-center text-sm font-bold hover:bg-slate-100 transition-colors">‹</button>
-            <span className="text-[8.5px] font-black text-slate-500 uppercase tracking-widest px-1.5">Geser</span>
-            <button onClick={(e) => { e.stopPropagation(); setOffset(o => o + 1); }} className="w-7 h-7 rounded-md bg-slate-50 text-slate-600 flex items-center justify-center text-sm font-bold hover:bg-slate-100 transition-colors">›</button>
-         </div>
-      </div>
-      
-      <div className="flex gap-3 overflow-x-auto snap-x pb-3 pt-1 -mx-2 px-2" style={{ scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' }}>
-         {renderMonthGrid(offset)}
-         {renderMonthGrid(offset + 1)}
-         {renderMonthGrid(offset + 2)}
+    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm mb-6 pop-in overflow-hidden w-full">
+      {/* HEADER */}
+      <div className="flex items-center gap-2.5 px-4 pt-4 pb-3">
+        <div className="w-8 h-8 rounded-xl bg-slate-100 flex items-center justify-center text-sm shrink-0">{phaseIcon}</div>
+        <div>
+          <h4 className="font-black text-slate-800 text-sm tracking-tight leading-none">{title}</h4>
+          <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">{subtitle}</p>
+        </div>
       </div>
 
-      {/* TAMPILAN POPUP KETERANGAN INTERAKTIF SAAT TANGGAL DIKLIK */}
-      <div className="h-14 mt-1 px-1 flex items-center justify-center transition-all duration-300">
-         {activeInfo ? (
-            <div className="bg-slate-800 text-white text-[10px] px-4 py-2.5 rounded-xl pop-in w-full shadow-lg font-medium leading-tight text-center">
-               <span className="font-black text-emerald-400 block mb-0.5 tracking-wider uppercase">{activeInfo.date.toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}</span>
-               {activeInfo.label}
+      {/* BLOK KALENDER UTAMA: countdown + navigasi + grid + info ketuk, satu kesatuan visual */}
+      <div className="bg-slate-50 mx-3 rounded-xl p-2.5">
+
+        {keyEvent && (
+          <div className={`rounded-lg px-2.5 py-2 mb-2.5 flex items-center gap-2 ${keyEvent.isOngoing ? "bg-amber-50" : keyEvent.isPast ? "bg-white" : "bg-emerald-50"}`}>
+            <div className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs shrink-0 ${keyEvent.isOngoing ? "bg-amber-400" : keyEvent.isPast ? "bg-slate-300" : "bg-emerald-500"}`}>
+              <span>{keyEvent.isOngoing ? "⏳" : keyEvent.isPast ? "⌛" : "🎯"}</span>
             </div>
-         ) : (
-            <div className="bg-emerald-50 text-emerald-800 border border-emerald-100 text-[9.5px] px-4 py-3.5 rounded-xl text-center w-full font-bold">
-               👆 Klik warna pada tanggal untuk melihat keterangan
+            <div className="flex-1 min-w-0">
+              <p className={`text-[9px] font-black uppercase tracking-widest ${keyEvent.isOngoing ? "text-amber-600" : keyEvent.isPast ? "text-slate-400" : "text-emerald-600"}`}>
+                {keyEvent.isOngoing ? "Sedang Berlangsung" : keyEvent.isPast ? "Sudah Terlewat" : `${keyEvent.daysUntilStart} Hari Lagi`}
+              </p>
+              <p className="text-[11px] font-bold text-slate-800 leading-snug mt-0.5 truncate">{keyEvent.block.label.split('.')[0]}</p>
             </div>
-         )}
+          </div>
+        )}
+
+        {/* NAVIGASI BULAN */}
+        <div className="flex items-center justify-between mb-2">
+          <button onClick={(e) => { e.stopPropagation(); setOffset(o => o - 1); }} className="w-6 h-6 rounded-md bg-white text-slate-500 flex items-center justify-center text-xs font-bold hover:bg-slate-100 transition-colors shadow-sm">‹</button>
+          <div className="text-center">
+            <p className="text-[11px] font-black text-slate-700 tracking-tight">{monthNames[viewMonth]} {viewYear}</p>
+            {!isAtReferenceMonth && (
+              <button onClick={(e) => { e.stopPropagation(); setOffset(0); }} className="text-[8px] font-black text-emerald-600 uppercase tracking-widest hover:text-emerald-700">↺ Bulan Acuan</button>
+            )}
+          </div>
+          <button onClick={(e) => { e.stopPropagation(); setOffset(o => o + 1); }} className="w-6 h-6 rounded-md bg-white text-slate-500 flex items-center justify-center text-xs font-bold hover:bg-slate-100 transition-colors shadow-sm">›</button>
+        </div>
+
+        {/* GRID KALENDER */}
+        <div className="grid grid-cols-7 gap-0.5 text-center mb-1">
+          {['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'].map((d, i) => (
+            <div key={d} className={`text-[8.5px] font-black uppercase tracking-wide py-0.5 ${i === 0 ? "text-rose-400" : "text-slate-400"}`}>{d}</div>
+          ))}
+        </div>
+        <div className="grid grid-cols-7 gap-0.5">
+          {monthDays.map((date, i) => {
+            if (!date) return <div key={`empty-${i}`} className="h-7"></div>;
+            const info = getDayInfo(date);
+            const isPlainSunday = date.getDay() === 0 && info.bg.includes("text-slate-500");
+            return (
+              <div
+                key={i}
+                onClick={(e) => { e.stopPropagation(); handleDayClick(date, info); }}
+                className={`flex justify-center items-center h-7 transition-colors cursor-pointer ${info.bg} ${info.border} ${isPlainSunday ? "bg-rose-50" : ""}`}
+              >
+                <span className={info.text}>{date.getDate()}</span>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* INFO TANGGAL TERKETUK */}
+        {activeInfo ? (
+          <div className="bg-slate-800 text-white text-[10px] px-3 py-2.5 rounded-lg pop-in w-full shadow-sm font-medium leading-snug text-center mt-2">
+            <span className="font-black text-emerald-400 block mb-0.5 tracking-wide">
+              {activeInfo.date.toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}
+            </span>
+            {activeInfo.label}
+          </div>
+        ) : (
+          <p className="text-center text-[9px] font-semibold text-slate-400 mt-2">👆 Ketuk tanggal berwarna untuk lihat keterangan</p>
+        )}
       </div>
 
-      <div className="mt-4 pt-3 border-t border-slate-200/60 flex flex-wrap gap-x-3 gap-y-2 justify-center px-1">
-         {isPregnant && conceptionDate ? (
-           <>
-             <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-sm bg-blue-200"></div><span className="text-[9px] font-bold text-slate-600 uppercase tracking-widest">Trim 1</span></div>
-             <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-sm bg-amber-200"></div><span className="text-[9px] font-bold text-slate-600 uppercase tracking-widest">Trim 2</span></div>
-             <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-sm bg-rose-200"></div><span className="text-[9px] font-bold text-slate-600 uppercase tracking-widest">Trim 3</span></div>
-             {/* Warna Legenda HPL sinkron otomatis dengan sistem blok */}
-             <div className="flex items-center gap-1.5"><div className={`w-2.5 h-2.5 rounded-sm ${legendTargetColor} animate-pulse`}></div><span className="text-[9px] font-bold text-slate-600 uppercase tracking-widest">HPL</span></div>
-           </>
-         ) : (
-           <>
-             {anchor && <div className="flex items-center gap-1.5"><div className={`w-2.5 h-2.5 rounded-sm ${anchorColorClass}`}></div><span className="text-[9px] font-bold text-slate-600 uppercase tracking-widest">Kejadian</span></div>}
-             
-             {/* 👇 PERBAIKAN: Warna "Target" Legend Sekarang 100% Sinkron dengan blok */}
-             {targetBlocks.length > 0 && <div className="flex items-center gap-1.5"><div className={`w-2.5 h-2.5 rounded-sm ${legendTargetColor.split(' ')[0]} animate-pulse`}></div><span className="text-[9px] font-bold text-slate-600 uppercase tracking-widest">Target</span></div>}
-           </>
-         )}
-         
-         {/* HARI INI DIPAKU PERMANEN DI LEGENDA BAWAH */}
-         <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-sm border-2 border-emerald-400 bg-white"></div><span className="text-[9px] font-bold text-slate-600 uppercase tracking-widest">Hari Ini</span></div>
+      {/* RINGKASAN & KETERANGAN ISTILAH — keterangan permanen, tidak hanya saat diketuk */}
+      {summaryItems.length > 0 && (
+        <div className="px-4 py-3 mt-1">
+          <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Tanggal Penting &amp; Keterangan</p>
+          <div>
+            {summaryItems.map((s, idx) => (
+              <div key={idx} className="py-2 border-b border-slate-100 last:border-0">
+                <div className="flex items-center gap-2">
+                  <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${s.dot}`}></div>
+                  <span className="text-xs shrink-0">{s.icon}</span>
+                  <p className="flex-1 min-w-0 text-[10.5px] font-bold text-slate-700 leading-tight">{s.label}</p>
+                  <p className="text-[10px] font-semibold text-slate-400 shrink-0 ml-2">{s.dateText}</p>
+                </div>
+                {s.desc && <p className="text-[10px] font-medium text-slate-500 leading-snug mt-0.5 pl-6">{s.desc}</p>}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// KOMPONEN TAB BARU: KALENDER REPRODUKSI (Daftar Sapi Betina + Kalender per-Ekor)
+function CalendarView({ dbCattle }) {
+  const femaleCattle = (dbCattle || []).filter(c => c && (c.jenis_kelamin || c.gender) !== "JANTAN");
+  const [selectedId, setSelectedId] = useState(null);
+
+  useEffect(() => {
+    if (femaleCattle.length === 0) { setSelectedId(null); return; }
+    if (!femaleCattle.some(c => c.id === selectedId)) {
+      const sorted = [...femaleCattle].sort((a, b) => {
+        const aUrgent = analyzeCattle(a).isUrgent ? 1 : 0;
+        const bUrgent = analyzeCattle(b).isUrgent ? 1 : 0;
+        return bUrgent - aUrgent;
+      });
+      setSelectedId(sorted[0]?.id ?? null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dbCattle]);
+
+  const selected = femaleCattle.find(c => c.id === selectedId) || null;
+  const selectedAnalysis = selected ? analyzeCattle(selected) : null;
+
+  return (
+    <div className="pb-28 fade-in bg-cream min-h-screen">
+      <div className="px-5 pt-7 pb-5 bg-white rounded-b-[28px] shadow-sm mb-4">
+        <h2 className="text-xl font-black text-slate-900 tracking-tight">Kalender Reproduksi</h2>
+        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1.5">Pantau siklus birahi, IB &amp; estimasi kelahiran</p>
       </div>
+
+      {femaleCattle.length === 0 ? (
+        <div className="flex flex-col items-center justify-center px-6 text-center mt-16">
+          <div className="text-5xl mb-3">📅</div>
+          <p className="font-black text-slate-700 text-sm">Belum Ada Data Sapi Betina</p>
+          <p className="text-xs font-medium text-slate-400 mt-1.5 max-w-xs">Tambahkan data ternak betina di tab Populasi untuk mulai memantau kalender siklus reproduksi.</p>
+        </div>
+      ) : (
+        <>
+          <div className="px-5 mb-2">
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Pilih Sapi ({femaleCattle.length} Ekor)</p>
+            <div className="flex gap-2 overflow-x-auto pb-2 -mx-1 px-1" style={{ scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' }}>
+              {femaleCattle.map(c => {
+                const a = analyzeCattle(c);
+                const isActive = c.id === selectedId;
+                return (
+                  <button
+                    key={c.id}
+                    onClick={() => setSelectedId(c.id)}
+                    className={`shrink-0 flex items-center gap-2 pl-3 pr-3.5 py-2.5 rounded-2xl border transition-all ${isActive ? "bg-emerald-600 border-emerald-600 text-white shadow-md shadow-emerald-500/20" : "bg-white border-slate-200 text-slate-600 hover:border-slate-300"}`}
+                  >
+                    {a.isUrgent && <span className={`w-2 h-2 rounded-full shrink-0 ${isActive ? "bg-white" : "bg-rose-500"} animate-pulse`}></span>}
+                    <span className="text-xs font-black whitespace-nowrap">{c.code || c.id}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="px-5 mt-3">
+            {selected && selectedAnalysis && (
+              <div className={`rounded-2xl p-3.5 mb-4 flex items-center gap-3 border ${COLOR[selectedAnalysis.color]?.border || "border-slate-200"} ${COLOR[selectedAnalysis.color]?.bg || "bg-slate-50"}`}>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Sapi {selected.code || selected.id}</p>
+                  <p className={`text-sm font-black mt-0.5 ${COLOR[selectedAnalysis.color]?.text || "text-slate-700"}`}>{selectedAnalysis.statusLabel}</p>
+                </div>
+                {selectedAnalysis.isUrgent && <span className="text-lg shrink-0">⚠️</span>}
+              </div>
+            )}
+            {selected && <SmartEstrusCalendar item={selected} />}
+          </div>
+        </>
+      )}
     </div>
   );
 }
 
 function DetailModal({ item, onClose, onDeleteLog, setAppToast, setAppConfirm }) {
-  const [confirmDelete, setConfirmDelete] = useState(null);
   if (!item) return null;
   const history = buildHistory(item);
   const itemGender = item.jenis_kelamin || item.gender;
@@ -804,7 +972,7 @@ function AssetRecordCard({ item, onEdit, onOpenAction, onOpenDetail, onDelete, h
   const cardRef = React.useRef(null);
   const isHighlighted = highlightedId === item.id;
   const _status = String(item.status_reproduksi || item.phase || '').toUpperCase().trim();
-  const isPregnant = _status === 'PREGNANT' || _status.includes('BUNTING');
+  const isPregnant = _status === 'PREGNANT';
   
   const needsPKBWarning = isPregnant && !item.conceptionDate;
 
@@ -839,7 +1007,7 @@ function AssetRecordCard({ item, onEdit, onOpenAction, onOpenDetail, onDelete, h
           <span className={`text-[10px] font-extrabold px-3 py-1.5 rounded-xl ${c.bg} ${c.text} uppercase tracking-widest text-center leading-tight whitespace-nowrap ml-2`}>{analysis.statusLabel}</span>
         </div>
         <div className="space-y-1.5 text-xs text-slate-600">
-          <p><span className="font-semibold text-slate-800">Tanggal Lahir:</span> {item.tanggal_lahir ? new Date(item.tanggal_lahir).toLocaleDateString('id-ID') : 'Tidak ada'}</p>
+          <p><span className="font-semibold text-slate-800">Tanggal Lahir:</span> {(item.tanggal_lahir || item.birthDate) ? new Date(item.tanggal_lahir || item.birthDate).toLocaleDateString('id-ID') : 'Tidak ada'}</p>
           <p><span className="font-semibold text-slate-800">Usia:</span> {getAge(item.tanggal_lahir || item.birthDate)}</p>
           {item.status_reproduksi && item.status_reproduksi !== "N/A" && (
             <p><span className="font-semibold text-slate-800">Status Reproduksi:</span> {item.status_reproduksi}</p>
@@ -870,14 +1038,11 @@ function AssetRecordCard({ item, onEdit, onOpenAction, onOpenDetail, onDelete, h
 
 function ActionModal({ open, item, onClose, onSaveRepro, onSaveHealth, setAppToast }) {
   const [tab, setTab] = useState("KESEHATAN");
-  const [resRepro, setResRepro] = useState("NONE"); 
-  const [dRepro, setDRepro] = useState(todayStr()); 
-  const [isUSG, setIsUSG] = useState(false);
+  const [resRepro, setResRepro] = useState("NONE");
+  const [dRepro, setDRepro] = useState(todayStr());
   const [pregMonth, setPregMonth] = useState("");
   const [dHealth, setDHealth] = useState(todayStr());
   const [kondisi, setKondisi] = useState("");
-  const [diagnosa, setDiagnosa] = useState("");
-  const [tindakan, setTindakan] = useState("");
   const [medicalWarning, setMedicalWarning] = useState(null);
 
   const profileStr = localStorage.getItem('srtt_user_profile');
@@ -889,13 +1054,13 @@ function ActionModal({ open, item, onClose, onSaveRepro, onSaveHealth, setAppToa
   const activeHealth = (item?.healthLog || []).find(h => h.status !== "SEMBUH");
 
   useEffect(() => {
-    if(open) { 
+    if(open) {
       setTab(isJantan ? "KESEHATAN" : "REPRO");
-      setResRepro("NONE"); setDRepro(todayStr()); setIsUSG(false); setPregMonth("");
-      setDHealth(todayStr()); setKondisi(""); setDiagnosa(""); setTindakan("");
+      setResRepro("NONE"); setDRepro(todayStr()); setPregMonth("");
+      setDHealth(todayStr()); setKondisi("");
       setMedicalWarning(null);
     }
-  }, [open, item, isJantan]);
+  }, [open, item?.id, isJantan]);
 
   useEffect(() => {
     if (resRepro === "IB" && dRepro) {
@@ -952,14 +1117,26 @@ function ActionModal({ open, item, onClose, onSaveRepro, onSaveHealth, setAppToa
   const handleSaveRepro = () => {
     if (resRepro === "NONE") return setAppToast({ message: "Silakan pilih jenis aksi terlebih dahulu", type: "error" });
     if (medicalWarning?.includes("❌")) return setAppToast({ message: "Tanggal tidak valid", type: "error" });
-    
-    onSaveRepro(resRepro, pregMonth, dRepro, isUSG);
+    if (resRepro !== 'POSITIVE' && resRepro !== 'NEGATIVE' && !dRepro) return setAppToast({ message: "Tanggal tindakan/kejadian wajib diisi", type: "error" });
+
+    if (resRepro === "POSITIVE") {
+      const sortedIB = [...(item?.ibLog || [])];
+      const hasIB = sortedIB.length > 0;
+      if (!hasIB) {
+        const monthNum = Number(pregMonth);
+        if (!pregMonth || isNaN(monthNum) || monthNum <= 0 || monthNum > 9) {
+          return setAppToast({ message: "Perkiraan umur kebuntingan harus diisi (1-9 bulan)", type: "error" });
+        }
+      }
+    }
+
+    onSaveRepro(resRepro, pregMonth, dRepro);
     onClose();
   };
 
   const submitHealth = (type) => {
     if (type === 'LAPOR' && !kondisi.trim()) return setAppToast({ message: "Harap isi keluhan/gejala sapi", type: "error" });
-    onSaveHealth({ type, date: dHealth, gejala: kondisi, diagnosa, tindakan });
+    onSaveHealth({ type, date: dHealth, gejala: kondisi });
     onClose();
   };
 
@@ -985,7 +1162,7 @@ function ActionModal({ open, item, onClose, onSaveRepro, onSaveHealth, setAppToa
             <FF label="Jenis Aksi">
               <select className={`${inp} bg-white`} value={resRepro} onChange={e => setResRepro(e.target.value)}>
                 <option value="NONE">-- Pilih Aksi --</option>
-                {item?.phase === "ABORTUS_PENDING" ? (
+                {(item?.status_reproduksi || item?.phase) === "ABORTUS_PENDING" ? (
                   <option value="TERAPI">✅ Sudah Mendapatkan Terapi Medis</option>
                 ) : (
                   <>
@@ -1056,7 +1233,7 @@ function ActionModal({ open, item, onClose, onSaveRepro, onSaveHealth, setAppToa
               <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 pop-in mb-1 mt-2">
                 <p className="text-[10px] font-black text-emerald-800 uppercase tracking-widest mb-1">✅ Konfirmasi Terapi</p>
                 <p className="text-xs font-bold text-emerald-700 leading-relaxed">
-                  {item?.phase === "ABORTUS_PENDING" 
+                  {(item?.status_reproduksi || item?.phase) === "ABORTUS_PENDING"
                     ? "Sapi telah ditangani petugas. Peringatan darurat dicabut dan sapi masuk masa PEMULIHAN (±45 Hari) sebelum boleh di-IB kembali."
                     : "Sapi telah diterapi medis. Peringatan merah dihapus dan status direset menjadi Kosong (OPEN)."
                   }
@@ -1151,6 +1328,158 @@ function ShareSummaryModal({ open, onClose, stats, profile, setAppToast }) {
   );
 }
 
+const REPRO_STATUS_LABELS = {
+  OPEN: "Kosong (Siap Kawin)",
+  BRED: "Sudah Kawin",
+  PREGNANT: "Bunting",
+  POSTPARTUM: "Pasca Melahirkan",
+  CALF: "Pedet / Dara",
+  ABORTUS_PENDING: "Lapor Petugas"
+};
+
+const REPRO_STATUS_COLORS = {
+  OPEN: "#f59e0b",
+  BRED: "#3b82f6",
+  PREGNANT: "#10b981",
+  POSTPARTUM: "#8b5cf6",
+  CALF: "#6366f1",
+  ABORTUS_PENDING: "#e11d48"
+};
+
+const REPRO_STATUS_ORDER = ["CALF", "OPEN", "BRED", "PREGNANT", "POSTPARTUM", "ABORTUS_PENDING"];
+
+function ReproStatusChart({ dbCattle }) {
+  const safeDb = Array.isArray(dbCattle) ? dbCattle : [];
+  const femaleCattle = safeDb.filter(item => item && (item.jenis_kelamin || item.gender) !== "JANTAN");
+  const total = femaleCattle.length;
+
+  if (total === 0) {
+    return (
+      <div className="bg-white rounded-[28px] border border-slate-100 shadow-sm p-5 text-center">
+        <p className="text-xs font-bold text-slate-400">Belum ada data sapi betina untuk ditampilkan.</p>
+      </div>
+    );
+  }
+
+  const counts = {};
+  const detailCounts = {}; // { statusLabel: { count, color, isUrgent } }
+  femaleCattle.forEach(item => {
+    const status = item.status_reproduksi || item.phase || "OPEN";
+    counts[status] = (counts[status] || 0) + 1;
+
+    let analysis = null;
+    try { analysis = analyzeCattle(item); } catch (e) { analysis = null; }
+    const detailLabel = (analysis?.statusLabel || status).replace(/⚠️|🚨/g, '').trim();
+    if (!detailCounts[detailLabel]) {
+      detailCounts[detailLabel] = { count: 0, color: REPRO_STATUS_COLORS[status] || "#94a3b8", isUrgent: !!analysis?.isUrgent };
+    }
+    detailCounts[detailLabel].count += 1;
+    if (analysis?.isUrgent) detailCounts[detailLabel].isUrgent = true;
+  });
+
+  const presentStatuses = Object.keys(counts);
+  const orderedStatuses = [
+    ...REPRO_STATUS_ORDER.filter(s => presentStatuses.includes(s)),
+    ...presentStatuses.filter(s => !REPRO_STATUS_ORDER.includes(s))
+  ];
+
+  const chartData = orderedStatuses.map(status => ({
+    name: status,
+    label: REPRO_STATUS_LABELS[status] || status,
+    value: counts[status],
+    color: REPRO_STATUS_COLORS[status] || "#94a3b8"
+  }));
+
+  const detailRows = Object.entries(detailCounts)
+    .map(([label, info]) => ({ label, ...info }))
+    .sort((a, b) => (b.isUrgent ? 1 : 0) - (a.isUrgent ? 1 : 0) || b.count - a.count);
+
+  const urgentCount = detailRows.filter(r => r.isUrgent).reduce((sum, r) => sum + r.count, 0);
+  const urgentPct = total > 0 ? (urgentCount / total) * 100 : 0;
+
+  let kandangLabel = "Kondisi Baik";
+  let kandangBg = "bg-emerald-100";
+  let kandangColor = "text-emerald-700";
+  let kandangIcon = <polyline points="20 6 9 17 4 12"></polyline>;
+  if (urgentPct > 30) {
+    kandangLabel = "Kritis"; kandangBg = "bg-rose-100"; kandangColor = "text-rose-700";
+    kandangIcon = <><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></>;
+  } else if (urgentPct > 10) {
+    kandangLabel = "Waspada"; kandangBg = "bg-amber-100"; kandangColor = "text-amber-700";
+    kandangIcon = <><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></>;
+  } else if (urgentPct > 0) {
+    kandangLabel = "Cukup Baik"; kandangBg = "bg-blue-100"; kandangColor = "text-blue-700";
+    kandangIcon = <polyline points="20 6 9 17 4 12"></polyline>;
+  }
+
+  return (
+    <div className="bg-white rounded-[28px] border border-slate-100 shadow-sm p-5">
+      <h3 className="font-black text-slate-800 text-base mb-1">Distribusi Status Reproduksi</h3>
+      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4">Populasi Betina Aktif</p>
+
+      <div className="flex items-center gap-4">
+        <div className="relative shrink-0" style={{ width: 140, height: 140 }}>
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              <Pie data={chartData} dataKey="value" nameKey="label" innerRadius={40} outerRadius={60} paddingAngle={3}>
+                {chartData.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={entry.color} strokeWidth={0} />
+                ))}
+              </Pie>
+            </PieChart>
+          </ResponsiveContainer>
+          <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+            <p className="text-xl font-black text-slate-800 leading-none">{total}</p>
+            <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Ekor Betina</p>
+          </div>
+        </div>
+
+        <table className="flex-1 min-w-0 text-left">
+          <tbody>
+            {chartData.map((entry, index) => {
+              const pct = total > 0 ? Math.round((entry.value / total) * 100) : 0;
+              return (
+                <tr key={index} className="border-b border-slate-50 last:border-0">
+                  <td className="py-1.5 pr-2">
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: entry.color }}></div>
+                      <span className="text-[10.5px] font-semibold text-slate-600 truncate">{entry.label}</span>
+                    </div>
+                  </td>
+                  <td className="py-1.5 text-right text-[11px] font-black text-slate-800 whitespace-nowrap">{entry.value}</td>
+                  <td className="py-1.5 pl-2 text-right text-[10px] font-bold text-slate-400 whitespace-nowrap">{pct}%</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+
+        <div className="flex flex-col items-center justify-center shrink-0 w-14 gap-1.5">
+          <div className={`w-9 h-9 rounded-full flex items-center justify-center ${kandangBg}`}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={kandangColor}>{kandangIcon}</svg>
+          </div>
+          <span className={`text-[8px] font-black uppercase tracking-wide text-center leading-tight ${kandangColor}`}>{kandangLabel}</span>
+        </div>
+      </div>
+
+      <div className="mt-5 pt-4 border-t border-slate-100">
+        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Rincian Kondisi Detail</p>
+        <div className="space-y-1.5">
+          {detailRows.map((row, idx) => (
+            <div key={idx} className={`flex items-center justify-between gap-2 px-3 py-2 rounded-lg ${row.isUrgent ? "bg-rose-50" : "bg-slate-50"}`}>
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: row.color }}></div>
+                <span className={`text-[10.5px] font-semibold truncate ${row.isUrgent ? "text-rose-700" : "text-slate-600"}`}>{row.label}</span>
+              </div>
+              <span className={`text-[11px] font-black shrink-0 ${row.isUrgent ? "text-rose-700" : "text-slate-800"}`}>{row.count}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function DashboardView({ dbCattle, profile, onAdviceClick, setAppToast }) {
  const safeDb = Array.isArray(dbCattle) ? dbCattle : [];
   const total = safeDb.length;
@@ -1158,7 +1487,8 @@ function DashboardView({ dbCattle, profile, onAdviceClick, setAppToast }) {
   const betina = safeDb.filter(i => i && (i.jenis_kelamin === "BETINA" || i.gender === "BETINA")).length;
   const pregnant = safeDb.filter(i => i && (i.status_reproduksi === "PREGNANT" || i.phase === "PREGNANT")).length;
   const [shareModalOpen, setShareModalOpen] = useState(false);
-  
+  const [adviceOpen, setAdviceOpen] = useState(false);
+
   const itemsWithAdvice = safeDb.map(item => {
     if (!item) return null;
     try { 
@@ -1189,17 +1519,25 @@ function DashboardView({ dbCattle, profile, onAdviceClick, setAppToast }) {
            </div>
         </div>
 
+        <ReproStatusChart dbCattle={safeDb} />
+
         <div>
-          <div className="flex items-center mb-4 ml-1">
-             <h3 className="font-black text-slate-800 text-base">Saran & Peringatan</h3>
-             {itemsWithAdvice.length > 0 && <span className="ml-2 bg-rose-100 text-rose-800 px-2 py-0.5 rounded-md text-[10px] font-bold">{itemsWithAdvice.length}</span>}
-          </div>
-          <div className="space-y-3">
-            {itemsWithAdvice.length === 0 ? 
-              <div className="p-6 bg-emerald-50 rounded-[24px] border border-emerald-200 text-center"><p className="text-xs text-emerald-800 font-bold">✨ Semua populasi kandang dalam kondisi prima.</p></div> : 
-              itemsWithAdvice.map(({ item, analysis }) => (<AdviceCard key={item.id} item={item} analysis={analysis} onClick={onAdviceClick} />))
-            }
-          </div>
+          <button onClick={() => setAdviceOpen(o => !o)} className="flex items-center justify-between w-full mb-4 ml-1">
+             <div className="flex items-center">
+               <h3 className="font-black text-slate-800 text-base">Saran & Peringatan</h3>
+               {itemsWithAdvice.length > 0 && <span className="ml-2 bg-rose-100 text-rose-800 px-2 py-0.5 rounded-md text-[10px] font-bold">{itemsWithAdvice.length}</span>}
+             </div>
+             <svg className={`text-slate-400 transition-transform duration-300 ${adviceOpen ? "rotate-180" : ""}`} width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+          </button>
+          {adviceOpen && (
+            itemsWithAdvice.length === 0 ? (
+              <div className="p-6 bg-emerald-50 rounded-[24px] border border-emerald-200 text-center"><p className="text-xs text-emerald-800 font-bold">✨ Semua populasi kandang dalam kondisi prima.</p></div>
+            ) : (
+              <div className="space-y-3 overflow-y-auto pr-1" style={{ maxHeight: 420 }}>
+                {itemsWithAdvice.map(({ item, analysis }) => (<AdviceCard key={item.id} item={item} analysis={analysis} onClick={onAdviceClick} ownerName={profile?.name} />))}
+              </div>
+            )
+          )}
         </div>
       </div>
       <ShareSummaryModal open={shareModalOpen} onClose={() => setShareModalOpen(false)} stats={{total, jantan, betina, pregnant}} profile={profile} setAppToast={setAppToast} />
@@ -1214,7 +1552,7 @@ function AcademyView() {
   };
 
   return (
-    <div className="pb-32 fade-in bg-slate-50 min-h-screen">
+    <div className="pb-32 fade-in bg-cream min-h-screen">
       <div className="bg-white px-5 pt-8 pb-8 border-b border-slate-200 shadow-sm">
         <h2 className="text-2xl font-black text-slate-900 tracking-tight">Akademi SIRAPI</h2>
         <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">Peternak Wajib Pintar</p>
@@ -1312,8 +1650,15 @@ function AddModal({ open, onClose, onSave, editItem, setAppToast }) {
         setRas(editItem.jenis_ras || "SIMENTAL SPSI");
         setGender(editItem.jenis_kelamin || editItem.gender || "BETINA");
         setOrigin(editItem.asal_usul_sapi || "KANDANG");
-        if (editItem.asal_usul_sapi === 'KANDANG' && editItem.tanggal_lahir) setBirthDate(editItem.tanggal_lahir);
-        
+        if (editItem.asal_usul_sapi === 'KANDANG' && editItem.tanggal_lahir) {
+          setBirthDate(editItem.tanggal_lahir);
+        } else if (editItem.asal_usul_sapi === 'PASAR' && editItem.tanggal_lahir) {
+          const ageMonths = Math.floor((new Date() - new Date(editItem.tanggal_lahir)) / (86400000 * 30));
+          const ageOptions = [12, 24, 36, 48, 60];
+          const closest = ageOptions.reduce((prev, curr) => Math.abs(curr - ageMonths) < Math.abs(prev - ageMonths) ? curr : prev, ageOptions[0]);
+          setAgeInMonths(String(closest));
+        }
+
         let editPhase = editItem.status_reproduksi || editItem.phase;
         if (editPhase === "N/A" || !editPhase) editPhase = "CALF";
         setPhase(editPhase);
@@ -1374,6 +1719,11 @@ function AddModal({ open, onClose, onSave, editItem, setAppToast }) {
     const requiresMatingDate = phase === 'BRED' || (phase === 'PREGNANT' && origin === 'KANDANG');
     if (requiresMatingDate && !lastMatingDate) {
       return setAppToast({message: "Tanggal Kawin Terakhir wajib diisi!", type: "error"});
+    }
+
+    const parityNum = Number(parity);
+    if (gender === 'BETINA' && (isNaN(parityNum) || parityNum < 0)) {
+      return setAppToast({message: "Jumlah beranak (paritas) tidak boleh negatif!", type: "error"});
     }
 
     const profileStr = localStorage.getItem('srtt_user_profile');
@@ -1560,6 +1910,7 @@ function AddModal({ open, onClose, onSave, editItem, setAppToast }) {
 
 function EditProfileModal({ open, onClose, onSave, currentProfile, setAppToast }) {
   const [name, setName] = useState(currentProfile?.name || '');
+  const [nik, setNik] = useState(currentProfile?.nik || '');
   const [address, setAddress] = useState(currentProfile?.alamat || currentProfile?.desa || '');
   const [photo, setPhoto] = useState(currentProfile?.photo || '');
   const [isLoading, setIsLoading] = useState(false);
@@ -1568,6 +1919,7 @@ function EditProfileModal({ open, onClose, onSave, currentProfile, setAppToast }
   useEffect(() => {
     if (open && currentProfile) {
       setName(currentProfile.name || '');
+      setNik(currentProfile.nik || '');
       setAddress(currentProfile.alamat || currentProfile.desa || '');
       setPhoto(currentProfile.photo || '');
     }
@@ -1593,6 +1945,8 @@ function EditProfileModal({ open, onClose, onSave, currentProfile, setAppToast }
 
   const handleSave = async () => {
     if (!name.trim()) return setAppToast({message: "Nama Pemilik wajib diisi!", type: "error"});
+    if (!nik.trim()) return setAppToast({message: "NIK wajib diisi untuk keperluan pendataan Dinas!", type: "error"});
+    if (!/^\d{16}$/.test(nik.trim())) return setAppToast({message: "NIK harus terdiri dari 16 digit angka sesuai KTP!", type: "error"});
     if (!address.trim()) return setAppToast({message: "Alamat wajib diisi!", type: "error"});
 
     setIsLoading(true);
@@ -1601,7 +1955,7 @@ function EditProfileModal({ open, onClose, onSave, currentProfile, setAppToast }
 
       // Update user profile
       const updateResult = await profileService.updateUserProfile(currentProfile.id, {
-        name: name.trim(), photo: photo || null, alamat: address.trim()
+        name: name.trim(), nik: nik.trim(), photo: photo || null, alamat: address.trim()
       });
 
       if (!updateResult.success) {
@@ -1647,6 +2001,18 @@ function EditProfileModal({ open, onClose, onSave, currentProfile, setAppToast }
         <div className="space-y-4">
           <FF label="Nama Lengkap (Sesuai KTP)">
             <input className={inp} value={name} onChange={e => setName(e.target.value)} disabled={isLoading} />
+          </FF>
+          <FF label="NIK (Sesuai KTP)">
+            <input
+              type="text"
+              inputMode="numeric"
+              className={inp}
+              value={nik}
+              onChange={e => setNik(e.target.value.replace(/\D/g, '').slice(0, 16))}
+              placeholder="16 digit NIK KTP"
+              maxLength={16}
+              disabled={isLoading}
+            />
           </FF>
           <FF label="Alamat Lengkap">
             <textarea className={inp + " h-24 resize-none"} value={address} onChange={e => setAddress(e.target.value)} disabled={isLoading} />
@@ -1740,16 +2106,20 @@ function AppContent() {
   
   const handleSaveAdd = async () => {
     if (!profile || !profile.id) return;
-    
-    const { profileService } = await import('./core/profileService');
-    const farmResult = await profileService.getFarm(profile.id);
-    
-    if (farmResult.success && farmResult.farm) {
-      const { cattleService } = await import('./core/cattleService');
-      const result = await cattleService.getCattleByFarm(farmResult.farm.id);
-      if (result.success) {
-        setDbCattle(result.cattle);
+
+    try {
+      const { profileService } = await import('./core/profileService');
+      const farmResult = await profileService.getFarm(profile.id);
+
+      if (farmResult.success && farmResult.farm) {
+        const { cattleService } = await import('./core/cattleService');
+        const result = await cattleService.getCattleByFarm(farmResult.farm.id);
+        if (result.success) {
+          setDbCattle(result.cattle);
+        }
       }
+    } catch (error) {
+      setAppToast({ message: "Data tersimpan, namun gagal memuat ulang daftar. Silakan refresh halaman.", type: "error" });
     }
   };
 
@@ -1772,8 +2142,10 @@ function AppContent() {
     const updatedItem = updatedDb.find(i => i.id === itemId);
     if(updatedItem) {
         import('./core/cattleService').then(({cattleService}) => {
-            cattleService.updateCattle(itemId, updatedItem);
-        });
+            cattleService.updateCattle(itemId, updatedItem).then(result => {
+                if (!result.success) setAppToast({ message: "Gagal menghapus riwayat di server: " + result.error, type: "error" });
+            });
+        }).catch(() => setAppToast({ message: "Gagal terhubung ke server.", type: "error" }));
     }
   };
 
@@ -1804,18 +2176,18 @@ function AppContent() {
     setHighlightedId(item.id);
   };
 
-  const handleSaveRepro = async (res, pregMonth, d, isUSG, isSuspect) => {
-    const idx = dbCattle.findIndex(b => b.id === actionItem.id); 
+  const handleSaveRepro = async (res, pregMonth, d) => {
+    const idx = dbCattle.findIndex(b => b.id === actionItem.id);
     if (idx === -1) return;
-    let current = { ...dbCattle[idx] }; 
+    let current = { ...dbCattle[idx] };
 
-    if (res === "NEGATIVE") { 
-      current.phase = "OPEN"; current.status_reproduksi = "OPEN"; 
-      current.pkbLog = [...(current.pkbLog || []), { date: d, result: "NEGATIVE" }]; 
-    } 
-    else if (res === "IB") { 
-      current.phase = "BRED"; current.status_reproduksi = "BRED"; 
-      current.ibLog = [...(current.ibLog || []), { date: d, isSuspect: isSuspect || false }]; 
+    if (res === "NEGATIVE") {
+      current.phase = "OPEN"; current.status_reproduksi = "OPEN";
+      current.pkbLog = [...(current.pkbLog || []), { date: d, result: "NEGATIVE" }];
+    }
+    else if (res === "IB") {
+      current.phase = "BRED"; current.status_reproduksi = "BRED";
+      current.ibLog = [...(current.ibLog || []), { date: d, isSuspect: false }];
     } 
     else if (res === "POSITIVE") { 
       let calculatedConception = todayStr();
@@ -1848,9 +2220,9 @@ function AppContent() {
       current.conceptionDate = null; 
     }
     else if (res === "ABORTUS") {
-      current.phase = "ABORTUS_PENDING"; 
-      current.status_reproduksi = "ABORTUS (BUTUH TERAPI)";
-      current.abortusDate = d; 
+      current.phase = "ABORTUS_PENDING";
+      current.status_reproduksi = "ABORTUS_PENDING";
+      current.abortusDate = d;
       current.abortusLog = [...(current.abortusLog || []), d]; 
       current.conceptionDate = null; 
     }
@@ -1860,39 +2232,57 @@ function AppContent() {
       current.therapyLog = [...(current.therapyLog || []), d]; 
     }
 
-    const up = [...dbCattle]; up[idx] = current; setDbCattle(up); 
-    setAppToast({ message: "Laporan reproduksi berhasil disimpan", type: "success" });
+    const up = [...dbCattle]; up[idx] = current; setDbCattle(up);
 
     try {
       const { cattleService } = await import('./core/cattleService');
       const updateResult = await cattleService.updateCattle(current.id, current);
       if (!updateResult.success) {
-        console.error("Gagal menyimpan riwayat repro ke database server.");
+        setAppToast({ message: "Gagal menyimpan ke server: " + updateResult.error, type: "error" });
+        return;
       }
+      setAppToast({ message: "Laporan reproduksi berhasil disimpan", type: "success" });
     } catch (error) {
-      console.error("Gagal integrasi database:", error);
+      setAppToast({ message: "Gagal terhubung ke server. Periksa koneksi internet.", type: "error" });
     }
   };
 
-  const handleSaveHealth = async (d, kondisi) => {
+  const handleSaveHealth = async ({ type, date, gejala }) => {
     if (!actionItem) return;
-    const idx = dbCattle.findIndex(b => b.id === actionItem.id); 
+    const idx = dbCattle.findIndex(b => b.id === actionItem.id);
     if (idx === -1) return;
-    
-    let current = { ...dbCattle[idx] }; 
-    current.healthReports = current.healthReports || [];
-    current.healthReports.push({ tanggalLaporan: d, gejalaKeluhan: kondisi, createdAt: new Date().toISOString() });
-    
-    const up = [...dbCattle]; 
-    up[idx] = current; 
+
+    let current = { ...dbCattle[idx] };
+
+    if (type === 'LAPOR') {
+      current.healthLog = [...(current.healthLog || []), {
+        date,
+        gejala,
+        status: "MENUNGGU_DOKTER"
+      }];
+    } else if (type === 'SEMBUH') {
+      const activeIdx = (current.healthLog || []).findIndex(h => h.status !== "SEMBUH");
+      if (activeIdx !== -1) {
+        const updatedLog = [...(current.healthLog || [])];
+        updatedLog[activeIdx] = { ...updatedLog[activeIdx], status: "SEMBUH", tanggalSembuh: date };
+        current.healthLog = updatedLog;
+      }
+    }
+
+    const up = [...dbCattle];
+    up[idx] = current;
     setDbCattle(up);
-    setAppToast({ message: "Laporan kesehatan berhasil disimpan", type: "success" });
 
     try {
       const { cattleService } = await import('./core/cattleService');
-      await cattleService.updateCattle(current.id, current);
+      const updateResult = await cattleService.updateCattle(current.id, current);
+      if (!updateResult.success) {
+        setAppToast({ message: "Gagal menyimpan ke server: " + updateResult.error, type: "error" });
+        return;
+      }
+      setAppToast({ message: type === 'SEMBUH' ? "Sapi dinyatakan sembuh!" : "Laporan gejala berhasil disimpan", type: "success" });
     } catch (error) {
-      console.error("Gagal menyimpan riwayat kesehatan ke database:", error);
+      setAppToast({ message: "Gagal terhubung ke server. Periksa koneksi internet.", type: "error" });
     }
   };
 
@@ -1906,9 +2296,10 @@ function AppContent() {
   }).sort((a, b) => (a.code || a.id).localeCompare(b.code || b.id, undefined, { numeric: true }));
 
   return (
-    <div className="min-h-screen bg-slate-50 font-sans text-slate-800 pb-20 relative flex flex-col">
+    <div className="min-h-screen bg-cream font-sans text-slate-800 pb-20 relative flex flex-col">
       <GlobalStyle />
       
+      <DialogSystem />
       <ToastNotification message={appToast?.message} type={appToast?.type} onClose={() => setAppToast(null)} />
       <CustomConfirm {...appConfirm} onCancel={() => setAppConfirm({ open: false })} />
       
@@ -1956,7 +2347,7 @@ function AppContent() {
           <div className="flex-1">
             {nav === "dashboard" && <DashboardView dbCattle={safeDb} onAdviceClick={handleAdviceClick} profile={profile} setAppToast={setAppToast} />}
             {nav === "assets" && (
-              <div className="pb-28 fade-in bg-slate-50">
+              <div className="pb-28 fade-in bg-cream">
                 <div className="sticky top-0 z-30 bg-slate-50/90 backdrop-blur-md px-5 py-4 border-b border-slate-200">
                    <div className="flex justify-between items-center">
                     <div><h2 className="font-black text-xl text-slate-900">Database Aset</h2><p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{filteredCattle.length} dari {safeDb.length} Ekor</p></div>
@@ -1980,9 +2371,10 @@ function AppContent() {
                 </div>
               </div>
             )}
+            {nav === "calendar" && <CalendarView dbCattle={safeDb} />}
             {nav === "academy" && <AcademyView />}
             {nav === "profile" && (
-              <div className="pb-32 fade-in bg-slate-50 min-h-screen">
+              <div className="pb-32 fade-in bg-cream min-h-screen">
                 <div className="bg-white px-5 pt-8 pb-8 border-b border-slate-200 shadow-sm flex flex-col items-center">
                   <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center text-3xl font-black text-slate-400 mb-3 shadow-inner overflow-hidden border-4 border-white">
                     {profile.photo ? <img src={profile.photo} alt="Profil" className="w-full h-full object-cover" /> : <span>{profile.name ? profile.name.charAt(0).toUpperCase() : "U"}</span>}
@@ -2014,9 +2406,17 @@ function AppContent() {
                       isDestructive: true,
                       confirmText: "Ya, Keluar",
                       onConfirm: () => {
-                        setDbCattle([]); 
-                        localStorage.removeItem("srtt_user_profile"); 
-                        setProfile(null); 
+                        setDbCattle([]);
+                        localStorage.removeItem("srtt_user_profile");
+                        setProfile(null);
+                        setNav("dashboard");
+                        setSearchQuery("");
+                        setGenderFilter("ALL");
+                        setDetailItem(null);
+                        setActionItem(null);
+                        setEditItem(null);
+                        setAddOpen(false);
+                        setHighlightedId(null);
                       }
                     });
                   }} className="w-full bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-100 font-bold py-4 rounded-[20px] text-sm transition-colors shadow-sm mt-4">
@@ -2030,6 +2430,7 @@ function AppContent() {
           <div className="nav-bar">
             <button onClick={() => setNav("dashboard")} className={`nav-item ${nav === "dashboard" ? "active" : ""}`}><span className="nav-icon"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 2L2 12h3v8h6v-6h2v6h6v-8h3z"/></svg></span><span>Beranda</span></button>
             <button onClick={() => setNav("assets")} className={`nav-item ${nav === "assets" ? "active" : ""}`}><span className="nav-icon"><svg viewBox="0 0 100 100" className="w-6 h-6 fill-current"><path d="M85.9,46.1c-1.9-2.2-4.1-4-6.5-5.3c0,0-11-6-11.4-6.3c-0.1,0-0.1-0.1-0.2-0.1c-1.3-1-3.1-1.3-4.7-0.7 c-0.7,0.3-1.4,0.7-1.9,1.3c-2.3,2.4-5.3,4.6-8.3,4.6c-2.6,0-5.1-1.6-7-4.1c-1.7-2.3-3.6-3.8-5.6-4.6c-0.1,0-0.2-0.1-0.3-0.1 C38,30.3,36.1,30.7,34.8,32c-0.1,0.1-0.1,0.1-0.2,0.1C33,33.5,22,41.4,22,41.4c-2.2,1.6-3.7,3.9-4,6.4c-0.3,2.5,0.7,5,2.6,6.6 c0.1,0.1,0.1,0.1,0.2,0.1c0.1,0,0.1,0,0.2,0.1c2.1,1.5,4.7,2.1,7.2,1.7c1.3-0.2,2.5-0.7,3.6-1.5c0.1-0.1,0.2-0.1,0.3-0.2 c2-1.9,4.5-2.8,7.1-2.8c2.9,0,5.6,1.2,7.4,3.1c1.8,1.9,4.1,3,6.6,3c2,0,3.9-0.8,5.3-2.2c0.1-0.1,0.1-0.1,0.2-0.1 c1.8-2,4.6-3,7.3-2.6c1.1,0.2,2.2,0.6,3.2,1.2c0.1,0.1,0.1,0.1,0.2,0.1c1.9,1.1,4.1,1.4,6.1,0.8c2-0.6,3.8-2,5-3.8 C86.7,50,86.9,48,85.9,46.1z M52.5,41.4c0,2.1-1.7,3.8-3.8,3.8c-2.1,0-3.8-1.7-3.8-3.8c0-2.1,1.7-3.8,3.8-3.8C50.8,37.6,52.5,39.3,52.5,41.4 z"/></svg></span><span>Populasi</span></button>
+            <button onClick={() => setNav("calendar")} className={`nav-item ${nav === "calendar" ? "active" : ""}`}><span className="nav-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M9 11H7v2h2v-2zm4 0h-2v2h2v-2zm4 0h-2v2h2v-2zm2-7h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 1.99 2H19c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V9h14v11z"/></svg></span><span>Kalender</span></button>
             <button onClick={() => setNav("academy")} className={`nav-item ${nav === "academy" ? "active" : ""}`}><span className="nav-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M12 3L1 9l4 2.18v6L12 21l7-3.82v-6l2-1.09V17h2V9L12 3zm6.82 6L12 12.72 5.18 9 12 5.28 18.82 9zM17 15.99l-5 2.73-5-2.73v-3.72L12 15l5-2.73v3.72z"/></svg></span><span>Akademi</span></button>
             <button onClick={() => setNav("profile")} className={`nav-item ${nav === "profile" ? "active" : ""}`}><span className="nav-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg></span><span>Profil</span></button>
           </div>

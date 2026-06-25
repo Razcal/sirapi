@@ -36,7 +36,7 @@ export const authService = {
 
       if (authError) {
         // Jika rate limit, generate UUID lokal untuk user
-        if (authError.message?.includes('rate limit') || authError.message?.includes('too many') || authError.message?.includes('429')) {
+        if (authError.status === 429 || authError.message?.includes('rate limit') || authError.message?.includes('too many') || authError.message?.includes('429')) {
           console.warn('Rate limit terdeteksi, menggunakan fallback UUID...');
           userId = generateUUID();
           sessionToken = null;
@@ -71,6 +71,7 @@ export const authService = {
         email: trimmedEmail,
         phone: trimmedPhone,
         name: profileData.name,
+        nik: profileData.nik,
         kecamatan: profileData.kecamatan,
         desa: profileData.desa,
         dusun: profileData.dusun,
@@ -83,14 +84,8 @@ export const authService = {
 
       // Jika pakai fallback UUID (rate limit), simpan password hash
       if (!sessionToken) {
-        console.log('Using fallback registration - hashing password...');
         const passwordHash = await bcrypt.hash(trimmedPassword, 10);
-        console.log('Password hashing for fallback user:');
-        console.log('- Original password:', trimmedPassword);
-        console.log('- Hash generated:', passwordHash);
         userInsertData.password_hash = passwordHash;
-      } else {
-        console.log('Using normal registration - password handled by Supabase Auth');
       }
 
       const { data: profileResult, error: profileError } = await supabase
@@ -164,33 +159,17 @@ export const authService = {
 
       if (!userRecord) throw new Error('User tidak ditemukan');
 
-      // Check if user ID is fallback UUID (not from Supabase Auth)
-      const isFallbackUser = userRecord.id && userRecord.id.startsWith('user_');
-      
-      console.log('Login attempt:');
-      console.log('- User ID:', userRecord.id);
-      console.log('- Is fallback user:', isFallbackUser);
-      console.log('- Has password hash:', !!userRecord.password_hash);
-
       // 3. Coba authenticate dengan email ke Supabase Auth
       let token = null;
-      
+
       // Jika user punya password_hash, verify dengan bcrypt (fallback user atau emergency)
       if (userRecord.password_hash) {
-        console.log('User has password_hash - using bcrypt verification...');
-        console.log('- Input password:', trimmedPassword);
-        console.log('- Stored hash:', userRecord.password_hash);
-        
         const passwordMatch = await bcrypt.compare(trimmedPassword, userRecord.password_hash);
-        console.log('- Password match result:', passwordMatch);
-        
         if (!passwordMatch) {
           throw new Error('Password salah');
         }
-        console.log('Bcrypt verification successful!');
       } else {
         // User dari Supabase Auth, authenticate normally
-        console.log('User has no password_hash - using Supabase Auth...');
         const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
           email: userRecord.email,
           password: trimmedPassword,
@@ -204,12 +183,13 @@ export const authService = {
         if (token) saveTokenToStorage(token);
       }
 
-      // Save user profile to storage
-      saveUserToStorage(userRecord);
+      // Save user profile to storage (JANGAN simpan password_hash!)
+      const { password_hash, ...safeUserRecord } = userRecord;
+      saveUserToStorage(safeUserRecord);
 
       return {
         success: true,
-        user: userRecord,
+        user: safeUserRecord,
         token
       };
     } catch (error) {
@@ -242,7 +222,9 @@ export const authService = {
         .eq('id', user.id)
         .single();
 
-      return userProfile;
+      if (!userProfile) return null;
+      const { password_hash, ...safeUserProfile } = userProfile;
+      return safeUserProfile;
     } catch (error) {
       console.error('Error getting current user:', error);
       return null;

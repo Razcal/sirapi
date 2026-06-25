@@ -9,7 +9,7 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 // Helper untuk session management
 export const getStoredUser = () => {
   try {
-    const user = localStorage.getItem('proverti_user');
+    const user = localStorage.getItem('sirapi_user');
     return user ? JSON.parse(user) : null;
   } catch (e) {
     return null;
@@ -17,18 +17,18 @@ export const getStoredUser = () => {
 };
 
 export const saveUserToStorage = (user) => {
-  localStorage.setItem('proverti_user', JSON.stringify(user));
+  localStorage.setItem('sirapi_user', JSON.stringify(user));
 };
 
 export const clearUserFromStorage = () => {
-  localStorage.removeItem('proverti_user');
-  localStorage.removeItem('proverti_token');
+  localStorage.removeItem('sirapi_user');
+  localStorage.removeItem('sirapi_token');
 };
 
 export const getStoredToken = () => {
-  return localStorage.getItem('proverti_token');
+  return localStorage.getItem('sirapi_token');
 };
 
 export const saveTokenToStorage = (token) => {
-  localStorage.setItem('proverti_token', token);
+  localStorage.setItem('sirapi_token', token);
 };

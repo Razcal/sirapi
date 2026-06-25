@@ -23,6 +23,10 @@ export function DialogSystem() {
   useEffect(() => {
     window.__showAlertDialog = (message, title) => setAlertConfig({ message, title });
     window.__showConfirmDialog = (message, onConfirm, title) => setConfirmConfig({ message, onConfirm, title });
+    return () => {
+      delete window.__showAlertDialog;
+      delete window.__showConfirmDialog;
+    };
   }, []);
 
   if (!alertConfig && !confirmConfig) return null;
