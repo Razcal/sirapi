@@ -2119,6 +2119,124 @@ function EditProfileModal({ open, onClose, onSave, currentProfile, setAppToast }
   );
 }
 
+const ICON_HOME = <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L2 12h3v8h6v-6h2v6h6v-8h3z"></path></svg>;
+const ICON_COW = <svg width="28" height="28" viewBox="0 0 100 100" fill="currentColor"><path d="M85.9,46.1c-1.9-2.2-4.1-4-6.5-5.3c0,0-11-6-11.4-6.3c-0.1,0-0.1-0.1-0.2-0.1c-1.3-1-3.1-1.3-4.7-0.7 c-0.7,0.3-1.4,0.7-1.9,1.3c-2.3,2.4-5.3,4.6-8.3,4.6c-2.6,0-5.1-1.6-7-4.1c-1.7-2.3-3.6-3.8-5.6-4.6c-0.1,0-0.2-0.1-0.3-0.1 C38,30.3,36.1,30.7,34.8,32c-0.1,0.1-0.1,0.1-0.2,0.1C33,33.5,22,41.4,22,41.4c-2.2,1.6-3.7,3.9-4,6.4c-0.3,2.5,0.7,5,2.6,6.6 c0.1,0.1,0.1,0.1,0.2,0.1c0.1,0,0.1,0,0.2,0.1c2.1,1.5,4.7,2.1,7.2,1.7c1.3-0.2,2.5-0.7,3.6-1.5c0.1-0.1,0.2-0.1,0.3-0.2 c2-1.9,4.5-2.8,7.1-2.8c2.9,0,5.6,1.2,7.4,3.1c1.8,1.9,4.1,3,6.6,3c2,0,3.9-0.8,5.3-2.2c0.1-0.1,0.1-0.1,0.2-0.1 c1.8-2,4.6-3,7.3-2.6c1.1,0.2,2.2,0.6,3.2,1.2c0.1,0.1,0.1,0.1,0.2,0.1c1.9,1.1,4.1,1.4,6.1,0.8c2-0.6,3.8-2,5-3.8 C86.7,50,86.9,48,85.9,46.1z M52.5,41.4c0,2.1-1.7,3.8-3.8,3.8c-2.1,0-3.8-1.7-3.8-3.8c0-2.1,1.7-3.8,3.8-3.8C50.8,37.6,52.5,39.3,52.5,41.4 z"></path></svg>;
+const ICON_CALENDAR = <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M9 11H7v2h2v-2zm4 0h-2v2h2v-2zm4 0h-2v2h2v-2zm2-7h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 1.99 2H19c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V9h14v11z"></path></svg>;
+const ICON_PHONE = <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>;
+const ICON_PLUS = <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>;
+const ICON_PROFILE_CARD = <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"></rect><circle cx="9" cy="10" r="2"></circle><path d="M5 17c0-1.7 1.8-3 4-3s4 1.3 4 3"></path><line x1="14" y1="8" x2="18" y2="8"></line><line x1="14" y1="12" x2="18" y2="12"></line></svg>;
+const ICON_PULSE = <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"></path></svg>;
+const ICON_SHARE = <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line></svg>;
+const ICON_BOOK = <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3L1 9l4 2.18v6L12 21l7-3.82v-6l2-1.09V17h2V9L12 3zm6.82 6L12 12.72 5.18 9 12 5.28 18.82 9zM17 15.99l-5 2.73-5-2.73v-3.72L12 15l5-2.73v3.72z"></path></svg>;
+const ICON_CHART = <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a9 9 0 1 1-9-9"></path><path d="M21 12a9 9 0 0 0-9-9v9z"></path></svg>;
+
+function OnboardingTutorial({ open, onClose }) {
+  const [step, setStep] = useState(0);
+
+  useEffect(() => { if (open) setStep(0); }, [open]);
+
+  const slides = [
+    { icon: ICON_HOME, title: "Selamat Datang di SIRAPI", desc: "Aplikasi ini membantu Anda mencatat dan memantau kondisi reproduksi sapi — mulai dari kawin, bunting, melahirkan, hingga kesehatan — semua dalam satu tempat. Mari pelajari fitur-fiturnya langkah demi langkah." },
+    { icon: ICON_COW, title: "Tab Populasi: Daftar Sapi Anda", desc: "Tab kedua di menu bawah. Semua sapi yang Anda miliki tercatat di sini, lengkap dengan kode dan status terkininya.", steps: ["Gunakan kolom pencarian untuk mencari sapi berdasarkan kode", "Gunakan filter jenis kelamin untuk melihat jantan/betina saja", "Ketuk salah satu kartu sapi untuk membuka detail lengkapnya"] },
+    { icon: ICON_PLUS, title: "Menambah Sapi Baru", desc: "Di tab Populasi, ketuk tombol tambah untuk mendaftarkan sapi baru.", steps: ["Isi kode/nama sapi, jenis kelamin, dan jenis ras", "Pilih asal usul sapi (lahir di kandang sendiri atau dibeli dari pasar)", "Isi tanggal lahir (atau perkiraan umur jika dari pasar)", "Ketuk Simpan — sapi langsung muncul di daftar Populasi"] },
+    { icon: ICON_HEART_OUTLINE, title: "Melapor Kawin (Inseminasi Buatan)", desc: "Buka detail sapi betina, lalu pilih tab Reproduksi.", steps: ["Pilih jenis aksi 'Kawin (IB)'", "Isi tanggal pelaksanaan IB", "Ketuk Simpan — status sapi otomatis berubah menjadi 'Sudah Kawin'"] },
+    { icon: ICON_SEARCH, title: "Melapor Pemeriksaan Kebuntingan", desc: "Sekitar 60 hari setelah kawin, petugas akan memeriksa kebuntingan sapi Anda.", steps: ["Buka kembali tab Reproduksi pada sapi tersebut", "Pilih hasil pemeriksaan: Bunting atau Tidak Bunting", "Jika Bunting, sistem otomatis menghitung perkiraan tanggal lahir (HPL)"] },
+    { icon: ICON_TAG, title: "Melapor Kelahiran", desc: "Saat sapi melahirkan, catat segera agar data tetap akurat.", steps: ["Buka tab Reproduksi sapi yang bunting", "Pilih aksi 'Lapor Melahirkan'", "Isi tanggal kelahiran — anak sapi bisa langsung didaftarkan sebagai pedet baru"] },
+    { icon: ICON_PULSE, title: "Melapor Sapi Sakit", desc: "Buka detail sapi, lalu pilih tab Medis (di sebelah tab Reproduksi).", steps: ["Ketuk 'Lapor Gejala' dan jelaskan kondisi sapi", "Status berubah menjadi 'Menunggu Dokter'", "Petugas akan menindaklanjuti dan mencatat diagnosa serta tindakan"] },
+    { icon: ICON_CALENDAR, title: "Tab Kalender: Prediksi Birahi", desc: "Tab ketiga di menu bawah. Pilih salah satu sapi betina untuk melihat kalender prediksinya.", steps: ["Sistem otomatis menghitung jadwal birahi berikutnya", "Jadwal pemeriksaan kebuntingan juga ditampilkan", "Perkiraan tanggal lahir (HPL) muncul untuk sapi yang sedang bunting", "Setiap istilah pada kalender disertai keterangan singkat di bawahnya"] },
+    { icon: ICON_CHART, title: "Tab Beranda: Grafik Distribusi", desc: "Tab pertama di menu bawah. Grafik donat menunjukkan populasi sapi betina dalam 3 kategori.", steps: ["Bunting — sudah diperiksa petugas, hasil positif", "Belum Bunting — sudah di-IB, belum diperiksa", "Tidak Bunting — pedet, kosong, atau pasca melahirkan", "Ketuk badge kondisi di pojok kanan atas untuk lihat keterangannya"] },
+    { icon: ICON_PHONE, title: "Saran & Hubungi Petugas", desc: "Masih di tab Beranda, gulir ke bawah untuk melihat kartu Saran & Peringatan.", steps: ["Setiap sapi yang butuh perhatian akan muncul di sini dengan saran otomatis", "Sapi yang butuh penanganan medis akan menampilkan tombol 'Hubungi Petugas'", "Ketuk tombol tersebut untuk langsung membuka percakapan WhatsApp"] },
+    { icon: ICON_SHARE, title: "Membagikan Laporan", desc: "Di tab Beranda, ketuk tombol Bagikan untuk membuat ringkasan bergambar.", steps: ["Sistem membuat gambar grafik ringkasan populasi sapi Anda", "Ketuk 'Bagikan sebagai Gambar' untuk mengirim ke WhatsApp atau platform lain"] },
+    { icon: ICON_BOOK, title: "Tab Akademi", desc: "Tab keempat di menu bawah. Berisi materi edukasi seputar reproduksi dan kesehatan sapi, serta jadwal live konsultasi dengan petugas." },
+    { icon: ICON_PROFILE_CARD, title: "Tab Profil", desc: "Tab terakhir di menu bawah. Kelola data diri Anda di sini.", steps: ["Edit Profil — ubah data diri dan NIK", "Keamanan & Password — ganti password akun Anda", "Bantuan — buka kembali Cara Pakai Aplikasi atau tutorial ini kapan saja"] },
+  ];
+
+  if (!open) return null;
+  const isLast = step === slides.length - 1;
+  const current = slides[step];
+
+  return (
+    <div className="fixed inset-0 z-[150] flex items-center justify-center bg-slate-900/70 backdrop-blur-sm px-4">
+      <div className="relative bg-white w-full max-w-sm rounded-[28px] shadow-2xl pop-in max-h-[88vh] flex flex-col overflow-hidden">
+        <button onClick={onClose} className="absolute top-5 right-5 z-10 text-slate-300 hover:text-slate-500 text-[11px] font-bold">Lewati</button>
+
+        <div className="overflow-y-auto p-7 pb-4 text-center">
+          <div className="w-16 h-16 bg-emerald-50 rounded-2xl flex items-center justify-center mx-auto mb-5 text-emerald-600">{current.icon}</div>
+          <h3 className="font-black text-lg text-slate-900 mb-2">{current.title}</h3>
+          <p className="text-sm text-slate-500 font-medium leading-relaxed">{current.desc}</p>
+
+          {current.steps && (
+            <ol className="text-left space-y-2.5 mt-5 bg-slate-50 rounded-2xl p-4">
+              {current.steps.map((s, i) => (
+                <li key={i} className="flex items-start gap-2.5">
+                  <span className="shrink-0 w-5 h-5 rounded-full bg-emerald-600 text-white text-[10px] font-black flex items-center justify-center mt-0.5">{i + 1}</span>
+                  <span className="text-xs text-slate-600 font-medium leading-relaxed">{s}</span>
+                </li>
+              ))}
+            </ol>
+          )}
+        </div>
+
+        <div className="px-7 pb-7 pt-3 border-t border-slate-100 shrink-0">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Langkah {step + 1} dari {slides.length}</span>
+          </div>
+          <div className="h-1.5 rounded-full bg-slate-100 mb-4 overflow-hidden">
+            <div className="h-full rounded-full bg-emerald-600 transition-all" style={{ width: `${((step + 1) / slides.length) * 100}%` }}></div>
+          </div>
+          <div className="flex gap-3">
+            {step > 0 && <button onClick={() => setStep(step - 1)} className="flex-1 py-3.5 rounded-xl border border-slate-200 text-sm font-bold text-slate-600 hover:bg-slate-50 transition-colors">Kembali</button>}
+            <button onClick={() => isLast ? onClose() : setStep(step + 1)} className="flex-1 py-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold shadow-lg shadow-emerald-500/30 transition-all">{isLast ? "Mulai Pakai" : "Lanjut"}</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function HelpGuideScreen({ open, onClose }) {
+  const [openSection, setOpenSection] = useState(0);
+
+  const sections = [
+    { title: "Menambah Data Sapi Baru", body: "Buka tab Populasi, lalu ketuk tombol tambah. Isi data sapi (kode, jenis kelamin, ras, asal usul, tanggal lahir/masuk), lalu simpan." },
+    { title: "Melaporkan Kawin (Inseminasi Buatan)", body: "Ketuk salah satu sapi betina di tab Populasi, pilih tab Reproduksi, lalu pilih aksi 'Kawin (IB)' dan isi tanggalnya. Status sapi otomatis berubah menjadi sudah kawin." },
+    { title: "Melaporkan Pemeriksaan Kebuntingan", body: "Sekitar 60 hari setelah kawin, petugas akan memeriksa kebuntingan. Catat hasilnya lewat tab Reproduksi pada sapi tersebut — pilih hasil Bunting atau Tidak Bunting." },
+    { title: "Melaporkan Kelahiran", body: "Saat sapi melahirkan, buka tab Reproduksi sapi tersebut, pilih aksi 'Lapor Melahirkan', lalu isi tanggal kelahirannya." },
+    { title: "Melaporkan Sapi Sakit", body: "Buka detail sapi, pilih tab Medis, lalu catat gejala yang muncul. Petugas akan menindaklanjuti laporan tersebut." },
+    { title: "Membaca Kalender Birahi", body: "Tab Kalender menunjukkan perkiraan jadwal birahi, jadwal pemeriksaan kebuntingan, dan perkiraan tanggal lahir untuk setiap sapi betina, dihitung otomatis dari data yang Anda masukkan." },
+    { title: "Memahami Tab Beranda", body: "Tab Beranda menampilkan ringkasan status reproduksi seluruh sapi dan daftar sapi yang butuh perhatian segera, lengkap dengan tombol hubungi petugas." },
+    { title: "Menghubungi Petugas", body: "Setiap saran yang membutuhkan tindak lanjut akan menampilkan tombol 'Hubungi Petugas' — ketuk untuk langsung membuka percakapan WhatsApp dengan petugas." },
+  ];
+
+  if (!open) return null;
+
+  return (
+    <div className="fixed inset-0 z-[150] bg-cream overflow-y-auto">
+      <div className="bg-white px-5 pt-8 pb-6 border-b border-slate-200 shadow-sm flex items-center gap-3 sticky top-0 z-10">
+        <button onClick={onClose} className="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 shrink-0">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+        </button>
+        <h2 className="text-xl font-black text-slate-900 tracking-tight">Cara Pakai Aplikasi</h2>
+      </div>
+      <div className="p-5 space-y-3 pb-12">
+        {sections.map((s, i) => (
+          <div key={i} className="bg-white rounded-[20px] border border-slate-100 shadow-sm overflow-hidden">
+            <button onClick={() => setOpenSection(openSection === i ? -1 : i)} className="w-full flex items-center justify-between p-4 text-left">
+              <span className="font-bold text-sm text-slate-700 pr-2">{i + 1}. {s.title}</span>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={`text-slate-400 shrink-0 transition-transform ${openSection === i ? "rotate-180" : ""}`}><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </button>
+            {openSection === i && (
+              <div className="px-4 pb-4 -mt-1">
+                <p className="text-xs text-slate-500 font-medium leading-relaxed">{s.body}</p>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function ChangePasswordModal({ open, onClose, currentProfile, setAppToast }) {
   const [oldPassword, setOldPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -2291,6 +2409,8 @@ function AppContent() {
   const [editProfileOpen, setEditProfileOpen] = useState(false);
   const [changePasswordOpen, setChangePasswordOpen] = useState(false);
   const [recoveryMode, setRecoveryMode] = useState(false);
+  const [tutorialOpen, setTutorialOpen] = useState(false);
+  const [helpGuideOpen, setHelpGuideOpen] = useState(false);
 
   useEffect(() => {
     const { data: authListener } = supabase.auth.onAuthStateChange((event) => {
@@ -2298,6 +2418,10 @@ function AppContent() {
     });
     return () => authListener?.subscription?.unsubscribe();
   }, []);
+
+  useEffect(() => {
+    if (profile && !localStorage.getItem("srtt_tutorial_seen")) setTutorialOpen(true);
+  }, [profile]);
 
   useEffect(() => { setTimeout(() => setHideSplashDOM(true), 2500); }, []);
   useEffect(() => { try { if (profile) localStorage.setItem("srtt_user_profile", JSON.stringify(profile)); } catch(e) {} }, [profile]);
@@ -2632,6 +2756,26 @@ function AppContent() {
                     </div>
                   </div>
 
+                  <div>
+                    <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 ml-2">Bantuan</h3>
+                    <div className="bg-white rounded-[20px] border border-slate-100 shadow-sm overflow-hidden divide-y divide-slate-100">
+                      <div onClick={() => setHelpGuideOpen(true)} className="flex items-center justify-between p-4 cursor-pointer hover:bg-slate-50 transition-colors">
+                         <div className="flex items-center gap-3">
+                           <div className="w-8 h-8 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-600"><svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg></div>
+                           <span className="font-bold text-sm text-slate-700">Cara Pakai Aplikasi</span>
+                         </div>
+                         <span className="text-slate-300 font-bold">❯</span>
+                      </div>
+                      <div onClick={() => setTutorialOpen(true)} className="flex items-center justify-between p-4 cursor-pointer hover:bg-slate-50 transition-colors">
+                         <div className="flex items-center gap-3">
+                           <div className="w-8 h-8 rounded-full bg-violet-50 flex items-center justify-center text-violet-600"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 1 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg></div>
+                           <span className="font-bold text-sm text-slate-700">Tutorial Interaktif</span>
+                         </div>
+                         <span className="text-slate-300 font-bold">❯</span>
+                      </div>
+                    </div>
+                  </div>
+
                   <button onClick={() => { 
                     setAppConfirm({
                       open: true,
@@ -2674,6 +2818,8 @@ function AppContent() {
           <DetailModal item={detailItem} onClose={() => setDetailItem(null)} onDeleteLog={handleDeleteLog} setAppToast={setAppToast} setAppConfirm={setAppConfirm} />
           <EditProfileModal open={editProfileOpen} onClose={() => setEditProfileOpen(false)} onSave={setProfile} currentProfile={profile} setAppToast={setAppToast} />
           <ChangePasswordModal open={changePasswordOpen} onClose={() => setChangePasswordOpen(false)} currentProfile={profile} setAppToast={setAppToast} />
+          <OnboardingTutorial open={tutorialOpen} onClose={() => { setTutorialOpen(false); localStorage.setItem("srtt_tutorial_seen", "1"); }} />
+          <HelpGuideScreen open={helpGuideOpen} onClose={() => setHelpGuideOpen(false)} />
         </>
       )}
     </div>
