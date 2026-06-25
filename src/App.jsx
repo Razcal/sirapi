@@ -951,8 +951,6 @@ function DetailModal({ item, onClose, onDeleteLog, setAppToast, setAppConfirm })
              </a>
           )}
 
-          <SmartEstrusCalendar item={item} />
-
           <h4 className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-6 ml-2">Recording Kronologis Lengkap</h4>
           <div className="relative">
             <div className="timeline-main-line"></div>
