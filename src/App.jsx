@@ -1419,7 +1419,7 @@ function ShareSummaryModal({ open, onClose, stats, profile, dbCattle, setAppToas
   );
 }
 
-function ReproStatusChart({ dbCattle }) {
+function ReproStatusChart({ dbCattle, onRowClick }) {
   const [kandangInfoOpen, setKandangInfoOpen] = useState(false);
   const safeDb = Array.isArray(dbCattle) ? dbCattle : [];
   const femaleCattle = safeDb.filter(item => item && (item.jenis_kelamin || item.gender) !== "JANTAN");
@@ -1430,7 +1430,7 @@ function ReproStatusChart({ dbCattle }) {
   }
 
   const counts = {};
-  const detailCounts = {}; // { statusLabel: { count, color, isUrgent } }
+  const detailCounts = {}; // { statusLabel: { count, color, isUrgent, ids } }
   femaleCattle.forEach(item => {
     const status = item.status_reproduksi || item.phase || "OPEN";
     counts[status] = (counts[status] || 0) + 1;
@@ -1439,9 +1439,10 @@ function ReproStatusChart({ dbCattle }) {
     try { analysis = analyzeCattle(item); } catch (e) { analysis = null; }
     const detailLabel = (analysis?.statusLabel || status).replace(/⚠️|🚨/g, '').trim();
     if (!detailCounts[detailLabel]) {
-      detailCounts[detailLabel] = { count: 0, color: COLOR_HEX[analysis?.color] || COLOR_HEX.slate, isUrgent: !!analysis?.isUrgent };
+      detailCounts[detailLabel] = { count: 0, color: COLOR_HEX[analysis?.color] || COLOR_HEX.slate, isUrgent: !!analysis?.isUrgent, ids: [] };
     }
     detailCounts[detailLabel].count += 1;
+    detailCounts[detailLabel].ids.push(item.id);
     if (analysis?.isUrgent) detailCounts[detailLabel].isUrgent = true;
   });
 
@@ -1546,13 +1547,17 @@ Menunjukkan seberapa banyak sapi yang butuh penanganan mendesak dari petugas. Se
         <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Rincian Kondisi Detail</p>
         <div className="space-y-1.5">
           {detailRows.map((row, idx) => (
-            <div key={idx} className={`flex items-center justify-between gap-2 px-3 py-2 rounded-lg ${row.isUrgent ? "bg-rose-50" : "bg-slate-50"}`}>
+            <button
+              key={idx}
+              onClick={() => onRowClick && row.ids[0] && onRowClick({ id: row.ids[0] })}
+              className={`w-full flex items-center justify-between gap-2 px-3 py-2 rounded-lg text-left transition-colors ${row.isUrgent ? "bg-rose-50 hover:bg-rose-100" : "bg-slate-50 hover:bg-slate-100"}`}
+            >
               <div className="flex items-center gap-2 min-w-0">
                 <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: row.color }}></div>
                 <span className={`text-[10.5px] font-semibold truncate ${row.isUrgent ? "text-rose-700" : "text-slate-600"}`}>{row.label}</span>
               </div>
               <span className={`text-[11px] font-black shrink-0 ${row.isUrgent ? "text-rose-700" : "text-slate-800"}`}>{row.count}</span>
-            </div>
+            </button>
           ))}
         </div>
       </div>
@@ -1604,7 +1609,7 @@ function DashboardView({ dbCattle, profile, onAdviceClick, setAppToast, onAddNew
                 <p className="text-xs font-medium text-slate-400 mt-1.5 max-w-xs mx-auto">Ketuk tombol hijau "Tambah Ternak" di pojok kanan bawah untuk mendaftarkan sapi pertama Anda.</p>
               </div>
             ) : (
-              <ReproStatusChart dbCattle={safeDb} />
+              <ReproStatusChart dbCattle={safeDb} onRowClick={onAdviceClick} />
             )}
           </div>
         </div>
