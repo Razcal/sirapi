@@ -7,7 +7,7 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('push', (event) => {
-  let data = { title: 'SIRAPI', body: 'Ada sapi yang butuh perhatian.' };
+  let data = { title: 'SIRAPI', body: 'Ada info baru untuk Anda hari ini.' };
   try {
     if (event.data) data = event.data.json();
   } catch (e) {

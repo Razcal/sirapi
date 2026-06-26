@@ -1982,6 +1982,8 @@ const ICON_COW = <svg width="28" height="28" viewBox="0 0 100 100" fill="current
 const ICON_CALENDAR = <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M9 11H7v2h2v-2zm4 0h-2v2h2v-2zm4 0h-2v2h2v-2zm2-7h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 1.99 2H19c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V9h14v11z"></path></svg>;
 const ICON_BOOK = <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3L1 9l4 2.18v6L12 21l7-3.82v-6l2-1.09V17h2V9L12 3zm6.82 6L12 12.72 5.18 9 12 5.28 18.82 9zM17 15.99l-5 2.73-5-2.73v-3.72L12 15l5-2.73v3.72z"></path></svg>;
 const ICON_CHART = <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a9 9 0 1 1-9-9"></path><path d="M21 12a9 9 0 0 0-9-9v9z"></path></svg>;
+const ICON_INFO = <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>;
+const ICON_HONESTY = <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>;
 
 function OnboardingTutorial({ open, onClose }) {
   const [step, setStep] = useState(0);
@@ -1990,11 +1992,12 @@ function OnboardingTutorial({ open, onClose }) {
 
   const slides = [
     { icon: ICON_HOME, title: "Selamat Datang di SIRAPI", desc: "Aplikasi ini membantu Anda mencatat dan memantau kondisi reproduksi sapi — mulai dari kawin, bunting, melahirkan, hingga kesehatan. Berikut gambaran singkat tiap menu di bawah." },
+    { icon: ICON_HONESTY, title: "Isi Data Sejujurnya", desc: "Sistem menganalisa kondisi sapi berdasarkan tanggal dan data yang Anda masukkan. Semakin jujur dan akurat pengisiannya (tanggal kawin, kelahiran, gejala sakit, dll), semakin valid pula saran dan prediksi yang diberikan sistem." },
     { icon: ICON_CHART, title: "Tab Beranda", desc: "Ringkasan kondisi seluruh sapi Anda, saran otomatis untuk yang butuh perhatian, dan tombol hijau 'Tambah Ternak' untuk mendaftarkan sapi baru." },
     { icon: ICON_COW, title: "Tab Rekam Medis", desc: "Daftar lengkap sapi Anda beserta riwayat medis dan reproduksinya. Ketuk salah satu sapi untuk melapor kawin, pemeriksaan kebuntingan, kelahiran, atau sakit." },
     { icon: ICON_CALENDAR, title: "Tab Kalender", desc: "Prediksi otomatis jadwal birahi, jadwal pemeriksaan kebuntingan, dan perkiraan tanggal lahir untuk setiap sapi betina." },
-    { icon: ICON_BOOK, title: "Tab Akademi & Profil", desc: "Akademi berisi materi edukasi peternakan. Profil untuk mengelola data diri, keamanan akun, dan membuka kembali panduan ini kapan saja." },
-    { icon: ICON_HEART_OUTLINE, title: "Butuh Panduan Lebih Detail?", desc: "Buka Profil > Bantuan > 'Cara Pakai Aplikasi' untuk panduan langkah-demi-langkah setiap fitur, lengkap dan bisa dibaca ulang kapan saja." },
+    { icon: ICON_BOOK, title: "Tab Akademi & Profil", desc: "Akademi berisi materi edukasi peternakan. Profil untuk mengelola data diri, keamanan akun, mengaktifkan notifikasi harian, dan membuka kembali panduan ini kapan saja." },
+    { icon: ICON_INFO, title: "Butuh Panduan Lebih Detail?", desc: "Buka Profil > Bantuan > 'Cara Pakai Aplikasi' untuk panduan langkah-demi-langkah setiap fitur, lengkap dan bisa dibaca ulang kapan saja." },
   ];
 
   if (!open) return null;
@@ -2044,6 +2047,7 @@ function HelpGuideScreen({ open, onClose }) {
   const [openSection, setOpenSection] = useState(0);
 
   const sections = [
+    { title: "Pentingnya Mengisi Data Sejujurnya", body: "Sistem menganalisa kondisi dan memberi saran berdasarkan tanggal dan data yang Anda masukkan (tanggal kawin, kelahiran, gejala sakit, dll). Semakin jujur dan akurat pengisiannya, semakin valid pula hasil analisa, prediksi kalender, dan saran yang diberikan sistem." },
     { title: "Menambah Data Sapi Baru", body: "Di tab Beranda, ketuk tombol hijau 'Tambah Ternak' di pojok kanan bawah. Isi data sapi (kode, jenis kelamin, ras, asal usul, tanggal lahir/masuk), lalu simpan." },
     { title: "Melaporkan Kawin (Inseminasi Buatan)", body: "Ketuk salah satu sapi betina di tab Rekam Medis, pilih tab Reproduksi, lalu pilih aksi 'Kawin (IB)' dan isi tanggalnya. Status sapi otomatis berubah menjadi sudah kawin." },
     { title: "Melaporkan Pemeriksaan Kebuntingan", body: "Sekitar 60 hari setelah kawin, petugas akan memeriksa kebuntingan. Catat hasilnya lewat tab Reproduksi pada sapi tersebut — pilih hasil Bunting atau Tidak Bunting." },
@@ -2052,6 +2056,7 @@ function HelpGuideScreen({ open, onClose }) {
     { title: "Membaca Kalender Birahi", body: "Tab Kalender menunjukkan perkiraan jadwal birahi, jadwal pemeriksaan kebuntingan, dan perkiraan tanggal lahir. Ketuk menu dropdown 'Pilih Sapi' di bagian atas untuk beralih ke sapi betina lain — semua dihitung otomatis dari data yang Anda masukkan." },
     { title: "Memahami Tab Beranda", body: "Tab Beranda menampilkan ringkasan status reproduksi seluruh sapi dan daftar sapi yang butuh perhatian segera, lengkap dengan tombol hubungi petugas." },
     { title: "Menghubungi Petugas", body: "Setiap saran yang membutuhkan tindak lanjut akan menampilkan tombol 'Hubungi Petugas' — ketuk untuk langsung membuka percakapan WhatsApp dengan petugas." },
+    { title: "Mengaktifkan Notifikasi Harian", body: "Buka Profil, nyalakan toggle 'Notifikasi Harian SIRAPI'. Anda akan menerima sapaan harian dan informasi penting tentang sapi Anda meski aplikasi tertutup. Di iPhone, tambahkan dulu aplikasi ini ke Homescreen (Safari > tombol Share > 'Add to Home Screen') supaya notifikasi bisa berfungsi." },
   ];
 
   if (!open) return null;
@@ -2647,8 +2652,8 @@ function AppContent() {
                          <div className="flex items-center gap-3 min-w-0">
                            <div className="w-8 h-8 rounded-full bg-amber-50 flex items-center justify-center text-amber-600 shrink-0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg></div>
                            <div className="min-w-0">
-                             <p className="font-bold text-sm text-slate-700">Notifikasi Sapi Mendesak</p>
-                             <p className="text-[10px] text-slate-400 font-medium">Dapatkan notifikasi meski aplikasi tertutup</p>
+                             <p className="font-bold text-sm text-slate-700">Notifikasi Harian SIRAPI</p>
+                             <p className="text-[10px] text-slate-400 font-medium">Sapaan & info penting tiap hari, meski aplikasi tertutup</p>
                            </div>
                          </div>
                          <button
