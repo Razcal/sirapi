@@ -4,7 +4,7 @@ export const daysDiff = (a, b = new Date()) => Math.floor((new Date(b) - new Dat
 
 export const fmtDate = (d) => {
   try { return new Date(d).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "2-digit" }); } 
-  catch(e) { return "-"; }
+  catch { return "-"; }
 };
 
 export const getAge = (dateStr) => {
@@ -16,7 +16,7 @@ export const getAge = (dateStr) => {
     const remM = m % 12;
     if (y > 0) return `${y} Thn ${remM} Bln`;
     return `${m} Bln`;
-  } catch(e) { return "-"; }
+  } catch { return "-"; }
 };
 
 export const dialog = {

@@ -26,7 +26,7 @@ export const pushService = {
       if (!registration) return false;
       const subscription = await registration.pushManager.getSubscription();
       return !!subscription;
-    } catch (e) {
+    } catch {
       return false;
     }
   },

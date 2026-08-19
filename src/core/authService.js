@@ -87,7 +87,7 @@ export const authService = {
         userInsertData.password_hash = passwordHash;
       }
 
-      const { data: profileResult, error: profileError } = await supabase
+      const { data: _profileResult, error: profileError } = await supabase
         .from('users')
         .insert([userInsertData])
         .select()
@@ -183,7 +183,7 @@ export const authService = {
       }
 
       // Save user profile to storage (JANGAN simpan password_hash!)
-      const { password_hash, ...safeUserRecord } = userRecord;
+      const { password_hash: _password_hash, ...safeUserRecord } = userRecord;
       saveUserToStorage(safeUserRecord);
 
       return {
@@ -222,7 +222,7 @@ export const authService = {
         .single();
 
       if (!userProfile) return null;
-      const { password_hash, ...safeUserProfile } = userProfile;
+      const { password_hash: _password_hash, ...safeUserProfile } = userProfile;
       return safeUserProfile;
     } catch (error) {
       console.error('Error getting current user:', error);

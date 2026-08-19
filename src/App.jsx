@@ -1,80 +1,40 @@
 import React, { useState, useEffect } from "react";
-import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
 import { toPng } from "html-to-image";
 import { AuthScreen } from "./AuthScreen";
 import { DialogSystem } from "./core/components/SharedUI";
 import { supabase } from "./core/supabaseClient";
 import { daysDiff, fmtDate, analyzeCattle } from "./core/analyzeCattle";
-import logoTuban from "./Tubankab.png";
+import { Icon } from "./core/components/Icons";
+import Donut from "./core/components/Donut";
+import { HeroScene } from "./core/components/Hero";
+import LaporanView from "./core/components/Laporan";
+import RewindView from "./core/components/Rewind";
+import logoTuban from "./assets/logo-tuban.png";
 
 /*
   ========================================
   1. GLOBAL STYLE & THEME - SIRAPI EDITION
   ========================================
 */
-const GlobalStyle = () => (
-  <style>{`
-    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap');
-    
-    * { font-family: 'Plus Jakarta Sans', sans-serif; box-sizing: border-box; }
-    body { background-color: #f8fafc; color: #0f172a; -webkit-tap-highlight-color: transparent; }
-    ::-webkit-scrollbar { width: 0px; } 
-    
-    .fade-in { animation: fadeIn 0.4s ease-out; }
-    .slide-up { animation: slideUp 0.4s cubic-bezier(.17,.67,.21,1); }
-    .pop-in { animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
-    
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-    @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
-    @keyframes popIn { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
-    
-    /* MODERNISED NAV-BAR */
-    .nav-bar { position: fixed; bottom: 0; left: 0; right: 0; background: rgba(250, 246, 236, 0.95); backdrop-filter: blur(16px); border-top: 1px solid #e8dfc8; display: flex; justify-content: space-around; padding: 12px 0 max(12px, env(safe-area-inset-bottom)); z-index: 50; box-shadow: 0 -8px 32px rgba(0,0,0,0.06); }
-    .nav-item { display: flex; flex-direction: column; align-items: center; font-size: 10px; color: #94a3b8; font-weight: 800; gap: 6px; transition: all 0.3s ease; width: 20%; }
-    .nav-item.active { color: #15803d; }
-
-    .nav-icon { width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; transition: all 0.3s ease; }
-    .nav-item.active .nav-icon { transform: translateY(-3px) scale(1.1); filter: drop-shadow(0 4px 6px rgba(21,128,61,0.3)); }
-
-    .timeline-line { width: 2px; background: #f1f5f9; position: absolute; top: 14px; bottom: 10px; left: 3px; }
-    .timeline-item:last-child .timeline-line { display: none; }
-    
-    .timeline-main-line { position: absolute; left: 24px; top: 0; bottom: 0; width: 2px; background: #f1f5f9; z-index: 0; }
-    .timeline-main-item { position: relative; padding-left: 56px; padding-bottom: 24px; z-index: 10; }
-    .timeline-main-icon { position: absolute; left: 10px; top: 0; width: 30px; height: 30px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 14px; border: 2px solid white; z-index: 20; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
-    
-    select, input, textarea { appearance: none; -webkit-appearance: none; transition: all 0.2s; }
-    select:focus, input:focus, textarea:focus { border-color: #10b981 !important; box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.1); }
-
-    .splash-container { position: fixed; inset: 0; background: linear-gradient(160deg, #15803d 0%, #064e3b 100%); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: opacity 0.6s ease; overflow: hidden; }
-    .splash-logo-wrap { animation: splashLogoIn 0.7s cubic-bezier(0.16, 1, 0.3, 1) both; }
-    .splash-title { animation: splashFadeUp 0.6s ease-out 0.35s both; }
-    .splash-subtitle { animation: splashFadeUp 0.6s ease-out 0.5s both; }
-    .splash-loader { width: 36px; height: 3px; border-radius: 999px; background: rgba(255,255,255,0.15); overflow: hidden; position: relative; animation: splashFadeUp 0.6s ease-out 0.7s both; }
-    .splash-loader::after { content: ''; position: absolute; inset: 0; width: 40%; background: #ffffff; border-radius: 999px; animation: splashLoaderSlide 1.1s ease-in-out infinite; }
-
-    @keyframes splashLogoIn { from { opacity: 0; transform: scale(0.7) translateY(10px); } to { opacity: 1; transform: scale(1) translateY(0); } }
-    @keyframes splashFadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
-    @keyframes splashLoaderSlide { 0% { left: -40%; } 100% { left: 100%; } }
-
-    .highlight-blink {
-      animation: highlight-blink-anim 1.5s ease-out 3;
-      border-color: #10b981 !important;
-    }
-
-    @keyframes highlight-blink-anim {
-      0%, 100% { box-shadow: 0 0 0 0px rgba(16, 185, 129, 0); }
-      50% { box-shadow: 0 0 0 10px rgba(16, 185, 129, 0.4); }
-    }
-  `}</style>
-);
+// Seluruh gaya kini hidup di src/styles/design-system.css.
+// Komponen ini sengaja dipertahankan (mengembalikan null) supaya semua
+// pemanggilan <GlobalStyle /> yang sudah tersebar tidak perlu diubah.
+const GlobalStyle = () => null;
 
 /*
   ========================================
   2. CONSTANTS & HELPERS
   ========================================
 */
-const todayStr = () => new Date().toISOString().split("T")[0];
+// PENTING: jangan pakai toISOString() di sini. toISOString() memberi waktu UTC,
+// sedangkan WIB adalah UTC+7 — antara tengah malam sampai pukul 07:00 pagi
+// hasilnya mundur satu hari. Peternak mencatat IB/kelahiran saat subuh, dan
+// tanggal IB yang meleset sehari langsung menggeser jadwal PKB & perkiraan lahir.
+const todayStr = () => {
+  const d = new Date();
+  const p = (n) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+};
 
 const getAge = (dateStr) => {
   if (!dateStr) return "-";
@@ -85,29 +45,55 @@ const getAge = (dateStr) => {
     const remM = m % 12;
     if (y > 0) return `${y} Thn ${remM} Bln`;
     return `${m} Bln`;
-  } catch(e) { return "-"; }
+  } catch { return "-"; }
 };
 
+// Peta warna hasil analisa -> token severity design system.
+// Satu tingkat kegentingan = satu warna, dipakai konsisten di badge, dot,
+// garis tepi kartu, dan chart. Tidak ada lagi "semua yang mendesak jadi merah".
+const SEV = {
+  rose:    "crit",
+  orange:  "warn",
+  amber:   "warn",
+  blue:    "info",
+  violet:  "info",
+  emerald: "ok",
+  slate:   "neut",
+};
+
+const SEV_HEX = {
+  crit: "#D92D20",
+  warn: "#F79009",
+  info: "#2E90FA",
+  ok:   "#12B76A",
+  neut: "#98A2B3",
+};
+
+// Bobot untuk mengurutkan: yang paling genting naik ke atas.
+const SEV_RANK = { crit: 0, warn: 1, info: 2, ok: 3, neut: 4 };
+
+const sevOf = (analysis) => SEV[analysis?.color] || "neut";
+
+// Dipertahankan supaya kode lama yang memakai COLOR[...] tetap jalan,
+// tapi nilainya sekarang mengikuti design system.
 const COLOR = {
-  emerald: { bg: "bg-emerald-100", text: "text-emerald-800", border: "border-emerald-200" },
-  amber: { bg: "bg-amber-100", text: "text-amber-800", border: "border-amber-200" },
-  orange: { bg: "bg-orange-100", text: "text-orange-800", border: "border-orange-200" },
-  blue: { bg: "bg-blue-100", text: "text-blue-800", border: "border-blue-200" },
-  violet: { bg: "bg-violet-100", text: "text-violet-800", border: "border-violet-200" },
-  rose: { bg: "bg-rose-100", text: "text-rose-800", border: "border-rose-200" },
-  slate: { bg: "bg-slate-100", text: "text-slate-800", border: "border-slate-200" }
+  emerald: { bg: "bg-[var(--ok-bg)]",   text: "text-[var(--ok)]",      border: "border-[var(--ok-bd)]" },
+  amber:   { bg: "bg-[var(--warn-bg)]", text: "text-[var(--warn)]",    border: "border-[var(--warn-bd)]" },
+  orange:  { bg: "bg-[var(--warn-bg)]", text: "text-[var(--warn)]",    border: "border-[var(--warn-bd)]" },
+  blue:    { bg: "bg-[var(--info-bg)]", text: "text-[var(--info)]",    border: "border-[var(--info-bd)]" },
+  violet:  { bg: "bg-[var(--info-bg)]", text: "text-[var(--info)]",    border: "border-[var(--info-bd)]" },
+  rose:    { bg: "bg-[var(--crit-bg)]", text: "text-[var(--crit)]",    border: "border-[var(--crit-bd)]" },
+  slate:   { bg: "bg-[var(--neut-bg)]", text: "text-[var(--neutral)]", border: "border-[var(--neut-bd)]" }
 };
 
-// Satu sumber kebenaran warna hex, sejajar dengan key COLOR di atas — dipakai
-// di tempat yang butuh nilai hex mentah (misal Recharts), bukan class Tailwind.
 const COLOR_HEX = {
-  emerald: "#10b981",
-  amber: "#f59e0b",
-  orange: "#f97316",
-  blue: "#3b82f6",
-  violet: "#8b5cf6",
-  rose: "#f43f5e",
-  slate: "#64748b"
+  emerald: SEV_HEX.ok,
+  amber:   SEV_HEX.warn,
+  orange:  SEV_HEX.warn,
+  blue:    SEV_HEX.info,
+  violet:  SEV_HEX.info,
+  rose:    SEV_HEX.crit,
+  slate:   SEV_HEX.neut
 };
 
 // Ikon SVG kustom (bukan emoji) — dipakai di SmartEstrusCalendar & ActionModal.
@@ -123,37 +109,52 @@ const ICON_PIN = <svg width="16" height="16" viewBox="0 0 24 24" fill="none" str
 
 // UI COMPONENT BARU: IN-APP TOAST NOTIFICATION (PENGGANTI ALERT)
 function ToastNotification({ message, type = "error", onClose }) {
-  if (!message) return null;
-  const bg = type === "error" ? "bg-rose-50 border-rose-200 text-rose-700" : "bg-emerald-50 border-emerald-200 text-emerald-800";
-  const icon = type === "error" ? "⚠️" : "✅";
-  
   useEffect(() => {
-    const timer = setTimeout(() => { onClose(); }, 4000);
+    if (!message) return;
+    const timer = setTimeout(() => onClose(), 4200);
     return () => clearTimeout(timer);
   }, [message, onClose]);
 
+  if (!message) return null;
+  const isError = type === "error";
+
   return (
-    <div className="fixed top-4 left-1/2 -translate-x-1/2 w-[90%] max-w-sm z-[9999] pop-in">
-      <div className={`p-4 rounded-xl border font-bold text-sm shadow-lg flex items-start gap-3 ${bg}`}>
-        <span>{icon}</span>
-        <p className="flex-1 leading-snug pt-0.5">{message}</p>
-        <button onClick={onClose} className="text-xl opacity-50 hover:opacity-100">×</button>
-      </div>
+    <div className="toast" role="status" aria-live="polite">
+      <span className="toast-icon" style={{ color: isError ? "var(--crit)" : "var(--ok)" }}>
+        {isError ? <Icon.alertCircle size={20} stroke={2} /> : <Icon.checkCircle size={20} stroke={2} />}
+      </span>
+      <p className="toast-msg">{message}</p>
+      <button onClick={onClose} className="icon-btn" style={{ width: 26, height: 26 }} aria-label="Tutup">
+        <Icon.close size={14} stroke={2.2} />
+      </button>
     </div>
   );
 }
 
-// UI COMPONENT BARU: IN-APP CONFIRMATION MODAL (PENGGANTI window.confirm)
 function CustomConfirm({ open, title, message, onConfirm, onCancel, confirmText = "Ya", cancelText = "Batal", isDestructive = false }) {
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm px-4 pop-in">
-      <div className="bg-white w-full max-w-sm rounded-[24px] p-6 shadow-2xl text-center">
-        <h3 className="font-black text-xl text-slate-900 mb-2 tracking-tight">{title}</h3>
-        <p className="text-sm text-slate-600 font-medium mb-6 leading-relaxed">{message}</p>
-        <div className="flex gap-3">
-          <button onClick={onCancel} className="flex-1 bg-slate-100 text-slate-600 font-bold py-3.5 rounded-xl text-sm hover:bg-slate-200 transition-colors">{cancelText}</button>
-          <button onClick={() => { onConfirm(); onCancel(); }} className={`flex-1 text-white font-bold py-3.5 rounded-xl text-sm transition-all shadow-md ${isDestructive ? 'bg-rose-600 hover:bg-rose-700 shadow-rose-500/30' : 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-500/30'}`}>{confirmText}</button>
+    <div className="sheet-overlay" style={{ alignItems: "center", padding: 16, zIndex: 9999 }} onClick={onCancel}>
+      <div className="card pop-in" onClick={(e) => e.stopPropagation()}
+           style={{ width: "100%", maxWidth: 380, padding: 22, boxShadow: "var(--sh-xl)" }}>
+        <div className="row-icon" style={{
+          width: 42, height: 42, marginBottom: 14,
+          background: isDestructive ? "var(--crit-bg)" : "var(--brand-soft)",
+          color: isDestructive ? "var(--crit)" : "var(--brand)",
+        }}>
+          {isDestructive ? <Icon.alert size={21} stroke={2} /> : <Icon.info size={21} stroke={2} />}
+        </div>
+        <h3 className="t-h2 c-1" style={{ margin: "0 0 6px" }}>{title}</h3>
+        <p className="t-sm c-2" style={{ margin: "0 0 20px" }}>{message}</p>
+        <div style={{ display: "flex", gap: 10 }}>
+          <button onClick={onCancel} className="btn btn-secondary" style={{ flex: 1 }}>{cancelText}</button>
+          <button
+            onClick={() => { onConfirm(); onCancel(); }}
+            className={`btn ${isDestructive ? "btn-solid-danger" : "btn-primary"}`}
+            style={{ flex: 1 }}
+          >
+            {confirmText}
+          </button>
         </div>
       </div>
     </div>
@@ -165,20 +166,52 @@ function CustomConfirm({ open, title, message, onConfirm, onCancel, confirmText 
   4. UI COMPONENTS (CORE)
   ========================================
 */
-const FF = ({ label, children }) => (<div className="mb-4"><p className="text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 ml-1">{label}</p>{children}</div>);
+const FF = ({ label, children, hint }) => (
+  <div className="field">
+    <label className="field-label">{label}</label>
+    {children}
+    {hint ? <p className="field-hint">{hint}</p> : null}
+  </div>
+);
 
-function TimelineItem({ log, isLast }) {
+function TimelineItem({ log }) {
   return (
-    <div className="timeline-item flex gap-4 relative pb-5">
-      {!isLast && <div className="timeline-line"></div>}
-      <div className="relative z-10 mt-1"><div className={`w-3 h-3 rounded-full border-2 border-white shadow-sm ${log.colorDot || "bg-slate-300"}`}></div></div>
-      <div className="flex-1">
-        <div className="flex justify-between items-start"><p className="text-xs font-bold text-slate-800">{log.label}</p><p className="text-[10px] font-medium text-slate-400">{fmtDate(log.date)}</p></div>
-        <p className="text-[11px] text-slate-500 mt-0.5 leading-relaxed">{log.desc}</p>
+    <div className="tl-item">
+      <span className="tl-dot" style={{ background: dotHex(log) }} />
+      <div className="tl-head">
+        <span className="tl-title">{tidyLabel(log.label)}</span>
+        <span className="tl-date">{fmtDate(log.date)}</span>
       </div>
+      <p className="tl-desc">{log.desc}</p>
     </div>
   );
 }
+
+// Riwayat masih menyimpan warna sebagai class Tailwind lama (mis. "bg-blue-500").
+// Dipetakan ke hex design system supaya titik timeline sewarna dengan badge & chart.
+const DOT_HEX = {
+  "cal-info-solid": SEV_HEX.info,
+  "cal-warn-solid": SEV_HEX.warn,
+  "cal-ok-solid":   SEV_HEX.ok,
+  "cal-crit-solid": SEV_HEX.crit,
+  "cal-neut-solid": SEV_HEX.neut,
+  "cal-neut-soft":  SEV_HEX.neut,
+  "bg-blue-300":    SEV_HEX.info,
+  "bg-amber-300":   SEV_HEX.warn,
+  "bg-rose-300":    SEV_HEX.crit,
+  "bg-violet-600":  SEV_HEX.info,
+  "bg-blue-500":    SEV_HEX.info,
+  "bg-orange-600":  SEV_HEX.warn,
+  "bg-orange-400":  SEV_HEX.warn,
+  "bg-emerald-500": SEV_HEX.ok,
+  "bg-rose-500":    SEV_HEX.crit,
+  "bg-rose-600":    SEV_HEX.crit,
+  "bg-violet-500":  SEV_HEX.info,
+  "bg-slate-300":   SEV_HEX.neut,
+  "bg-slate-400":   SEV_HEX.neut,
+};
+const dotHex = (log) =>
+  (log && log.sev && SEV_HEX[log.sev]) || DOT_HEX[log?.colorDot] || SEV_HEX.neut;
 
 function buildHistory(item) { 
   let history = []; 
@@ -269,72 +302,127 @@ function buildHistory(item) {
         label: analysis.statusLabel,
         desc: analysis.advice,
         colorDot: `bg-${analysis.color}-500`,
+        sev: sevOf(analysis),
         rawDate: new Date(new Date().getTime() + 9999999) 
       });
     }
 
     return history.sort((a, b) => (b.rawDate || 0) - (a.rawDate || 0)); 
-  } catch(e) { return []; }
+  } catch { return []; }
 }
+
+// Nomor petugas dikumpulkan di satu tempat. Sebelumnya ditulis ulang di tiga
+// lokasi berbeda, sehingga pergantian petugas berarti edit tiga file lalu deploy.
+export const PETUGAS_WA = "6281555863186";
+
+const waPetugas = (pesan) => `https://wa.me/${PETUGAS_WA}?text=${encodeURIComponent(pesan)}`;
+
+const SEV_ICON = {
+  crit: Icon.alertCircle,
+  warn: Icon.alert,
+  info: Icon.clock,
+  ok:   Icon.checkCircle,
+  neut: Icon.info,
+};
+
+// Sebagian statusLabel dari mesin analisa ditulis KAPITAL SEMUA
+// ("PUERPERIUM (NIFAS)", "AWAS: DARA TERLAMBAT IB"). Kapital penuh lebih lambat
+// dibaca dan terkesan berteriak, jadi dirapikan jadi Sentence case di lapisan
+// tampilan saja — datanya sendiri tidak diubah.
+const tidyLabel = (raw) => {
+  const t = String(raw || "").replace(/⚠️|🚨|💡|✅/g, "").trim();
+  if (!t) return "";
+  const isShouting = t === t.toUpperCase() && /[A-Z]{3}/.test(t);
+  if (!isShouting) return t;
+  const keep = new Set(["IB", "PKB", "SIRAPI", "WIB"]);
+  return t
+    .toLowerCase()
+    .split(" ")
+    .map((w, i) => {
+      const bare = w.replace(/[^a-z]/gi, "").toUpperCase();
+      if (keep.has(bare)) return w.toUpperCase();
+      return i === 0 ? w.charAt(0).toUpperCase() + w.slice(1) : w;
+    })
+    .join(" ")
+    .replace(/^(\w)/, (m) => m.toUpperCase());
+};
+
+const SEV_LABEL = {
+  crit: "Perlu petugas",
+  warn: "Perlu tindakan",
+  info: "Terjadwal",
+  ok:   "Aman",
+  neut: "Normal",
+};
 
 function AdviceCard({ item, analysis, onClick, ownerName }) {
   if (!item || !analysis) return null;
 
   const history = buildHistory(item);
   const latestLog = history.length > 0 ? history[0] : null;
-
+  const lastReal = history.find((h) => h.type !== "systemAlert") || null;
   const mainText = latestLog ? latestLog.desc : analysis.advice;
-  const titleText = latestLog ? latestLog.label : analysis.statusLabel;
+  const titleText = (latestLog ? latestLog.label : analysis.statusLabel) || "";
+  if (!mainText || mainText.trim() === "") return null;
 
-  const colorBg = latestLog && latestLog.colorDot
-    ? latestLog.colorDot.replace('500', '100').replace('600', '100').replace('400', '100')
-    : (COLOR[analysis.color] ? COLOR[analysis.color].bg : "bg-slate-100");
+  const sev = sevOf(analysis);
+  const SevIcon = SEV_ICON[sev] || Icon.info;
 
-  const icon = analysis.isUrgent ? '⚠️' : '💡';
-
-  if (!mainText || mainText.trim() === '') return null;
-
-  const waLink = `https://wa.me/6281555863186?text=${encodeURIComponent(`Halo Petugas, saya ${ownerName || "Peternak"}. Tolong periksa sapi saya (Kode: ${item.code || item.id}). Kasus: ${analysis.statusLabel} - Butuh Penanganan Darurat.`)}`;
+  const link = waPetugas(
+    `Halo Petugas, saya ${ownerName || "Peternak"}. Mohon bantuan untuk sapi kode ${item.code || item.id}. ` +
+    `Kondisi terdeteksi: ${analysis.statusLabel}.`
+  );
 
   return (
-    <div onClick={() => onClick(item)} className="bg-white p-4 rounded-2xl shadow-sm flex items-start gap-3 cursor-pointer hover:bg-slate-50/70 transition-colors border border-slate-100 hover:border-slate-200">
-      <div className={`w-9 h-9 rounded-xl ${colorBg} flex-shrink-0 flex items-center justify-center mt-0.5`}>
-        <span className="text-lg">{icon}</span>
-      </div>
-      <div className="flex-1 w-full overflow-hidden">
-        <div className="flex justify-between items-center mb-1">
-           <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Sapi {item.code || item.id || "N/A"}</p>
-           {analysis.isUrgent && <span className="flex h-2.5 w-2.5 relative"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span><span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-rose-500"></span></span>}
+    <article
+      onClick={() => onClick(item)}
+      className={`card row-accent sev-${sev}`}
+      style={{ overflow: "hidden", cursor: "pointer" }}
+    >
+      <div style={{ padding: "14px 16px 14px 18px" }}>
+        <div className="flex items-center gap-2" style={{ marginBottom: 8 }}>
+          <span className={`badge badge-${sev}`}>
+            <SevIcon size={13} stroke={2} />
+            {SEV_LABEL[sev]}
+          </span>
+          <span className="t-xs c-3 tabular" style={{ marginLeft: "auto", fontWeight: 600 }}>
+            {lastReal ? `Terakhir ${fmtDate(lastReal.date)}` : "Sapi baru"}
+          </span>
         </div>
 
-        <h4 className="font-black text-sm text-slate-800 mb-1 leading-snug">
-          {titleText.replace(/⚠️|🚨|💡|✅/g, '').trim()}
-        </h4>
-        <p className="text-xs font-medium text-slate-600 leading-relaxed">
-          {mainText}
-        </p>
+        <div className="flex items-baseline gap-2" style={{ marginBottom: 3 }}>
+          <span className="t-h3 c-1" style={{ whiteSpace: "nowrap", flexShrink: 0 }}>{item.code || item.id || "?"}</span>
+          <span className="t-sm c-3" style={{ flexShrink: 0 }}>·</span>
+          <span className="t-sm c-2 truncate-1" style={{ fontWeight: 600, minWidth: 0 }}>
+            {tidyLabel(titleText)}
+          </span>
+        </div>
 
-        <div className="mt-3 flex items-center justify-between gap-2 border-t border-slate-100 pt-2">
-           <div className="flex items-center gap-1.5 min-w-0">
-             <div className={`w-2 h-2 rounded-full shrink-0 ${latestLog ? latestLog.colorDot : 'bg-slate-300'}`}></div>
-             <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest truncate">
-               {latestLog ? `Status Terkini • ${fmtDate(latestLog.date)}` : 'Saran Otomatis Sistem'}
-             </p>
-           </div>
-           {analysis.needsVet && (
-             <a
-               href={waLink}
-               target="_blank"
-               rel="noopener noreferrer"
-               onClick={(e) => e.stopPropagation()}
-               className="flex items-center gap-1 bg-[#25D366] text-white text-[9px] font-bold px-2.5 py-1.5 rounded-full shrink-0 hover:bg-[#1ea952] transition-colors shadow-sm"
-             >
-               📞 Petugas
-             </a>
-           )}
+        <p className="t-sm c-2 truncate-2" style={{ margin: 0 }}>{mainText}</p>
+
+        <div className="flex items-center gap-8" style={{ marginTop: 12 }}>
+          {analysis.needsVet ? (
+            <a
+              href={link}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="btn btn-sm"
+              style={{ background: "#25D366", color: "#fff", flex: "0 0 auto" }}
+            >
+              <Icon.phone size={15} stroke={2} /> Hubungi petugas
+            </a>
+          ) : null}
+          <button
+            onClick={(e) => { e.stopPropagation(); onClick(item); }}
+            className="btn btn-sm btn-secondary"
+            style={{ marginLeft: analysis.needsVet ? 8 : 0 }}
+          >
+            Lihat detail <Icon.chevronRight size={15} stroke={2} />
+          </button>
         </div>
       </div>
-    </div>
+    </article>
   );
 }
 
@@ -362,7 +450,7 @@ function SmartEstrusCalendar({ item }) {
   let targetBlocks = []; // Format baru: Array of Blocks { start, end, bg, text, label }
   let title = "Kalender Pintar"; 
   let subtitle = "Pemantauan Siklus";
-  let anchorColorClass = "bg-slate-500";
+  let anchorColorClass = "cal-neut-solid";
 
   let displayMonthDate = new Date(today);
   displayMonthDate.setDate(1); 
@@ -380,15 +468,15 @@ function SmartEstrusCalendar({ item }) {
       // Blok Masa Pantau 1 (H+19 s/d H+22)
       const t1Start = new Date(anchor); t1Start.setDate(t1Start.getDate() + 19);
       const t1End = new Date(anchor); t1End.setDate(t1End.getDate() + 22);
-      targetBlocks.push({ start: t1Start, end: t1End, bg: "bg-amber-500", text: "text-white font-bold", label: "Masa Evaluasi Birahi (Siklus 1). Pantau vulva!" });
+      targetBlocks.push({ start: t1Start, end: t1End, bg: "cal-warn-solid", text: "cal-on-solid", label: "Masa Evaluasi Birahi (Siklus 1). Pantau vulva!" });
 
       // Blok Masa Pantau 2 (H+40 s/d H+43)
       const t2Start = new Date(anchor); t2Start.setDate(t2Start.getDate() + 40);
       const t2End = new Date(anchor); t2End.setDate(t2End.getDate() + 43);
-      targetBlocks.push({ start: t2Start, end: t2End, bg: "bg-amber-200", text: "text-amber-900 font-bold", label: "Masa Evaluasi Birahi (Siklus 2)" });
+      targetBlocks.push({ start: t2Start, end: t2End, bg: "cal-warn-soft", text: "cal-on-warn", label: "Masa Evaluasi Birahi (Siklus 2)" });
 
       title = "Evaluasi IB"; subtitle = "Masa Pantau Birahi";
-      anchorColorClass = "bg-blue-500"; // Sinkron dengan warna IB di Kronologis
+      anchorColorClass = "cal-info-solid"; // Sinkron dengan warna IB di Kronologis
       displayMonthDate = new Date(anchor);
       displayMonthDate.setDate(1);
     }
@@ -403,10 +491,10 @@ function SmartEstrusCalendar({ item }) {
       // Range HPL: 7 Hari (H-3 sampai H+3)
       const hplStart = new Date(hplDate); hplStart.setDate(hplStart.getDate() - 3);
       const hplEnd = new Date(hplDate); hplEnd.setDate(hplEnd.getDate() + 3);
-      targetBlocks.push({ start: hplStart, end: hplEnd, bg: "bg-violet-500", text: "text-white font-bold", label: "RANGE HPL (Perkiraan Lahir). Siapkan Kandang!" });
+      targetBlocks.push({ start: hplStart, end: hplEnd, bg: "cal-info-solid", text: "cal-on-solid", label: "RANGE HPL (Perkiraan Lahir). Siapkan Kandang!" });
 
       title = "Kebuntingan"; subtitle = "Pantauan Trimester & HPL";
-      anchorColorClass = "bg-blue-500";
+      anchorColorClass = "cal-info-solid";
     } else {
       title = "Kebuntingan"; subtitle = "Belum Diperiksa Presisi";
     }
@@ -418,10 +506,10 @@ function SmartEstrusCalendar({ item }) {
       const kawinStart = new Date(anchor); kawinStart.setDate(kawinStart.getDate() + 540);
       const kawinEnd = new Date(kawinStart); kawinEnd.setDate(kawinEnd.getDate() + 7); // Range 1 minggu
       
-      targetBlocks.push({ start: kawinStart, end: kawinEnd, bg: "bg-emerald-500", text: "text-white font-bold", label: "Fase Awal Dara Siap Kawin (Usia 18 Bulan)" });
+      targetBlocks.push({ start: kawinStart, end: kawinEnd, bg: "cal-ok-solid", text: "cal-on-solid", label: "Fase Awal Dara Siap Kawin (Usia 18 Bulan)" });
       
       title = "Pertumbuhan"; subtitle = "Target Siap Kawin";
-      anchorColorClass = "bg-slate-300";
+      anchorColorClass = "cal-neut-soft";
       const diffKawin = Math.floor((kawinStart - today)/86400000);
       displayMonthDate = diffKawin <= 90 ? new Date(kawinStart) : new Date(today);
       displayMonthDate.setDate(1);
@@ -430,19 +518,19 @@ function SmartEstrusCalendar({ item }) {
   else if (phase === "ABORTUS_PENDING") {
     if (item.abortusDate) anchor = new Date(item.abortusDate);
     title = "Kondisi Darurat"; subtitle = "Menunggu Penanganan";
-    anchorColorClass = "bg-rose-600"; 
+    anchorColorClass = "cal-crit-solid"; 
     displayMonthDate = new Date(today); displayMonthDate.setDate(1);
   }
   else {
     // OPEN / POSTPARTUM
     if (phase === "POSTPARTUM" && item.calvingDate) {
        anchor = new Date(item.calvingDate);
-       anchorColorClass = "bg-violet-500"; 
+       anchorColorClass = "cal-info-solid"; 
     }
     else if (phase === "OPEN") {
        let dates = [];
-       if (item.calvingDate) dates.push({ d: item.calvingDate, c: "bg-violet-500", l: "Melahirkan" });
-       (item.therapyLog || []).forEach(d => dates.push({ d, c: "bg-emerald-500", l: "Terapi Medis" }));
+       if (item.calvingDate) dates.push({ d: item.calvingDate, c: "cal-info-solid", l: "Melahirkan" });
+       (item.therapyLog || []).forEach(d => dates.push({ d, c: "cal-ok-solid", l: "Terapi Medis" }));
        (item.pkbLog || []).filter(l => l.result === "NEGATIVE").forEach(l => dates.push({ d: l.date, c: "bg-rose-500", l: "Pemeriksaan Kebuntingan Negatif" }));
        (item.ibLog || []).forEach(l => dates.push({ d: l.date || l, c: "bg-blue-500", l: "Inseminasi Buatan" }));
        if (item.abortusDate) dates.push({ d: item.abortusDate, c: "bg-rose-600", l: "Keguguran" });
@@ -465,7 +553,7 @@ function SmartEstrusCalendar({ item }) {
       const nextCycleStart = new Date(anchor); nextCycleStart.setDate(nextCycleStart.getDate() + (cycles * 21) - 1);
       const nextCycleEnd = new Date(nextCycleStart); nextCycleEnd.setDate(nextCycleEnd.getDate() + 2); // 3 Hari Range
       
-      targetBlocks.push({ start: nextCycleStart, end: nextCycleEnd, bg: "bg-emerald-500", text: "text-white font-bold", label: "Prediksi Masa Subur (Siklus Birahi)" });
+      targetBlocks.push({ start: nextCycleStart, end: nextCycleEnd, bg: "cal-ok-solid", text: "cal-on-solid", label: "Prediksi Masa Subur (Siklus Birahi)" });
       
       title = "Siklus Birahi"; subtitle = "Saran Jadwal IB Optimal";
     } else {
@@ -497,7 +585,7 @@ function SmartEstrusCalendar({ item }) {
         icon: phase === "ABORTUS_PENDING" ? ICON_ALERT_TRIANGLE : phase === "CALF" ? ICON_TAG : ICON_PIN,
         label: anchorLabel,
         dateText: fmtDate(anchor.toISOString().split("T")[0]),
-        dot: anchorColorClass.split(' ')[0],
+        dot: anchorColorClass,
         desc: anchorDesc
       });
     }
@@ -530,35 +618,34 @@ function SmartEstrusCalendar({ item }) {
     keyEvent = { block: chosen, isOngoing, isPast, daysUntilStart };
   }
 
-  const phaseIcon = phase === "BRED" ? ICON_SEARCH : phase === "PREGNANT" ? ICON_HEART_FILLED : phase === "CALF" ? ICON_TAG : phase === "ABORTUS_PENDING" ? ICON_ALERT_TRIANGLE : ICON_REFRESH;
 
   // Fungsi untuk mengekstrak info hari saat diklik
   const getDayInfo = (date) => {
-    let info = { bg: "text-slate-500 hover:bg-slate-100 rounded-md", text: "font-semibold text-[11px]", border: "", label: "" };
+    let info = { bg: "cal-plain", text: "", border: "", label: "" };
     const isAnchor = anchor && date.getTime() === anchor.getTime();
     const isToday = date.getTime() === today.getTime();
 
     // Trimester Check (Base layer)
     if (isPregnant && conceptionDate && hplDate && date >= conceptionDate && date <= hplDate) {
        const daysPreg = Math.floor((date - conceptionDate) / 86400000);
-       if (daysPreg <= 94) { info.bg = "bg-blue-100 text-blue-700 rounded-md"; info.text = "font-bold text-[11px]"; info.label = "Masa Kebuntingan Trimester 1"; }
-       else if (daysPreg <= 189) { info.bg = "bg-amber-100 text-amber-700 rounded-md"; info.text = "font-bold text-[11px]"; info.label = "Masa Kebuntingan Trimester 2"; }
-       else { info.bg = "bg-rose-100 text-rose-700 rounded-md"; info.text = "font-bold text-[11px]"; info.label = "Masa Kebuntingan Trimester 3"; }
+       if (daysPreg <= 94) { info.bg = "cal-info-soft"; info.text = "cal-on-info"; info.label = "Masa kebuntingan trimester 1"; }
+       else if (daysPreg <= 189) { info.bg = "cal-warn-soft"; info.text = "cal-on-warn"; info.label = "Masa kebuntingan trimester 2"; }
+       else { info.bg = "cal-crit-soft"; info.text = "cal-on-crit"; info.label = "Masa kebuntingan trimester 3"; }
     }
 
     // Target Block Check (Menimpa trimester)
     for (let block of targetBlocks) {
       if (date >= block.start && date <= block.end) {
-         info.bg = block.bg + " rounded-md";
-         info.text = block.text + " text-[11px]";
+         info.bg = block.bg;
+         info.text = block.text;
          info.label = block.label;
       }
     }
 
     // Anchor Check (Menimpa target)
     if (isAnchor) {
-       info.bg = anchorColorClass.includes("slate-300") ? `${anchorColorClass} text-slate-800 rounded-md` : `${anchorColorClass} text-white rounded-md`;
-       info.text = "font-bold text-[11px]";
+       info.bg = anchorColorClass;
+       info.text = anchorColorClass === "cal-neut-soft" ? "cal-on-neut" : "cal-on-solid";
        info.label = "Tanggal Kejadian / Tindakan Terakhir";
     }
 
@@ -567,8 +654,8 @@ function SmartEstrusCalendar({ item }) {
     }
 
     if (isToday && !isAnchor && !targetBlocks.some(b => date >= b.start && date <= b.end)) {
-       info.border = "border border-emerald-400 bg-white text-emerald-700 rounded-md";
-       info.text = "font-black text-[11px]";
+       info.bg = "cal-today";
+       info.text = "cal-on-today";
     }
 
     return info;
@@ -595,180 +682,206 @@ function SmartEstrusCalendar({ item }) {
   const isAtReferenceMonth = offset === 0;
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm mb-6 pop-in overflow-hidden w-full">
-      {/* HEADER */}
-      <div className="flex items-center gap-2.5 px-4 pt-4 pb-3">
-        <div className="w-8 h-8 rounded-xl bg-slate-100 flex items-center justify-center text-sm shrink-0">{phaseIcon}</div>
-        <div>
-          <h4 className="font-black text-slate-800 text-sm tracking-tight leading-none">{title}</h4>
-          <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">{subtitle}</p>
+    <div className="card pop-in" style={{ overflow: "hidden" }}>
+      <div className="card-head">
+        <div style={{ minWidth: 0 }}>
+          <p className="t-h3 c-1" style={{ margin: 0 }}>{title}</p>
+          <p className="t-xs c-3" style={{ margin: "2px 0 0", fontWeight: 600 }}>{subtitle}</p>
         </div>
       </div>
 
-      {/* BLOK KALENDER UTAMA: countdown + navigasi + grid + info ketuk, satu kesatuan visual */}
-      <div className="bg-slate-50 mx-3 rounded-xl p-2.5">
-
+      <div style={{ padding: 14 }}>
         {keyEvent && (
-          <div className={`rounded-lg px-2.5 py-2 mb-2.5 flex items-center gap-2 ${keyEvent.isOngoing ? "bg-amber-50" : keyEvent.isPast ? "bg-white" : "bg-emerald-50"}`}>
-            <div className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs shrink-0 ${keyEvent.isOngoing ? "bg-amber-400" : keyEvent.isPast ? "bg-slate-300" : "bg-emerald-500"}`}>
-              <span>{keyEvent.isOngoing ? "⏳" : keyEvent.isPast ? "⌛" : "🎯"}</span>
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className={`text-[9px] font-black uppercase tracking-widest ${keyEvent.isOngoing ? "text-amber-600" : keyEvent.isPast ? "text-slate-400" : "text-emerald-600"}`}>
-                {keyEvent.isOngoing ? "Sedang Berlangsung" : keyEvent.isPast ? "Sudah Terlewat" : `${keyEvent.daysUntilStart} Hari Lagi`}
-              </p>
-              <p className="text-[11px] font-bold text-slate-800 leading-snug mt-0.5 truncate">{keyEvent.block.label.split('.')[0]}</p>
-            </div>
+          <div className={`callout ${keyEvent.isOngoing ? "callout-warn" : keyEvent.isPast ? "callout-neut" : "callout-ok"}`}
+               style={{ marginBottom: 12, alignItems: "center" }}>
+            {keyEvent.isOngoing ? <Icon.clock size={17} stroke={2} />
+              : keyEvent.isPast ? <Icon.check size={17} stroke={2} />
+              : <Icon.calendar size={17} stroke={2} />}
+            <span style={{ minWidth: 0 }}>
+              <strong style={{ display: "block" }}>
+                {keyEvent.isOngoing ? "Sedang berlangsung"
+                  : keyEvent.isPast ? "Sudah lewat"
+                  : `${keyEvent.daysUntilStart} hari lagi`}
+              </strong>
+              <span className="truncate-1" style={{ display: "block", color: "var(--text-2)", fontWeight: 500 }}>
+                {keyEvent.block.label.split(".")[0]}
+              </span>
+            </span>
           </div>
         )}
 
-        {/* NAVIGASI BULAN */}
-        <div className="flex items-center justify-between mb-2">
-          <button onClick={(e) => { e.stopPropagation(); setOffset(o => o - 1); }} className="w-6 h-6 rounded-md bg-white text-slate-500 flex items-center justify-center text-xs font-bold hover:bg-slate-100 transition-colors shadow-sm">‹</button>
-          <div className="text-center">
-            <p className="text-[11px] font-black text-slate-700 tracking-tight">{monthNames[viewMonth]} {viewYear}</p>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+          <button onClick={(e) => { e.stopPropagation(); setOffset((o) => o - 1); }}
+                  className="icon-btn" style={{ width: 30, height: 30 }} aria-label="Bulan sebelumnya">
+            <Icon.chevronLeft size={16} stroke={2.2} />
+          </button>
+          <div style={{ textAlign: "center" }}>
+            <p className="t-smstr c-1" style={{ margin: 0 }}>{monthNames[viewMonth]} {viewYear}</p>
             {!isAtReferenceMonth && (
-              <button onClick={(e) => { e.stopPropagation(); setOffset(0); }} className="text-[8px] font-black text-emerald-600 uppercase tracking-widest hover:text-emerald-700">↺ Bulan Acuan</button>
+              <button onClick={(e) => { e.stopPropagation(); setOffset(0); }}
+                      className="t-xs" style={{ background: "none", border: 0, color: "var(--brand)", fontWeight: 700, cursor: "pointer", padding: "2px 0 0" }}>
+                Kembali ke bulan acuan
+              </button>
             )}
           </div>
-          <button onClick={(e) => { e.stopPropagation(); setOffset(o => o + 1); }} className="w-6 h-6 rounded-md bg-white text-slate-500 flex items-center justify-center text-xs font-bold hover:bg-slate-100 transition-colors shadow-sm">›</button>
+          <button onClick={(e) => { e.stopPropagation(); setOffset((o) => o + 1); }}
+                  className="icon-btn" style={{ width: 30, height: 30 }} aria-label="Bulan berikutnya">
+            <Icon.chevronRight size={16} stroke={2.2} />
+          </button>
         </div>
 
-        {/* GRID KALENDER */}
-        <div className="grid grid-cols-7 gap-0.5 text-center mb-1">
-          {['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'].map((d, i) => (
-            <div key={d} className={`text-[8.5px] font-black uppercase tracking-wide py-0.5 ${i === 0 ? "text-rose-400" : "text-slate-400"}`}>{d}</div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 3, marginBottom: 4 }}>
+          {["Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"].map((d, i) => (
+            <div key={d} className="t-xs" style={{ textAlign: "center", fontWeight: 700, padding: "3px 0",
+                 color: i === 0 ? "var(--crit-dot)" : "var(--text-3)" }}>{d}</div>
           ))}
         </div>
-        <div className="grid grid-cols-7 gap-0.5">
+
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 3 }}>
           {monthDays.map((date, i) => {
-            if (!date) return <div key={`empty-${i}`} className="h-7"></div>;
+            if (!date) return <div key={`e-${i}`} style={{ height: 34 }} />;
             const info = getDayInfo(date);
-            const isPlainSunday = date.getDay() === 0 && info.bg.includes("text-slate-500");
+            const isPlainSunday = date.getDay() === 0 && !info.label;
             return (
-              <div
+              <button
                 key={i}
                 onClick={(e) => { e.stopPropagation(); handleDayClick(date, info); }}
-                className={`flex justify-center items-center h-7 transition-colors cursor-pointer ${info.bg} ${info.border} ${isPlainSunday ? "bg-rose-50" : ""}`}
+                className={`${info.bg} ${info.border}`}
+                style={{
+                  height: 34, display: "flex", alignItems: "center", justifyContent: "center",
+                  borderRadius: "var(--r-xs)", cursor: info.label ? "pointer" : "default",
+                  border: 0, fontSize: 13.5, fontVariantNumeric: "tabular-nums",
+                  color: isPlainSunday ? "var(--crit-dot)" : undefined,
+                }}
               >
                 <span className={info.text}>{date.getDate()}</span>
-              </div>
+              </button>
             );
           })}
         </div>
 
-        {/* INFO TANGGAL TERKETUK */}
         {activeInfo ? (
-          <div className="bg-slate-800 text-white text-[10px] px-3 py-2.5 rounded-lg pop-in w-full shadow-sm font-medium leading-snug text-center mt-2">
-            <span className="font-black text-emerald-400 block mb-0.5 tracking-wide">
-              {activeInfo.date.toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}
-            </span>
-            {activeInfo.label}
+          <div className="pop-in" style={{
+            marginTop: 10, background: "var(--text)", color: "#fff", borderRadius: "var(--r-sm)",
+            padding: "10px 13px", fontSize: 12.5, lineHeight: 1.5,
+          }}>
+            <strong style={{ display: "block", marginBottom: 2 }}>{fmtDate(activeInfo.date)}</strong>
+            <span style={{ opacity: .82 }}>{activeInfo.label}</span>
           </div>
         ) : (
-          <p className="text-center text-[9px] font-semibold text-slate-400 mt-2">👆 Ketuk tanggal berwarna untuk lihat keterangan</p>
+          <p className="t-xs c-3" style={{ textAlign: "center", marginTop: 10, fontWeight: 600 }}>
+            Ketuk tanggal berwarna untuk melihat keterangannya
+          </p>
         )}
       </div>
 
-      {/* RINGKASAN & KETERANGAN ISTILAH — keterangan permanen, tidak hanya saat diketuk */}
       {summaryItems.length > 0 && (
-        <div className="px-4 py-3 mt-1">
-          <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Tanggal Penting &amp; Keterangan</p>
-          <div>
-            {summaryItems.map((s, idx) => (
-              <div key={idx} className="py-2 border-b border-slate-100 last:border-0">
-                <div className="flex items-center gap-2">
-                  <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${s.dot}`}></div>
-                  <span className="text-xs shrink-0">{s.icon}</span>
-                  <p className="flex-1 min-w-0 text-[10.5px] font-bold text-slate-700 leading-tight">{s.label}</p>
-                  <p className="text-[10px] font-semibold text-slate-400 shrink-0 ml-2">{s.dateText}</p>
-                </div>
-                {s.desc && <p className="text-[10px] font-medium text-slate-500 leading-snug mt-0.5 pl-6">{s.desc}</p>}
+        <div style={{ borderTop: "1px solid var(--border)", padding: "14px 16px" }}>
+          <p className="t-over" style={{ marginBottom: 9 }}>Tanggal penting</p>
+          {summaryItems.map((sItem, idx) => (
+            <div key={idx} style={{ padding: "9px 0", borderBottom: idx === summaryItems.length - 1 ? 0 : "1px solid var(--border)" }}>
+              <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+                <span style={{ width: 7, height: 7, borderRadius: "50%", flexShrink: 0,
+                               background: dotHex({ colorDot: sItem.dot }), transform: "translateY(-1px)" }} />
+                <p className="t-smstr c-1" style={{ margin: 0, flex: 1, minWidth: 0 }}>{sItem.label}</p>
+                <p className="t-xs c-3 tabular" style={{ margin: 0, flexShrink: 0, fontWeight: 600 }}>{sItem.dateText}</p>
               </div>
-            ))}
-          </div>
+              {sItem.desc && <p className="t-xs c-2" style={{ margin: "3px 0 0", paddingLeft: 15 }}>{sItem.desc}</p>}
+            </div>
+          ))}
         </div>
       )}
     </div>
   );
 }
 
-// KOMPONEN TAB BARU: KALENDER REPRODUKSI (Daftar Sapi Betina + Kalender per-Ekor)
 function CalendarView({ dbCattle, profile }) {
-  const femaleCattle = (dbCattle || []).filter(c => c && (c.jenis_kelamin || c.gender) !== "JANTAN");
+  const femaleCattle = (dbCattle || []).filter((c) => c && (c.jenis_kelamin || c.gender) !== "JANTAN");
   const [selectedId, setSelectedId] = useState(null);
 
   useEffect(() => {
     if (femaleCattle.length === 0) { setSelectedId(null); return; }
-    if (!femaleCattle.some(c => c.id === selectedId)) {
-      const sorted = [...femaleCattle].sort((a, b) => {
-        const aUrgent = analyzeCattle(a).isUrgent ? 1 : 0;
-        const bUrgent = analyzeCattle(b).isUrgent ? 1 : 0;
-        return bUrgent - aUrgent;
-      });
+    if (!femaleCattle.some((c) => c.id === selectedId)) {
+      const sorted = [...femaleCattle].sort(
+        (a, b) => SEV_RANK[sevOf(analyzeCattle(a))] - SEV_RANK[sevOf(analyzeCattle(b))]
+      );
       setSelectedId(sorted[0]?.id ?? null);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dbCattle]);
 
-  const selected = femaleCattle.find(c => c.id === selectedId) || null;
-  const selectedAnalysis = selected ? analyzeCattle(selected) : null;
-  const ownerName = profile?.name || "Peternak";
-  const waLink = selected ? `https://wa.me/6281555863186?text=${encodeURIComponent(`Halo Petugas, saya ${ownerName}. Tolong periksa sapi saya (Kode: ${selected.code || selected.id}). Kasus: ${selectedAnalysis?.statusLabel} - Butuh Penanganan Darurat.`)}` : "";
+  const selected = femaleCattle.find((c) => c.id === selectedId) || null;
+  const analysis = selected ? analyzeCattle(selected) : null;
+  const sev = analysis ? sevOf(analysis) : "neut";
+  const SevIcon = SEV_ICON[sev] || Icon.info;
 
   return (
-    <div className="pb-28 fade-in bg-cream min-h-screen">
-      <div className="px-5 pt-7 pb-5 bg-white rounded-b-[28px] shadow-sm mb-4">
-        <h2 className="text-xl font-black text-slate-900 tracking-tight">Kalender Reproduksi</h2>
-        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1.5">Pantau siklus birahi, IB &amp; estimasi kelahiran</p>
+    <div className="page fade-in">
+      <div className="page-head">
+        <h1 className="t-h1 c-1">Kalender</h1>
+        <p className="t-sm c-3" style={{ marginTop: 2 }}>Perkiraan jadwal birahi, pemeriksaan, dan kelahiran</p>
       </div>
 
       {femaleCattle.length === 0 ? (
-        <div className="flex flex-col items-center justify-center px-6 text-center mt-16">
-          <div className="text-5xl mb-3">📅</div>
-          <p className="font-black text-slate-700 text-sm">Belum Ada Data Sapi Betina</p>
-          <p className="text-xs font-medium text-slate-400 mt-1.5 max-w-xs">Tambahkan data ternak betina lewat tombol "Tambah Ternak" di Beranda untuk mulai memantau kalender siklus reproduksi.</p>
+        <div className="card">
+          <div className="empty">
+            <div className="empty-icon"><Icon.calendar size={24} /></div>
+            <p className="empty-title">Belum ada sapi betina</p>
+            <p className="empty-text" style={{ marginBottom: 0 }}>
+              Kalender dihitung dari riwayat sapi betina. Tambahkan ternak betina dulu di tab Ternak.
+            </p>
+          </div>
         </div>
       ) : (
-        <>
-          <div className="px-5 mb-2">
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Pilih Sapi ({femaleCattle.length} Ekor)</p>
-            <div className="relative">
-              <select
-                value={selectedId || ""}
-                onChange={(e) => setSelectedId(e.target.value)}
-                className="w-full border border-slate-200 rounded-2xl pl-4 pr-10 py-3.5 text-sm font-black text-slate-700 bg-white focus:outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-50 appearance-none"
-              >
-                {femaleCattle.map(c => {
-                  const a = analyzeCattle(c);
-                  return (
-                    <option key={c.id} value={c.id}>{a.isUrgent ? "⚠️ " : ""}{c.code || c.id} — {a.statusLabel}</option>
-                  );
-                })}
-              </select>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-slate-400"><polyline points="6 9 12 15 18 9"></polyline></svg>
-            </div>
+        <div className="stack-16">
+          <div className="field" style={{ marginBottom: 0 }}>
+            <label className="field-label">Pilih sapi ({femaleCattle.length} ekor betina)</label>
+            <select className="select" value={selectedId || ""} onChange={(e) => setSelectedId(e.target.value)}>
+              {femaleCattle.map((c) => {
+                const a = analyzeCattle(c);
+                return (
+                  <option key={c.id} value={c.id}>
+                    {c.code || c.id} — {tidyLabel(a.statusLabel)}
+                  </option>
+                );
+              })}
+            </select>
           </div>
 
-          <div className="px-5 mt-3">
-            {selected && selectedAnalysis && (
-              <div className={`rounded-2xl p-3.5 mb-4 flex items-center gap-3 border ${COLOR[selectedAnalysis.color]?.border || "border-slate-200"} ${COLOR[selectedAnalysis.color]?.bg || "bg-slate-50"}`}>
-                <div className="flex-1 min-w-0">
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Sapi {selected.code || selected.id}</p>
-                  <p className={`text-sm font-black mt-0.5 ${COLOR[selectedAnalysis.color]?.text || "text-slate-700"}`}>{selectedAnalysis.statusLabel}</p>
+          {selected && analysis && (
+            <div className={`card row-accent sev-${sev}`} style={{ overflow: "hidden" }}>
+              <div style={{ padding: "13px 16px 13px 18px", display: "flex", alignItems: "center", gap: 11 }}>
+                <span className="row-icon" style={{
+                  background: `var(--${sev === "neut" ? "neut" : sev}-bg)`,
+                  color: `var(--${sev === "neut" ? "neutral" : sev})`,
+                }}>
+                  <SevIcon size={18} stroke={2} />
+                </span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p className="t-xs c-3" style={{ margin: 0, fontWeight: 600 }}>Sapi {selected.code || selected.id}</p>
+                  <p className="t-bodystr c-1" style={{ margin: "1px 0 0" }}>{tidyLabel(analysis.statusLabel)}</p>
                 </div>
-                {selectedAnalysis.isUrgent && <span className="text-lg shrink-0">⚠️</span>}
               </div>
-            )}
-            {selected && <SmartEstrusCalendar item={selected} />}
+            </div>
+          )}
 
-            {selectedAnalysis?.needsVet && (
-              <a href={waLink} target="_blank" rel="noopener noreferrer" className="block w-full bg-[#25D366] text-white font-black py-4 rounded-2xl text-center text-sm shadow-lg animate-pulse mt-4 border-2 border-emerald-400">
-                🚨 HUBUNGI PETUGAS MEDIS (WA)
-              </a>
-            )}
-          </div>
-        </>
+          {selected && <SmartEstrusCalendar item={selected} />}
+
+          {analysis?.needsVet && (
+            <a
+              href={waPetugas(
+                `Halo Petugas, saya ${profile?.name || "Peternak"}. Mohon bantuan untuk sapi kode ` +
+                `${selected.code || selected.id}. Kondisi terdeteksi: ${analysis.statusLabel}.`
+              )}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn btn-block"
+              style={{ background: "#25D366", color: "#fff" }}
+            >
+              <Icon.phone size={17} /> Hubungi petugas
+            </a>
+          )}
+        </div>
       )}
     </div>
   );
@@ -777,143 +890,234 @@ function CalendarView({ dbCattle, profile }) {
 function DetailModal({ item, onClose, onDeleteLog, setAppToast, setAppConfirm }) {
   if (!item) return null;
   const history = buildHistory(item);
-  const itemGender = item.jenis_kelamin || item.gender;
-
+  const isJantan = (item.jenis_kelamin || item.gender) === "JANTAN";
   const analysis = analyzeCattle(item);
+  const sev = sevOf(analysis);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end bg-slate-900/60 backdrop-blur-sm" onClick={onClose}>
-      <div className="bg-white w-full rounded-t-[32px] slide-up h-[92vh] flex flex-col shadow-2xl" onClick={e => e.stopPropagation()}>
-        <div className="flex justify-center pt-3 pb-1"><div className="w-12 h-1.5 bg-slate-200 rounded-full"></div></div>
-        <div className="flex justify-between items-center p-6 border-b border-slate-100 pb-4">
-          <div>
-            <h3 className="font-black text-3xl text-slate-900 tracking-tight">{item.code || item.id}</h3>
-            <p className="text-xs font-semibold text-slate-500 uppercase tracking-widest mt-1">{itemGender} • {item.ras || item.jenis_ras} • {analysis.statusLabel}</p>
+    <div className="sheet-overlay" onClick={onClose}>
+      <div className="sheet" style={{ height: "92dvh", display: "flex", flexDirection: "column" }}
+           onClick={(e) => e.stopPropagation()}>
+        <div className="sheet-grip" />
+        <div className="sheet-head">
+          <div style={{ minWidth: 0 }}>
+            <p className="t-h1 c-1" style={{ margin: 0 }}>{item.code || item.id}</p>
+            <p className="t-xs c-3" style={{ margin: "3px 0 0", fontWeight: 600 }}>
+              {isJantan ? "Jantan" : "Betina"} · {item.jenis_ras || item.ras || "Ras -"} · {getAge(item.tanggal_lahir || item.birthDate)}
+            </p>
           </div>
-          <button onClick={onClose} className="bg-slate-100 w-10 h-10 rounded-full flex items-center justify-center font-bold text-slate-500 hover:bg-slate-200 transition-colors">✕</button>
+          <button onClick={onClose} className="icon-btn" aria-label="Tutup"><Icon.close size={18} /></button>
         </div>
-        <div className="flex-1 overflow-y-auto p-6 bg-slate-50 relative">
-          <div className="p-4 bg-white rounded-2xl border border-slate-200 mb-6 grid grid-cols-2 gap-4">
-              <div>
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Usia Ternak</p>
-                <p className="text-sm font-black text-slate-800">{getAge(item.tanggal_lahir || item.birthDate)}</p>
-              </div>
-              <div>
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Status Terakhir</p>
-                <p className="text-sm font-black text-emerald-600">{analysis.statusLabel}</p>
-              </div>
+
+        <div style={{ flex: 1, overflowY: "auto", padding: 18, background: "var(--bg)" }}>
+          <div className={`card row-accent sev-${sev}`} style={{ overflow: "hidden", marginBottom: 18 }}>
+            <div style={{ padding: "13px 16px 13px 18px" }}>
+              <p className="t-over" style={{ marginBottom: 4 }}>Status saat ini</p>
+              <p className="t-bodystr c-1" style={{ margin: 0 }}>{tidyLabel(analysis.statusLabel)}</p>
+              <p className="t-sm c-2" style={{ margin: "6px 0 0" }}>{analysis.advice}</p>
+            </div>
           </div>
 
-          <h4 className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-6 ml-2">Riwayat Kronologis Lengkap</h4>
-          <div className="relative">
-            <div className="timeline-main-line"></div>
-            {history.length === 0 ? (
-              <p className="text-center text-slate-400 text-sm py-10 font-medium">Belum ada catatan.</p>
-            ) : (
-              history.map((log, index) => (
-                <div key={index} className="timeline-main-item">
-                  <div className={`timeline-main-icon ${log.colorDot}`} style={{left: "10px", width: "30px", height: "30px"}}></div>
-                  <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
-                    <div className="flex justify-between items-center mb-1.5">
-                      <p className="font-extrabold text-sm text-slate-800">{log.label}</p>
-                      <div className="flex items-center gap-2">
-                        <p className="text-[10px] font-bold text-slate-400">{fmtDate(log.date)}</p>
-                        
-                        {log.type !== 'birthDate' && log.type !== 'systemAlert' && onDeleteLog && (
-                          <button onClick={(e) => { 
-                            e.stopPropagation(); 
-                            setAppConfirm({
-                              open: true,
-                              title: "Hapus Riwayat?",
-                              message: "Riwayat medis/aksi ini akan dihapus secara permanen.",
-                              isDestructive: true,
-                              onConfirm: () => {
-                                onDeleteLog(item.id, log.type, log.originalIndex);
-                                setAppToast({ message: "Riwayat berhasil dihapus.", type: "success" });
-                              }
-                            });
-                          }} className="text-slate-300 hover:text-rose-500 transition-colors p-1"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg></button>
+          <p className="t-over" style={{ marginBottom: 10 }}>Riwayat lengkap ({history.length})</p>
+
+          {history.length === 0 ? (
+            <div className="card"><div className="empty" style={{ padding: "34px 20px" }}>
+              <div className="empty-icon"><Icon.clock size={22} /></div>
+              <p className="empty-title">Belum ada catatan</p>
+              <p className="empty-text" style={{ marginBottom: 0 }}>Riwayat akan muncul setelah Anda mencatat kondisi sapi ini.</p>
+            </div></div>
+          ) : (
+            <div className="card card-pad">
+              <div className="tl">
+                {history.map((log, index) => (
+                  <div key={index} className="tl-item">
+                    <span className="tl-dot" style={{ background: dotHex(log) }} />
+                    <div className="tl-head">
+                      <span className="tl-title">{tidyLabel(log.label)}</span>
+                      <span style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+                        <span className="tl-date">{fmtDate(log.date)}</span>
+                        {log.type !== "birthDate" && log.type !== "systemAlert" && onDeleteLog && (
+                          <button
+                            aria-label="Hapus riwayat"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setAppConfirm({
+                                open: true,
+                                title: "Hapus riwayat ini?",
+                                message: "Catatan ini akan dihapus permanen dan analisa sapi akan dihitung ulang tanpanya.",
+                                isDestructive: true,
+                                confirmText: "Hapus",
+                                onConfirm: () => {
+                                  onDeleteLog(item.id, log.type, log.originalIndex);
+                                  setAppToast({ message: "Riwayat dihapus.", type: "success" });
+                                },
+                              });
+                            }}
+                            style={{ background: "none", border: 0, cursor: "pointer",
+                                     color: "var(--border-strong)", padding: 2, display: "flex" }}
+                          >
+                            <Icon.trash size={14} stroke={2} />
+                          </button>
                         )}
-                      </div>
+                      </span>
                     </div>
-                    <p className="text-xs font-medium text-slate-500 leading-relaxed">{log.desc}</p>
+                    <p className="tl-desc">{log.desc}</p>
                   </div>
-                </div>
-              ))
-            )}
-          </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
   );
 }
 
+// Sebelumnya tiap sapi ditampilkan sebagai kartu setinggi ~600px berisi seluruh
+// riwayat. Dengan 50 ekor, peternak harus menggulir 30.000px hanya untuk mencari
+// satu sapi. Sekarang: baris ringkas yang bisa dipindai cepat, detail lengkap
+// tetap tersedia satu ketukan di bawahnya.
 function AssetRecordCard({ item, onEdit, onOpenAction, onOpenDetail, onDelete, highlightedId, setHighlightedId }) {
-  if (!item) return null;
-  const analysis = analyzeCattle(item);
-  const c = COLOR[analysis.color] || COLOR.slate;
-  const history = buildHistory(item);
-  const recentHistory = history.slice(0, 2);
+  // Semua hook dipanggil lebih dulu, tanpa syarat. React mewajibkan urutan hook
+  // sama di setiap render, jadi `if (!item) return null` tidak boleh mendahuluinya.
   const cardRef = React.useRef(null);
-  const isHighlighted = highlightedId === item.id;
-  const _status = String(item.status_reproduksi || item.phase || '').toUpperCase().trim();
-  const isPregnant = _status === 'PREGNANT';
-  
-  const needsPKBWarning = isPregnant && !item.conceptionDate;
+  const [open, setOpen] = useState(false);
+  const isHighlighted = !!item && highlightedId === item.id;
 
   useEffect(() => {
     if (isHighlighted && cardRef.current) {
-      cardRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      const timer = setTimeout(() => {
-        if (setHighlightedId) setHighlightedId(null);
-      }, 4500);
+      cardRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+      setOpen(true);
+      const timer = setTimeout(() => { if (setHighlightedId) setHighlightedId(null); }, 4500);
       return () => clearTimeout(timer);
     }
   }, [isHighlighted, setHighlightedId]);
 
-  return (
-    <div ref={cardRef} className={`bg-white rounded-3xl border shadow-sm overflow-hidden mb-4 hover:shadow-md transition-shadow cursor-pointer ${isHighlighted ? 'highlight-blink' : 'border-slate-100'}`} onClick={() => onOpenDetail && onOpenDetail(item)}>
-      <div className="p-5 border-b border-slate-50 bg-white">
-        <div className="flex justify-between items-start mb-4">
-          <div className="flex-1">
-            <h3 className="text-2xl font-black text-slate-900 tracking-tight mb-2">{item.code || item.id || "?"}</h3>
-            <div className="flex flex-wrap gap-2 mb-3">
-              <span className="text-[10px] bg-slate-100 text-slate-600 px-2.5 py-1 rounded-lg font-bold uppercase tracking-widest">
-                {item.jenis_kelamin === "JANTAN" ? "♂️ JANTAN" : "♀️ BETINA"}
-              </span>
-              <span className="text-[10px] bg-blue-100 text-blue-600 px-2.5 py-1 rounded-lg font-bold uppercase tracking-widest">
-                {item.jenis_ras || "N/A"}
-              </span>
-              <span className="text-[10px] bg-amber-100 text-amber-600 px-2.5 py-1 rounded-lg font-bold uppercase tracking-widest">
-                {item.asal_usul_sapi === "KANDANG" ? "🏠 Kandang" : "🛒 Pasar"}
-              </span>
-            </div>
-          </div>
-          <span className={`text-[10px] font-extrabold px-3 py-1.5 rounded-xl ${c.bg} ${c.text} uppercase tracking-widest text-center leading-tight whitespace-nowrap ml-2`}>{analysis.statusLabel}</span>
-        </div>
-        <div className="space-y-1.5 text-xs text-slate-600">
-          <p><span className="font-semibold text-slate-800">Tanggal Lahir:</span> {(item.tanggal_lahir || item.birthDate) ? new Date(item.tanggal_lahir || item.birthDate).toLocaleDateString('id-ID') : 'Tidak ada'}</p>
-          <p><span className="font-semibold text-slate-800">Usia:</span> {getAge(item.tanggal_lahir || item.birthDate)}</p>
+  if (!item) return null;
 
-          {needsPKBWarning && (
-            <div className="mt-3 p-3 bg-orange-50 border border-orange-200 rounded-lg pop-in">
-              <p className="text-[11px] text-orange-800 font-semibold leading-relaxed">
-                <strong>⚠️ Diduga bunting ({item.asal_usul_sapi === 'PASAR' ? 'asal pasar' : 'dari kandang sendiri'}).</strong> Belum dikonfirmasi — wajib lapor ke petugas untuk pemeriksaan kebuntingan.
-              </p>
+  const analysis = analyzeCattle(item);
+  const sev = sevOf(analysis);
+  const history = buildHistory(item);
+  // history[0] selalu berupa "status hari ini" yang dihitung sistem, bukan
+  // kejadian nyata — jadi tanggalnya selalu hari ini dan tidak informatif.
+  const last = history.find((h) => h.type !== "systemAlert") || null;
+
+  const _status = String(item.status_reproduksi || item.phase || "").toUpperCase().trim();
+  const needsPKBWarning = _status === "PREGNANT" && !item.conceptionDate;
+  const isJantan = (item.jenis_kelamin || item.gender) === "JANTAN";
+
+  return (
+    <div
+      ref={cardRef}
+      className={`card row-accent sev-${sev} ${isHighlighted ? "highlight-blink" : ""}`}
+      style={{ overflow: "hidden" }}
+    >
+      {/* --- baris ringkas --- */}
+      <button
+        onClick={() => setOpen((o) => !o)}
+        style={{
+          width: "100%", display: "flex", alignItems: "center", gap: 12,
+          padding: "13px 14px 13px 17px", background: "transparent", border: 0,
+          cursor: "pointer", textAlign: "left",
+        }}
+        aria-expanded={open}
+      >
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+            <span className="t-h3 c-1" style={{ whiteSpace: "nowrap" }}>{item.code || item.id || "?"}</span>
+            <span className={`badge badge-${sev}`} style={{ minWidth: 0 }}>
+              <span className="truncate-1">{tidyLabel(analysis.statusLabel)}</span>
+            </span>
+          </div>
+          <p className="t-xs c-3 truncate-1" style={{ margin: 0, fontWeight: 600 }}>
+            {isJantan ? "Jantan" : "Betina"} · {item.jenis_ras || "Ras -"} · {getAge(item.tanggal_lahir || item.birthDate)}
+            {last ? ` · terakhir ${fmtDate(last.date)}` : ""}
+          </p>
+        </div>
+        <span className="row-chev" style={{ transform: open ? "rotate(90deg)" : "none", transition: "transform .2s ease" }}>
+          <Icon.chevronRight size={18} />
+        </span>
+      </button>
+
+      {/* --- detail, dibuka saat diketuk --- */}
+      {open && (
+        <div className="fade-in" style={{ borderTop: "1px solid var(--border)" }}>
+          <div style={{ padding: "14px 16px" }}>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 12 }}>
+              <span className="chip">{isJantan ? "Jantan" : "Betina"}</span>
+              <span className="chip">{item.jenis_ras || "Ras tidak diisi"}</span>
+              <span className="chip">
+                {item.asal_usul_sapi === "PASAR" ? "Dari pasar" : "Lahir di kandang"}
+              </span>
             </div>
-          )}
+
+            <dl style={{ display: "grid", gridTemplateColumns: "auto 1fr", gap: "5px 14px", margin: "0 0 14px" }}>
+              <dt className="t-xs c-3" style={{ fontWeight: 600 }}>Tanggal lahir</dt>
+              <dd className="t-xs c-1 tabular" style={{ margin: 0, fontWeight: 600 }}>
+                {(item.tanggal_lahir || item.birthDate) ? fmtDate(item.tanggal_lahir || item.birthDate) : "Tidak ada"}
+              </dd>
+              <dt className="t-xs c-3" style={{ fontWeight: 600 }}>Usia</dt>
+              <dd className="t-xs c-1 tabular" style={{ margin: 0, fontWeight: 600 }}>{getAge(item.tanggal_lahir || item.birthDate)}</dd>
+              {!isJantan && (
+                <>
+                  <dt className="t-xs c-3" style={{ fontWeight: 600 }}>Jumlah beranak</dt>
+                  <dd className="t-xs c-1 tabular" style={{ margin: 0, fontWeight: 600 }}>{item.jumlah_beranak ?? 0}×</dd>
+                </>
+              )}
+            </dl>
+
+            {needsPKBWarning && (
+              <div className="callout callout-warn" style={{ marginBottom: 14 }}>
+                <Icon.alert size={17} stroke={2} />
+                <span>
+                  Diduga bunting ({item.asal_usul_sapi === "PASAR" ? "asal pasar" : "dari kandang sendiri"}),
+                  belum dikonfirmasi. Minta petugas melakukan pemeriksaan kebuntingan.
+                </span>
+              </div>
+            )}
+
+            <p className="t-over" style={{ marginBottom: 9 }}>Riwayat terakhir</p>
+            <div className="tl">
+              {history.length === 0 ? (
+                <p className="t-xs c-3" style={{ margin: 0 }}>Belum ada catatan.</p>
+              ) : (
+                history.slice(0, 3).map((log, i) => (
+                  <div key={i} className="tl-item">
+                    <span className="tl-dot" style={{ background: dotHex(log) }} />
+                    <div className="tl-head">
+                      <span className="tl-title">{tidyLabel(log.label)}</span>
+                      <span className="tl-date">{fmtDate(log.date)}</span>
+                    </div>
+                    <p className="tl-desc truncate-2">{log.desc}</p>
+                  </div>
+                ))
+              )}
+            </div>
+
+            {history.length > 3 && (
+              <button onClick={(e) => { e.stopPropagation(); onOpenDetail && onOpenDetail(item); }} className="btn btn-sm btn-ghost" style={{ marginTop: 6, paddingLeft: 0 }}>
+                Lihat semua riwayat ({history.length}) <Icon.chevronRight size={15} />
+              </button>
+            )}
+          </div>
+
+          <div style={{ display: "flex", gap: 8, padding: "12px 14px", borderTop: "1px solid var(--border)", background: "var(--surface-2)" }}>
+            <button onClick={(e) => { e.stopPropagation(); onOpenAction && onOpenAction(item); }} className="btn btn-sm btn-primary" style={{ flex: 1 }}>
+              <Icon.plus size={15} stroke={2.2} /> Catat kondisi
+            </button>
+            {onEdit && (
+              <button onClick={(e) => { e.stopPropagation(); onEdit(item); }} className="btn btn-sm btn-secondary" aria-label="Ubah data sapi">
+                <Icon.edit size={15} />
+              </button>
+            )}
+            {onDelete && (
+              <button onClick={(e) => { e.stopPropagation(); onDelete(item.id); }} className="btn btn-sm btn-danger" aria-label="Hapus sapi">
+                <Icon.trash size={15} />
+              </button>
+            )}
+          </div>
         </div>
-      </div>
-      <div className="p-5 pb-3">
-        <div className="pl-1">
-          {recentHistory.length === 0 ? <p className="text-xs text-slate-400 italic">Belum ada rekam medis/aksi.</p> : recentHistory.map((log, i) => <TimelineItem key={i} log={log} isLast={i === recentHistory.length - 1} />)}
-        </div>
-      </div>
-      <div className="bg-slate-50/50 px-5 py-4 flex gap-3 border-t border-slate-100">
-        <button onClick={(e) => { e.stopPropagation(); if(onOpenAction) onOpenAction(item); }} className="flex-1 bg-emerald-700 text-white py-2.5 rounded-xl text-xs font-bold hover:bg-emerald-800 shadow-sm transition-colors">Catat Kondisi</button>
-        {onEdit && <button onClick={(e) => { e.stopPropagation(); onEdit(item); }} className="bg-white border border-slate-200 text-slate-600 px-3 py-2.5 rounded-xl text-xs font-bold hover:bg-slate-50 shadow-sm transition-colors">Edit</button>}
-        {onDelete && <button onClick={(e) => { e.stopPropagation(); onDelete(item.id); }} className="bg-rose-50 border border-rose-200 text-rose-600 px-3 py-2.5 rounded-xl text-xs font-bold hover:bg-rose-100 shadow-sm transition-colors">Hapus</button>}
-      </div>
+      )}
     </div>
   );
 }
@@ -927,9 +1131,6 @@ function ActionModal({ open, item, onClose, onSaveRepro, onSaveHealth, setAppToa
   const [kondisi, setKondisi] = useState("");
   const [medicalWarning, setMedicalWarning] = useState(null);
 
-  const profileStr = localStorage.getItem('srtt_user_profile');
-  const profile = profileStr ? JSON.parse(profileStr) : null;
-  const ownerName = profile?.name || "Peternak";
   const itemGender = item?.jenis_kelamin || item?.gender;
   const isJantan = itemGender === "JANTAN";
 
@@ -994,8 +1195,6 @@ function ActionModal({ open, item, onClose, onSaveRepro, onSaveHealth, setAppToa
 
   if (!open || !item) return null;
 
-  const waLink = `https://wa.me/6281555863186?text=${encodeURIComponent(`Halo Petugas, saya ${ownerName}. Sapi ${item.code || item.id} terdeteksi Nymphomania (3x IB jarak dekat). Mohon bantuannya.`)}`;
-
   const handleSaveRepro = () => {
     if (resRepro === "NONE") return setAppToast({ message: "Silakan pilih jenis kondisi terlebih dahulu", type: "error" });
     if (medicalWarning?.includes("❌")) return setAppToast({ message: "Tanggal tidak valid", type: "error" });
@@ -1022,150 +1221,187 @@ function ActionModal({ open, item, onClose, onSaveRepro, onSaveHealth, setAppToa
     onClose();
   };
 
-  const inp = "w-full border border-slate-200 rounded-xl px-4 py-3 text-sm font-medium focus:outline-none focus:border-emerald-500 bg-slate-50 transition-all";
+  // Pilihan kondisi disaring menurut fase sapi. Sebelumnya seekor dara yang belum
+  // pernah di-IB tetap bisa memilih "Kelahiran Normal" atau "Pemeriksaan
+  // Kebuntingan: Positif" — mustahil secara biologis, dan salah pilih akan
+  // mengacaukan seluruh perhitungan kalender sapi itu.
+  const phase = String(item?.status_reproduksi || item?.phase || "").toUpperCase();
+  const punyaIB = (item?.ibLog || []).length > 0;
+
+  const OPSI = [
+    { v: "IB",       t: "Inseminasi buatan (IB)",             show: ["CALF", "OPEN", "BRED", "POSTPARTUM"] },
+    { v: "POSITIVE", t: "Hasil periksa: bunting (+)",         show: ["BRED", "OPEN", "PREGNANT"], perlu: () => punyaIB || phase === "PREGNANT" },
+    { v: "NEGATIVE", t: "Hasil periksa: tidak bunting (−)",   show: ["BRED", "PREGNANT"] },
+    { v: "CALVED",   t: "Melahirkan",                          show: ["PREGNANT"] },
+    { v: "ABORTUS",  t: "Keguguran",                           show: ["BRED", "PREGNANT"] },
+    { v: "TERAPI",   t: "Sudah mendapat terapi medis",         show: ["OPEN", "BRED", "POSTPARTUM", "ABORTUS_PENDING"] },
+  ];
+  const opsiTampil = phase === "ABORTUS_PENDING"
+    ? OPSI.filter((o) => o.v === "TERAPI")
+    : OPSI.filter((o) => o.show.includes(phase) && (!o.perlu || o.perlu()));
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-900/60 backdrop-blur-sm p-0 sm:p-4">
-      <div className="bg-white w-full max-w-md rounded-t-[32px] sm:rounded-[32px] p-6 slide-up shadow-2xl max-h-[90vh] overflow-y-auto">
-        
-        <div className="flex justify-between items-center mb-5">
-          <div><p className="font-black text-xl text-slate-900">Catat Kondisi</p><p className="text-[10px] font-bold text-slate-500 uppercase">ID: {item.code || item.id}</p></div>
-          <button onClick={onClose} className="bg-slate-100 w-8 h-8 rounded-full flex items-center justify-center font-bold">✕</button>
+    <div className="sheet-overlay" onClick={onClose}>
+      <div className="sheet" onClick={(e) => e.stopPropagation()}>
+        <div className="sheet-grip" />
+        <div className="sheet-head">
+          <div style={{ minWidth: 0 }}>
+            <p className="t-h2 c-1" style={{ margin: 0 }}>Catat kondisi</p>
+            <p className="t-xs c-3" style={{ margin: "2px 0 0", fontWeight: 600 }}>Sapi {item.code || item.id}</p>
+          </div>
+          <button onClick={onClose} className="icon-btn" aria-label="Tutup"><Icon.close size={18} /></button>
         </div>
 
-        <div className="flex bg-slate-100 p-1.5 rounded-2xl mb-6">
-          <button onClick={() => setTab("KESEHATAN")} className={`flex-1 py-2.5 text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 ${tab === "KESEHATAN" ? "bg-white shadow-sm text-slate-800" : "text-slate-500"}`}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"></path></svg> Medis</button>
-          <button onClick={() => { if(activeHealth) setAppToast({message: "Sapi dalam perawatan. Selesaikan di tab Medis.", type: "error"}); else if(isJantan) setAppToast({message: "Menu Reproduksi khusus sapi betina", type: "error"}); else setTab("REPRO"); }} className={`flex-1 py-2.5 text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 ${tab === "REPRO" ? "bg-white shadow-sm text-slate-800" : "text-slate-500"} ${activeHealth || isJantan ? "opacity-50" : ""}`}>{ICON_HEART_OUTLINE} Reproduksi</button>
-        </div>
+        <div className="sheet-body">
+          <div className="segmented" style={{ marginBottom: 18 }}>
+            <button onClick={() => setTab("KESEHATAN")} className={tab === "KESEHATAN" ? "active" : ""}>
+              <Icon.stethoscope size={16} /> Kesehatan
+            </button>
+            <button
+              className={`${tab === "REPRO" ? "active" : ""}`}
+              style={{ opacity: activeHealth || isJantan ? .45 : 1 }}
+              onClick={() => {
+                if (activeHealth) setAppToast({ message: "Sapi sedang dirawat. Selesaikan dulu di tab Kesehatan.", type: "error" });
+                else if (isJantan) setAppToast({ message: "Menu reproduksi hanya untuk sapi betina.", type: "error" });
+                else setTab("REPRO");
+              }}
+            >
+              <Icon.heart size={16} /> Reproduksi
+            </button>
+          </div>
 
-        {tab === "REPRO" && !activeHealth && (
-          <div className="space-y-4 fade-in">
-            
-            <FF label="Jenis Kondisi">
-              <select className={`${inp} bg-white`} value={resRepro} onChange={e => setResRepro(e.target.value)}>
-                <option value="NONE">-- Pilih Kondisi --</option>
-                {(item?.status_reproduksi || item?.phase) === "ABORTUS_PENDING" ? (
-                  <option value="TERAPI">✅ Sudah Mendapatkan Terapi Medis</option>
-                ) : (
-                  <>
-                    <option value="IB">Inseminasi Buatan (IB)</option>
-                    <option value="NEGATIVE">Pemeriksaan Kebuntingan: Negatif (-)</option>
-                    <option value="POSITIVE">Pemeriksaan Kebuntingan: Positif (+)</option>
-                    <option value="CALVED">Kelahiran Normal</option>
-                    <option value="ABORTUS">Keguguran</option>
-                    <option value="TERAPI">Sudah Mendapatkan Terapi Medis</option>
-                  </>
-                )}
-              </select>
-            </FF>
-
-            {resRepro !== 'POSITIVE' && resRepro !== 'NEGATIVE' && (
-              <div className="pop-in mt-2">
-                <FF label="Tanggal Tindakan / Kejadian">
-                  <input type="date" className={`${inp} bg-white`} value={dRepro} onChange={e => setDRepro(e.target.value)} />
-                </FF>
+          {tab === "REPRO" && !activeHealth && (
+            <div className="fade-in">
+              <div className="field">
+                <label className="field-label">Jenis kondisi</label>
+                <select className="select" value={resRepro} onChange={(e) => setResRepro(e.target.value)}>
+                  <option value="NONE">Pilih kondisi…</option>
+                  {opsiTampil.map((o) => <option key={o.v} value={o.v}>{o.t}</option>)}
+                </select>
+                <p className="field-hint">
+                  Pilihan menyesuaikan status sapi saat ini ({tidyLabel(analyzeCattle(item).statusLabel) || "-"}).
+                </p>
               </div>
-            )}
 
-            {resRepro === "POSITIVE" && (
-              <div className="pop-in p-4 bg-emerald-50 rounded-xl border border-emerald-100 mb-2 mt-2">
-                {(() => {
-                  const sortedIB = [...(item?.ibLog || [])].sort((a, b) => {
-                    const da = typeof a === 'object' ? a.date : a;
-                    const db = typeof b === 'object' ? b.date : b;
-                    return new Date(da) - new Date(db);
-                  });
-                  const hasIB = sortedIB.length > 0;
-                  const lastIBDate = hasIB ? (typeof sortedIB[sortedIB.length - 1] === 'object' ? sortedIB[sortedIB.length - 1].date : sortedIB[sortedIB.length - 1]) : null;
+              {resRepro !== "POSITIVE" && resRepro !== "NEGATIVE" && (
+                <div className="field pop-in">
+                  <label className="field-label">Tanggal tindakan atau kejadian</label>
+                  <input type="date" className="input" value={dRepro} max={todayStr()} onChange={(e) => setDRepro(e.target.value)} />
+                </div>
+              )}
 
-                  if (hasIB) {
-                    return (
-                      <div>
-                        <p className="text-[11px] font-black text-emerald-900 mb-1.5 uppercase tracking-widest">✅ Data Kawin Ditemukan</p>
-                        <p className="text-xs text-emerald-800 leading-relaxed font-semibold">
-                          Sistem akan menghitung HPL presisi berdasarkan tanggal IB/Kawin terakhir.
+              {resRepro === "POSITIVE" && (
+                <div className="pop-in" style={{ marginBottom: 16 }}>
+                  {(() => {
+                    const sortedIB = [...(item?.ibLog || [])].sort((a, b) => {
+                      const da = typeof a === "object" ? a.date : a;
+                      const db = typeof b === "object" ? b.date : b;
+                      return new Date(da) - new Date(db);
+                    });
+                    const hasIB = sortedIB.length > 0;
+                    const lastIBDate = hasIB
+                      ? (typeof sortedIB[sortedIB.length - 1] === "object" ? sortedIB[sortedIB.length - 1].date : sortedIB[sortedIB.length - 1])
+                      : null;
+                    return hasIB ? (
+                      <div className="callout callout-ok">
+                        <Icon.checkCircle size={17} stroke={2} />
+                        <span>
+                          Usia kebuntingan dihitung otomatis dari IB terakhir ({fmtDate(lastIBDate)}).
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="field">
+                        <label className="field-label">Perkiraan usia kebuntingan menurut petugas</label>
+                        <select className="select" value={pregMonth} onChange={(e) => setPregMonth(e.target.value)}>
+                          <option value="">Pilih usia…</option>
+                          {[1,2,3,4,5,6,7,8,9].map((m) => <option key={m} value={m}>{m} bulan</option>)}
+                        </select>
+                        <p className="field-hint">
+                          Sapi ini belum punya catatan IB, jadi usia kebuntingan perlu diisi manual.
                         </p>
                       </div>
                     );
-                  } else {
-                    return (
-                      <>
-                        <FF label="Perkiraan Umur Kebuntingan (Bulan)">
-                          <input type="number" className={`${inp} bg-white`} value={pregMonth} onChange={e => setPregMonth(e.target.value)} placeholder="Contoh: 3" autoFocus />
-                        </FF>
-                        <p className="text-[10px] text-emerald-800 leading-relaxed font-semibold mt-1">
-                          💡 Masukkan bulan kebuntingan hasil rabaan pemeriksaan dokter.
-                        </p>
-                      </>
-                    );
-                  }
-                })()}
-              </div>
-            )}
-
-            {resRepro === "NEGATIVE" && (
-              <div className="pop-in p-4 bg-rose-50 rounded-xl border border-rose-100 mb-2 mt-2">
-                <p className="text-[10px] text-rose-800 leading-relaxed font-semibold">
-                  💡 Status sapi akan dikembalikan menjadi Kosong (OPEN). Sistem mencatat waktu pemeriksaan otomatis pada hari ini.
-                </p>
-              </div>
-            )}
-
-            {resRepro === "TERAPI" && (
-              <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 pop-in mb-1 mt-2">
-                <p className="text-[10px] font-black text-emerald-800 uppercase tracking-widest mb-1">✅ Konfirmasi Terapi</p>
-                <p className="text-xs font-bold text-emerald-700 leading-relaxed">
-                  {(item?.status_reproduksi || item?.phase) === "ABORTUS_PENDING"
-                    ? "Sapi telah ditangani petugas. Peringatan darurat dicabut dan sapi masuk masa PEMULIHAN (±45 Hari) sebelum boleh di-IB kembali."
-                    : "Sapi telah diterapi medis. Peringatan merah dihapus dan status direset menjadi Kosong (OPEN)."
-                  }
-                </p>
-              </div>
-            )}
-
-            {medicalWarning && (
-              <div className="space-y-3 pop-in">
-                <div className={`p-4 rounded-xl border font-bold text-[11px] ${medicalWarning.includes('❌') ? 'bg-rose-50 border-rose-200 text-rose-700' : 'bg-orange-50 border-orange-200 text-orange-800'}`}>
-                  {medicalWarning}
+                  })()}
                 </div>
-                {medicalWarning.includes("Birahi Tidak Normal") && (
-                  <a href={waLink} target="_blank" rel="noopener noreferrer" className="block w-full bg-[#25D366] text-white font-black py-4 rounded-xl text-center text-sm shadow-md animate-pulse">
-                    🚨 HUBUNGI PETUGAS (WA)
-                  </a>
-                )}
-              </div>
-            )}
-            <button onClick={handleSaveRepro} disabled={medicalWarning?.includes('❌')} className={`w-full font-bold py-4 rounded-xl text-sm ${medicalWarning?.includes('❌') ? 'bg-slate-200 text-slate-400' : 'bg-emerald-600 text-white hover:bg-emerald-700'}`}>Simpan Kondisi</button>
-          </div>
-        )}
+              )}
 
-        {tab === "KESEHATAN" && (
-          <div className="space-y-4 fade-in">
-            {activeHealth ? (
-              <div className="bg-emerald-50 p-5 rounded-2xl border border-emerald-200">
-                <div className="mb-4">
-                  <p className="text-[10px] font-black text-emerald-800 uppercase tracking-widest mb-1">Status Perawatan</p>
-                  <p className="text-xs font-bold text-emerald-700 leading-relaxed">
-                    💡 Catatan: Pantau lendir vulva setiap hari. Jika sudah diobati dan lendirnya kembali bening serta elastis, ketuk tombol konfirmasi di bawah agar sapi bisa di-IB kembali.
-                  </p>
+              {medicalWarning && (
+                <div className={`callout ${medicalWarning.includes("❌") ? "callout-crit" : "callout-warn"}`} style={{ marginBottom: 16 }}>
+                  <Icon.alert size={17} stroke={2} />
+                  <span>{medicalWarning.replace(/⚠️|❌/g, "").trim()}</span>
                 </div>
-                <button onClick={() => submitHealth('SEMBUH')} className="w-full bg-emerald-600 text-white font-bold py-4 rounded-xl text-sm shadow-lg hover:bg-emerald-700">✅ KONFIRMASI SEMBUH</button>
-              </div>
-            ) : (
-              <>
-                <FF label="Tanggal Gejala"><input type="date" className={`${inp} bg-white`} value={dHealth} onChange={e => setDHealth(e.target.value)} /></FF>
-                <FF label="Keluhan"><textarea className={`${inp} bg-white h-20`} value={kondisi} onChange={e => setKondisi(e.target.value)} placeholder="Tulis gejala..." /></FF>
-                <button onClick={() => submitHealth('LAPOR')} className="w-full bg-orange-600 text-white font-bold py-4 rounded-xl text-sm hover:bg-orange-700">Lapor Petugas</button>
-              </>
-            )}
-          </div>
-        )}
+              )}
+
+              <button onClick={handleSaveRepro} className="btn btn-primary btn-block">Simpan catatan</button>
+            </div>
+          )}
+
+          {tab === "KESEHATAN" && (
+            <div className="fade-in">
+              {activeHealth ? (
+                <>
+                  <div className="callout callout-warn" style={{ marginBottom: 14 }}>
+                    <Icon.info size={17} stroke={2} />
+                    <span>
+                      Sapi ini sedang dalam penanganan. Pantau kondisinya setiap hari, dan tandai sembuh
+                      hanya setelah petugas menyatakan sapi pulih.
+                    </span>
+                  </div>
+                  <div className="card card-pad" style={{ marginBottom: 16 }}>
+                    <p className="t-over" style={{ marginBottom: 6 }}>Keluhan yang dilaporkan</p>
+                    <p className="t-sm c-1" style={{ margin: 0 }}>{activeHealth.gejala}</p>
+                    <p className="t-xs c-3" style={{ margin: "8px 0 0", fontWeight: 600 }}>
+                      Dilaporkan {fmtDate(activeHealth.date)}
+                    </p>
+                  </div>
+                  <button onClick={() => submitHealth("SEMBUH")} className="btn btn-primary btn-block">
+                    <Icon.checkCircle size={17} /> Tandai sudah sembuh
+                  </button>
+                </>
+              ) : (
+                <>
+                  <div className="field">
+                    <label className="field-label">Tanggal gejala muncul</label>
+                    <input type="date" className="input" value={dHealth} max={todayStr()} onChange={(e) => setDHealth(e.target.value)} />
+                  </div>
+                  <div className="field">
+                    <label className="field-label">Apa yang Anda lihat pada sapi?</label>
+                    <textarea
+                      className="textarea"
+                      value={kondisi}
+                      onChange={(e) => setKondisi(e.target.value)}
+                      placeholder="Contoh: nafsu makan turun, keluar lendir keruh dari vulva, badan terasa panas"
+                    />
+                    <p className="field-hint">
+                      Tulis apa adanya. Petugas yang akan menentukan penyakitnya — Anda cukup melaporkan yang terlihat.
+                    </p>
+                  </div>
+                  <button onClick={() => submitHealth("LAPOR")} className="btn btn-primary btn-block">
+                    Kirim laporan ke petugas
+                  </button>
+                </>
+              )}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
 }
 
+// Menutup lapisan dengan tombol Esc untuk modal yang state-nya tidak hidup di
+// AppContent, sehingga tetap ikut aturan "kembali menutup lapisan teratas".
+function useEscape(open, onClose) {
+  useEffect(() => {
+    if (!open) return;
+    const h = (e) => { if (e.key === "Escape") { e.stopPropagation(); onClose(); } };
+    window.addEventListener("keydown", h, true);
+    return () => window.removeEventListener("keydown", h, true);
+  }, [open, onClose]);
+}
+
 function ShareSummaryModal({ open, onClose, stats, profile, dbCattle, setAppToast }) {
+  useEscape(open, onClose);
   const cardRef = React.useRef(null);
   const [isGenerating, setIsGenerating] = useState(false);
 
@@ -1216,203 +1452,169 @@ function ShareSummaryModal({ open, onClose, stats, profile, dbCattle, setAppToas
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/80 backdrop-blur-sm p-4 pop-in" onClick={onClose}>
-      <div className="w-full max-w-sm" onClick={e => e.stopPropagation()}>
-        <div ref={cardRef} className="bg-gradient-to-br from-slate-900 to-slate-800 rounded-[32px] p-7 text-white shadow-2xl relative overflow-hidden border border-slate-700">
-          <div className="relative z-10">
-            <h2 className="text-2xl font-black leading-tight">Laporan Populasi Ternak</h2>
-            <p className="text-slate-400 text-[10px] font-bold tracking-widest uppercase mt-1">{ownerName} • {address}</p>
-            <p className="text-slate-500 text-[9px] font-semibold mb-5">{fmtDate(new Date())}</p>
+    <div className="sheet-overlay" style={{ alignItems: "center", padding: 16, zIndex: 100 }} onClick={onClose}>
+      <div style={{ width: "100%", maxWidth: 400 }} onClick={(e) => e.stopPropagation()}>
+        <div ref={cardRef} style={{
+          background: "linear-gradient(160deg, #101828 0%, #1D2939 100%)",
+          borderRadius: 20, padding: 24, color: "#fff", boxShadow: "var(--sh-xl)",
+        }}>
+          <p style={{ fontSize: 20, fontWeight: 700, letterSpacing: "-.02em", margin: 0 }}>Laporan populasi ternak</p>
+          <p style={{ fontSize: 13, fontWeight: 600, color: "rgba(255,255,255,.55)", margin: "4px 0 0" }}>
+            {ownerName} · {address}
+          </p>
+          <p style={{ fontSize: 12.5, fontWeight: 500, color: "rgba(255,255,255,.38)", margin: "1px 0 18px" }}>
+            {fmtDate(new Date())}
+          </p>
 
-            {totalFemale > 0 && (
-              <div className="flex items-center gap-3 bg-white/5 rounded-2xl p-4 mb-4">
-                <div className="relative shrink-0" style={{ width: 90, height: 90 }}>
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie data={shareChartData} dataKey="value" innerRadius={26} outerRadius={42} paddingAngle={3}>
-                        {shareChartData.map((entry, index) => (
-                          <Cell key={index} fill={entry.color} strokeWidth={0} />
-                        ))}
-                      </Pie>
-                    </PieChart>
-                  </ResponsiveContainer>
-                  <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                    <p className="text-lg font-black text-white leading-none">{totalFemale}</p>
-                    <p className="text-[6px] font-bold text-slate-400 uppercase tracking-wide mt-0.5">Ekor</p>
+          {totalFemale > 0 && (
+            <div style={{ display: "flex", alignItems: "center", gap: 14, background: "rgba(255,255,255,.05)",
+                          border: "1px solid rgba(255,255,255,.08)", borderRadius: 14, padding: 14, marginBottom: 10 }}>
+              <Donut data={shareChartData} size={90} inner={26} outer={42} gap={2.5} track="rgba(255,255,255,.10)">
+                <span style={{ fontSize: 19, fontWeight: 700, color: "#fff", lineHeight: 1, fontVariantNumeric: "tabular-nums" }}>{totalFemale}</span>
+                <span style={{ fontSize: 11.5, fontWeight: 600, color: "rgba(255,255,255,.55)", marginTop: 2 }}>betina</span>
+              </Donut>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                {shareChartData.map((entry, i) => (
+                  <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, padding: "5px 0" }}>
+                    <span style={{ width: 7, height: 7, borderRadius: 2, background: entry.color, flexShrink: 0 }} />
+                    <span style={{ flex: 1, minWidth: 0, fontSize: 12.5, fontWeight: 500, color: "rgba(255,255,255,.62)",
+                                   overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{entry.name}</span>
+                    <span style={{ fontSize: 14, fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>{entry.value}</span>
                   </div>
-                </div>
-                <div className="flex-1 space-y-1.5 min-w-0">
-                  {shareChartData.map((entry, index) => (
-                    <div key={index} className="flex items-center gap-2 text-[10px]">
-                      <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: entry.color }}></div>
-                      <span className="font-semibold text-slate-300 flex-1 truncate">{entry.name}</span>
-                      <span className="font-black text-white">{entry.value}</span>
-                    </div>
-                  ))}
-                </div>
+                ))}
               </div>
-            )}
-
-            <div className="grid grid-cols-3 gap-2.5">
-              <div className="bg-white/5 p-3 rounded-xl text-center"><p className="text-[8px] font-bold uppercase text-slate-400 tracking-widest mb-1">Total</p><p className="text-xl font-black">{stats.total}</p></div>
-              <div className="bg-white/5 p-3 rounded-xl text-center"><p className="text-[8px] font-bold uppercase text-slate-400 tracking-widest mb-1">Indukan</p><p className="text-xl font-black">{stats.betina}</p></div>
-              <div className="bg-white/5 p-3 rounded-xl text-center"><p className="text-[8px] font-bold uppercase text-slate-400 tracking-widest mb-1">Pejantan</p><p className="text-xl font-black">{stats.jantan}</p></div>
             </div>
+          )}
 
-            <p className="text-center text-[8px] font-bold text-slate-500 uppercase tracking-widest mt-4">Dibuat dari Aplikasi SIRAPI Tuban</p>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 10 }}>
+            {[
+              { l: "Total", v: stats.total },
+              { l: "Betina", v: stats.betina },
+              { l: "Jantan", v: stats.jantan },
+            ].map((k) => (
+              <div key={k.l} style={{ background: "rgba(255,255,255,.05)", border: "1px solid rgba(255,255,255,.08)",
+                                      borderRadius: 12, padding: "12px 10px" }}>
+                <p style={{ fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,.5)", margin: 0 }}>{k.l}</p>
+                <p style={{ fontSize: 22, fontWeight: 700, margin: "2px 0 0", letterSpacing: "-.02em",
+                            fontVariantNumeric: "tabular-nums" }}>{k.v}</p>
+              </div>
+            ))}
           </div>
+
+          <p style={{ fontSize: 11.5, fontWeight: 600, color: "rgba(255,255,255,.32)", textAlign: "center", margin: "18px 0 0" }}>
+            SIRAPI · Dinas Ketahanan Pangan, Pertanian dan Perikanan Kabupaten Tuban
+          </p>
         </div>
 
-        <div className="mt-6">
-          <button onClick={handleShareImage} disabled={isGenerating} className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-800 disabled:cursor-not-allowed text-white py-4 rounded-2xl font-bold text-sm shadow-lg shadow-emerald-500/30 flex items-center justify-center gap-2 transition-colors">
-            {isGenerating ? 'Membuat Gambar...' : '📤 Bagikan sebagai Gambar'}
+        <div style={{ marginTop: 16, display: "flex", gap: 10 }}>
+          <button onClick={onClose} className="btn btn-secondary" style={{ flex: "0 0 auto" }}>Tutup</button>
+          <button onClick={handleShareImage} disabled={isGenerating} className="btn btn-primary" style={{ flex: 1 }}>
+            {isGenerating ? "Membuat gambar…" : <><Icon.download size={17} /> Simpan &amp; bagikan</>}
           </button>
-          <p className="text-center text-white/50 text-[10px] font-semibold mt-3 mb-4">Bisa dibagikan langsung ke WhatsApp, Instagram, Facebook, dan platform lain</p>
-          <button onClick={onClose} className="w-full bg-white/10 text-white border border-white/20 py-3 rounded-2xl font-bold text-sm hover:bg-white/20 transition-colors">Tutup</button>
         </div>
+        <p style={{ fontSize: 12.5, fontWeight: 500, color: "rgba(255,255,255,.62)", textAlign: "center", margin: "12px 0 0" }}>
+          Gambar bisa langsung dikirim lewat WhatsApp atau media sosial lain.
+        </p>
       </div>
     </div>
   );
 }
 
 function ReproStatusChart({ dbCattle, onRowClick }) {
-  const [kandangInfoOpen, setKandangInfoOpen] = useState(false);
   const safeDb = Array.isArray(dbCattle) ? dbCattle : [];
-  const femaleCattle = safeDb.filter(item => item && (item.jenis_kelamin || item.gender) !== "JANTAN");
+  const femaleCattle = safeDb.filter((i) => i && (i.jenis_kelamin || i.gender) !== "JANTAN");
   const total = femaleCattle.length;
 
   if (total === 0) {
-    return <p className="text-xs font-bold text-slate-400 text-center py-2">Belum ada data sapi betina untuk ditampilkan.</p>;
+    return <p className="t-sm c-3" style={{ textAlign: "center", padding: "18px 0" }}>Belum ada sapi betina untuk ditampilkan.</p>;
   }
 
   const counts = {};
-  const detailCounts = {}; // { statusLabel: { count, color, isUrgent, ids } }
-  femaleCattle.forEach(item => {
+  const detailCounts = {};
+  femaleCattle.forEach((item) => {
     const status = item.status_reproduksi || item.phase || "OPEN";
     counts[status] = (counts[status] || 0) + 1;
-
     let analysis = null;
-    try { analysis = analyzeCattle(item); } catch (e) { analysis = null; }
-    const detailLabel = (analysis?.statusLabel || status).replace(/⚠️|🚨/g, '').trim();
-    if (!detailCounts[detailLabel]) {
-      detailCounts[detailLabel] = { count: 0, color: COLOR_HEX[analysis?.color] || COLOR_HEX.slate, isUrgent: !!analysis?.isUrgent, ids: [] };
-    }
-    detailCounts[detailLabel].count += 1;
-    detailCounts[detailLabel].ids.push(item.id);
-    if (analysis?.isUrgent) detailCounts[detailLabel].isUrgent = true;
+    try { analysis = analyzeCattle(item); } catch { analysis = null; }
+    const label = tidyLabel(analysis?.statusLabel || status);
+    const sev = sevOf(analysis);
+    if (!detailCounts[label]) detailCounts[label] = { count: 0, sev, ids: [] };
+    detailCounts[label].count += 1;
+    detailCounts[label].ids.push(item.id);
   });
 
-  const pregnantCount = counts["PREGNANT"] || 0; // sudah diperiksa petugas, hasil positif
-  const belumBuntingCount = counts["BRED"] || 0; // sudah IB, belum diperiksa petugas
-  const tidakBuntingCount = total - pregnantCount - belumBuntingCount; // belum bunting (kosong/pedet/pasca melahirkan/dll)
+  const pregnant = counts["PREGNANT"] || 0;
+  const bred = counts["BRED"] || 0;
+  const other = total - pregnant - bred;
 
   const chartData = [
-    { name: "PREGNANT", label: "Bunting", value: pregnantCount, color: COLOR_HEX.emerald },
-    { name: "BRED", label: "Belum Bunting", value: belumBuntingCount, color: COLOR_HEX.amber },
-    { name: "OTHER", label: "Tidak Bunting", value: tidakBuntingCount, color: COLOR_HEX.slate }
-  ]; // sengaja tidak difilter value > 0 — tabel di bawah harus tetap menampilkan ketiga kategori meski jumlahnya 0
+    { key: "ok",   label: "Bunting terkonfirmasi", value: pregnant, color: SEV_HEX.ok,
+      note: "Sudah diperiksa petugas, hasilnya positif" },
+    { key: "warn", label: "Menunggu pemeriksaan",  value: bred,     color: SEV_HEX.warn,
+      note: "Sudah di-IB, belum diperiksa petugas" },
+    { key: "neut", label: "Belum bunting",         value: other,    color: SEV_HEX.neut,
+      note: "Pedet, dara, kosong, atau pasca melahirkan" },
+  ];
 
   const detailRows = Object.entries(detailCounts)
     .map(([label, info]) => ({ label, ...info }))
-    .sort((a, b) => (b.isUrgent ? 1 : 0) - (a.isUrgent ? 1 : 0) || b.count - a.count);
-
-  const urgentCount = detailRows.filter(r => r.isUrgent).reduce((sum, r) => sum + r.count, 0);
-  const urgentPct = total > 0 ? (urgentCount / total) * 100 : 0;
-
-  let kandangLabel = "Kondisi Baik";
-  let kandangBg = "bg-emerald-100";
-  let kandangColor = "text-emerald-700";
-  let kandangIcon = <polyline points="20 6 9 17 4 12"></polyline>;
-  if (urgentPct > 30) {
-    kandangLabel = "Kritis"; kandangBg = "bg-rose-100"; kandangColor = "text-rose-700";
-    kandangIcon = <><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></>;
-  } else if (urgentPct > 10) {
-    kandangLabel = "Waspada"; kandangBg = "bg-amber-100"; kandangColor = "text-amber-700";
-    kandangIcon = <><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></>;
-  } else if (urgentPct > 0) {
-    kandangLabel = "Cukup Baik"; kandangBg = "bg-blue-100"; kandangColor = "text-blue-700";
-    kandangIcon = <polyline points="20 6 9 17 4 12"></polyline>;
-  }
+    .sort((a, b) => (SEV_RANK[a.sev] - SEV_RANK[b.sev]) || (b.count - a.count));
 
   return (
     <div>
-      <div className="flex items-start justify-between gap-3 mb-4">
-        <div>
-          <h3 className="font-black text-slate-800 text-base mb-1">Distribusi Status Reproduksi</h3>
-          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Populasi Betina Aktif</p>
-        </div>
-        <div className="relative shrink-0">
-          <button onClick={() => setKandangInfoOpen(!kandangInfoOpen)} className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-full ${kandangBg}`}>
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={kandangColor}>{kandangIcon}</svg>
-            <span className={`text-[9px] font-black uppercase tracking-wide whitespace-nowrap ${kandangColor}`}>{kandangLabel}</span>
-          </button>
-          {kandangInfoOpen && (
-            <div className="absolute right-0 top-full mt-2 w-56 bg-slate-800 text-white text-[10px] font-medium leading-relaxed rounded-xl p-3 shadow-xl z-20">
-Menunjukkan seberapa banyak sapi yang butuh penanganan mendesak dari petugas. Semakin tinggi tingkatnya — dari <strong>Kondisi Baik</strong>, <strong>Cukup Baik</strong>, <strong>Waspada</strong>, hingga <strong>Kritis</strong> — semakin banyak sapi yang perlu segera diperiksa.
-            </div>
-          )}
-        </div>
-      </div>
+      <div style={{ display: "flex", alignItems: "center", gap: 18, padding: "4px 0 6px" }}>
+        <Donut data={chartData} size={116} inner={40} outer={57}>
+          <span className="tabular" style={{ fontSize: 25, fontWeight: 700, letterSpacing: "-.03em", lineHeight: 1 }}>{total}</span>
+          <span className="t-xs c-3" style={{ fontWeight: 600, marginTop: 3 }}>betina</span>
+        </Donut>
 
-      <div className="flex items-center gap-4">
-        <div className="relative shrink-0" style={{ width: 140, height: 140 }}>
-          <ResponsiveContainer width="100%" height="100%">
-            <PieChart>
-              <Pie data={chartData} dataKey="value" nameKey="label" innerRadius={40} outerRadius={60} paddingAngle={3}>
-                {chartData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.color} strokeWidth={0} />
-                ))}
-              </Pie>
-            </PieChart>
-          </ResponsiveContainer>
-          <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-            <p className="text-xl font-black text-slate-800 leading-none">{total}</p>
-            <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Ekor Betina</p>
-          </div>
-        </div>
-
-        <table className="flex-1 min-w-0 text-left">
-          <tbody>
-            {chartData.map((entry, index) => {
-              const pct = total > 0 ? Math.round((entry.value / total) * 100) : 0;
-              return (
-                <tr key={index} className="border-b border-slate-50 last:border-0">
-                  <td className="py-1.5 pr-2">
-                    <div className="flex items-center gap-1.5 min-w-0">
-                      <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: entry.color }}></div>
-                      <span className="text-[10.5px] font-semibold text-slate-600 truncate">{entry.label}</span>
-                    </div>
-                  </td>
-                  <td className="py-1.5 text-right text-[11px] font-black text-slate-800 whitespace-nowrap">{entry.value}</td>
-                  <td className="py-1.5 pl-2 text-right text-[10px] font-bold text-slate-400 whitespace-nowrap">{pct}%</td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-
-      <div className="text-[10px] font-medium text-slate-400 leading-relaxed mt-3 bg-slate-50 rounded-lg px-3 py-2 space-y-1">
-        <p>💡 Persentase dihitung dari total <strong className="text-slate-600">{total} ekor</strong> sapi betina:</p>
-        <p>• <strong className="text-emerald-600">Bunting</strong> — sudah diperiksa petugas/dokter hewan dan hasilnya positif.</p>
-        <p>• <strong className="text-amber-600">Belum Bunting</strong> — sudah di-IB, tapi belum diperiksa kebuntingannya oleh petugas.</p>
-        <p>• <strong className="text-slate-600">Tidak Bunting</strong> — kategori sapi yang saat ini belum bunting (pedet/dara, kosong, pasca melahirkan, dll). Lihat rincian lengkapnya di bawah.</p>
-      </div>
-
-      <div className="mt-5 pt-4 border-t border-slate-100">
-        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Rincian Kondisi Detail</p>
-        <div className="space-y-1.5">
-          {detailRows.map((row, idx) => (
-            <button
-              key={idx}
-              onClick={() => onRowClick && row.ids[0] && onRowClick({ id: row.ids[0] })}
-              className={`w-full flex items-center justify-between gap-2 px-3 py-2 rounded-lg text-left transition-colors ${row.isUrgent ? "bg-rose-50 hover:bg-rose-100" : "bg-slate-50 hover:bg-slate-100"}`}
-            >
-              <div className="flex items-center gap-2 min-w-0">
-                <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: row.color }}></div>
-                <span className={`text-[10.5px] font-semibold truncate ${row.isUrgent ? "text-rose-700" : "text-slate-600"}`}>{row.label}</span>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          {chartData.map((e) => {
+            const pct = total > 0 ? Math.round((e.value / total) * 100) : 0;
+            return (
+              <div key={e.key} style={{ padding: "7px 0", borderBottom: "1px solid var(--border)" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <span style={{ width: 8, height: 8, borderRadius: 2, background: e.color, flexShrink: 0 }} />
+                  <span className="t-xs c-2" style={{ fontWeight: 600, flex: 1, minWidth: 0, lineHeight: 1.3 }}>{e.label}</span>
+                  <span className="t-smstr c-1 tabular">{e.value}</span>
+                  <span className="t-xs c-3 tabular" style={{ width: 32, textAlign: "right", fontWeight: 600 }}>{pct}%</span>
+                </div>
               </div>
-              <span className={`text-[11px] font-black shrink-0 ${row.isUrgent ? "text-rose-700" : "text-slate-800"}`}>{row.count}</span>
+            );
+          })}
+        </div>
+      </div>
+
+      <details style={{ marginTop: 10 }}>
+        <summary className="t-xs c-3" style={{ cursor: "pointer", fontWeight: 600, listStyle: "none", padding: "6px 0" }}>
+          Apa arti ketiga kategori ini?
+        </summary>
+        <div className="callout callout-neut" style={{ marginTop: 6, flexDirection: "column", gap: 6 }}>
+          {chartData.map((e) => (
+            <p key={e.key} className="t-xs" style={{ margin: 0, color: "var(--text-2)" }}>
+              <strong style={{ color: "var(--text)" }}>{e.label}</strong> — {e.note}.
+            </p>
+          ))}
+        </div>
+      </details>
+
+      <div style={{ marginTop: 16, paddingTop: 14, borderTop: "1px solid var(--border)" }}>
+        <p className="t-over" style={{ marginBottom: 8 }}>Rincian per kondisi</p>
+        <div className="stack-4">
+          {detailRows.map((row, i) => (
+            <button
+              key={i}
+              onClick={() => onRowClick && row.ids[0] && onRowClick({ id: row.ids[0] })}
+              style={{
+                width: "100%", display: "flex", alignItems: "center", gap: 9,
+                padding: "9px 11px", borderRadius: "var(--r-sm)", cursor: "pointer",
+                background: "var(--surface-2)", border: "1px solid var(--border)", textAlign: "left",
+              }}
+            >
+              <span style={{ width: 7, height: 7, borderRadius: "50%", background: SEV_HEX[row.sev], flexShrink: 0 }} />
+              <span className="t-xs c-2 truncate-1" style={{ flex: 1, fontWeight: 600 }}>{row.label}</span>
+              <span className="t-smstr c-1 tabular">{row.count}</span>
+              <Icon.chevronRight size={15} className="row-chev" />
             </button>
           ))}
         </div>
@@ -1421,155 +1623,273 @@ Menunjukkan seberapa banyak sapi yang butuh penanganan mendesak dari petugas. Se
   );
 }
 
-function DashboardView({ dbCattle, profile, onAdviceClick, setAppToast, onAddNew }) {
- const safeDb = Array.isArray(dbCattle) ? dbCattle : [];
-  const total = safeDb.length;
-  const jantan = safeDb.filter(i => i && (i.jenis_kelamin === "JANTAN" || i.gender === "JANTAN")).length;
-  const betina = safeDb.filter(i => i && (i.jenis_kelamin === "BETINA" || i.gender === "BETINA")).length;
-  const pregnant = safeDb.filter(i => i && (i.status_reproduksi === "PREGNANT" || i.phase === "PREGNANT")).length;
-  const [shareModalOpen, setShareModalOpen] = useState(false);
-  const [adviceOpen, setAdviceOpen] = useState(false);
+function Greeting({ name, total, needAction, critCount, onAddNew }) {
+  const h = new Date().getHours();
+  const sapa = h < 11 ? "Selamat pagi" : h < 15 ? "Selamat siang" : h < 18 ? "Selamat sore" : "Selamat malam";
+  const tgl = new Date().toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long" });
+  const depan = (name || "Peternak").split(" ")[0];
 
-  const itemsWithAdvice = safeDb.map(item => {
-    if (!item) return null;
-    try { 
-      const analysis = analyzeCattle(item); 
-      return analysis.isUrgent ? { item, analysis } : null; 
-    } 
-    catch (e) { return null; }
-  }).filter(Boolean).sort((a, b) => {
-    if (a.analysis.isUrgent && !b.analysis.isUrgent) return -1;
-    if (!a.analysis.isUrgent && b.analysis.isUrgent) return 1;
-    return 0;
-  });
+  let ringkas;
+  if (total === 0) ringkas = "Belum ada ternak yang tercatat.";
+  else if (needAction === 0) ringkas = `Semua ${total} ekor dalam kondisi baik hari ini.`;
+  else if (critCount > 0) ringkas = `${needAction} ekor perlu tindakan, ${critCount} di antaranya perlu petugas.`;
+  else ringkas = `${needAction} dari ${total} ekor perlu tindakan hari ini.`;
 
   return (
-    <div className="fade-in pb-28 pt-2">
-      <div className="px-5 space-y-6">
-        <div className="bg-white rounded-[32px] shadow-xl border border-slate-100 overflow-hidden">
-          <div className="bg-slate-900 px-6 pt-6 pb-5 text-white relative overflow-hidden">
-             <div className="flex justify-between items-start relative z-10">
-               <div>
-                 <p className="text-xs font-semibold text-slate-400">Selamat Datang,</p>
-                 <h2 className="text-xl font-black mt-0.5">{profile?.name || "Peternak"}</h2>
-               </div>
-               {total > 0 && <button onClick={() => setShareModalOpen(true)} className="bg-white/10 text-white text-xs font-bold px-4 py-2 rounded-full hover:bg-white/20 transition-colors shrink-0">Bagikan</button>}
-             </div>
-             <p className="text-[11px] font-bold text-slate-400 mt-4">Total Ternak: <span className="text-white">{total} Ekor</span> ({jantan} Jantan &middot; {betina} Betina)</p>
-          </div>
-          <div className="p-5">
-            {total === 0 ? (
-              <div className="text-center py-6">
-                <div className="w-16 h-16 bg-emerald-50 rounded-2xl flex items-center justify-center mx-auto mb-4 text-emerald-600">{ICON_COW}</div>
-                <p className="font-black text-slate-700 text-sm">Belum Ada Data Sapi</p>
-                <p className="text-xs font-medium text-slate-400 mt-1.5 max-w-xs mx-auto">Ketuk tombol hijau "Tambah Ternak" di pojok kanan bawah untuk mendaftarkan sapi pertama Anda.</p>
-              </div>
-            ) : (
-              <ReproStatusChart dbCattle={safeDb} onRowClick={onAdviceClick} />
-            )}
-          </div>
-        </div>
-
-        <div>
-          <button onClick={() => setAdviceOpen(o => !o)} className="flex items-center justify-between w-full mb-4 ml-1">
-             <div className="flex items-center">
-               <h3 className="font-black text-slate-800 text-base">Saran & Peringatan</h3>
-               {itemsWithAdvice.length > 0 && <span className="ml-2 bg-rose-100 text-rose-800 px-2 py-0.5 rounded-md text-[10px] font-bold">{itemsWithAdvice.length}</span>}
-             </div>
-             <svg className={`text-slate-400 transition-transform duration-300 ${adviceOpen ? "rotate-180" : ""}`} width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+    <div className="hero-card">
+      <HeroScene variant="card" />
+      <div className="hero-card-in">
+        <p className="hero-date">{tgl}</p>
+        <h1 className="hero-greet">{sapa}, {depan}</h1>
+        <p className="hero-sum">{ringkas}</p>
+        {total > 0 && (
+          <button onClick={onAddNew} className="hero-action">
+            <Icon.plus size={15} stroke={2.2} /> Tambah ternak
           </button>
-          {adviceOpen && (
-            itemsWithAdvice.length === 0 ? (
-              <div className="p-6 bg-emerald-50 rounded-[24px] border border-emerald-200 text-center"><p className="text-xs text-emerald-800 font-bold">✨ Semua populasi kandang dalam kondisi prima.</p></div>
-            ) : (
-              <div className="space-y-3 overflow-y-auto pr-1" style={{ maxHeight: 420 }}>
-                {itemsWithAdvice.map(({ item, analysis }) => (<AdviceCard key={item.id} item={item} analysis={analysis} onClick={onAdviceClick} ownerName={profile?.name} />))}
-              </div>
-            )
-          )}
-        </div>
+        )}
       </div>
-      <ShareSummaryModal open={shareModalOpen} onClose={() => setShareModalOpen(false)} stats={{total, jantan, betina, pregnant}} profile={profile} dbCattle={safeDb} setAppToast={setAppToast} />
-      <button onClick={onAddNew} className="fixed bottom-24 right-5 z-40 h-10 pl-3 pr-3.5 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white shadow-xl shadow-emerald-600/40 flex items-center gap-1.5 transition-all active:scale-95">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="shrink-0"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-        <span className="text-xs font-bold whitespace-nowrap">Tambah Ternak</span>
-      </button>
     </div>
   );
 }
 
-function AcademyView() {
-  const handleJoinZoom = () => {
-    const zoomLink = "https://zoom.us/j/1234567890"; 
-    window.open(zoomLink, '_blank');
-  };
+function DashboardView({ dbCattle, profile, onAdviceClick, setAppToast, onAddNew }) {
+  const safeDb = Array.isArray(dbCattle) ? dbCattle : [];
+  const total = safeDb.length;
+  const jantan = safeDb.filter((i) => i && (i.jenis_kelamin === "JANTAN" || i.gender === "JANTAN")).length;
+  const betina = total - jantan;
+  const pregnant = safeDb.filter((i) => i && (i.status_reproduksi === "PREGNANT" || i.phase === "PREGNANT")).length;
+  const [shareModalOpen, setShareModalOpen] = useState(false);
+
+  const analysed = safeDb.map((item) => {
+    if (!item) return null;
+    try { return { item, analysis: analyzeCattle(item) }; } catch { return null; }
+  }).filter(Boolean);
+
+  // Diurutkan menurut tingkat kegentingan sebenarnya, bukan sekadar flag
+  // "mendesak" — supaya kasus yang butuh dokter hewan selalu di paling atas.
+  const needAction = analysed
+    .filter((x) => x.analysis.isUrgent)
+    .sort((a, b) => SEV_RANK[sevOf(a.analysis)] - SEV_RANK[sevOf(b.analysis)]);
+
+  const critCount = analysed.filter((x) => sevOf(x.analysis) === "crit").length;
+  const aman = total - needAction.length;
 
   return (
-    <div className="pb-32 fade-in bg-cream min-h-screen">
-      <div className="bg-white px-5 pt-8 pb-8 border-b border-slate-200 shadow-sm">
-        <h2 className="text-2xl font-black text-slate-900 tracking-tight">Akademi SIRAPI</h2>
-        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">Peternak Wajib Pintar</p>
+    <div className="page fade-in">
+      <Greeting name={profile?.name} total={total} needAction={needAction.length}
+                critCount={critCount} onAddNew={onAddNew} />
+
+      {total === 0 ? (
+        <div className="card">
+          <div className="empty">
+            <div className="empty-icon"><Icon.cow size={26} /></div>
+            <p className="empty-title">Belum ada data sapi</p>
+            <p className="empty-text">Daftarkan sapi pertama Anda untuk mulai memantau status reproduksinya.</p>
+            <button onClick={onAddNew} className="btn btn-primary">
+              <Icon.plus size={17} stroke={2.2} /> Tambah sapi pertama
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="stack-20 stagger">
+          {/* ---- Ringkasan angka ---- */}
+          <section>
+            <div className="stat-grid">
+              <div className="stat">
+                <span className="stat-label"><Icon.cow size={14} /> Total ternak</span>
+                <span className="stat-value">{total}</span>
+                <span className="stat-meta">{betina} betina · {jantan} jantan</span>
+              </div>
+              <div className="stat">
+                <span className="stat-label"><Icon.heart size={14} /> Bunting</span>
+                <span className="stat-value">{pregnant}</span>
+                <span className="stat-meta">terkonfirmasi petugas</span>
+              </div>
+              <div className={`stat ${needAction.length ? "is-crit" : "is-ok"}`}>
+                <span className="stat-label"><Icon.alert size={14} /> Perlu tindakan</span>
+                <span className="stat-value">{needAction.length}</span>
+                <span className="stat-meta">{critCount > 0 ? `${critCount} perlu petugas` : "tidak ada yang darurat"}</span>
+              </div>
+              <div className="stat is-ok">
+                <span className="stat-label"><Icon.checkCircle size={14} /> Aman</span>
+                <span className="stat-value">{aman}</span>
+                <span className="stat-meta">tidak perlu tindakan</span>
+              </div>
+            </div>
+          </section>
+
+          {/* ---- Yang perlu tindakan: sekarang di ATAS dan terbuka ---- */}
+          <section>
+            <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 10 }}>
+              <h2 className="t-h2 c-1">Perlu tindakan</h2>
+              {needAction.length > 0 && (
+                <span className="t-xs c-3" style={{ fontWeight: 600 }}>{needAction.length} ekor</span>
+              )}
+            </div>
+
+            {needAction.length === 0 ? (
+              <div className="card">
+                <div className="empty" style={{ padding: "30px 24px" }}>
+                  <div className="empty-icon" style={{ background: "var(--ok-bg)", color: "var(--ok)" }}>
+                    <Icon.checkCircle size={26} />
+                  </div>
+                  <p className="empty-title">Semua sapi dalam kondisi baik</p>
+                  <p className="empty-text" style={{ marginBottom: 0 }}>Tidak ada yang butuh tindakan hari ini.</p>
+                </div>
+              </div>
+            ) : (
+              <div className="stack-8">
+                {needAction.map(({ item, analysis }) => (
+                  <AdviceCard key={item.id} item={item} analysis={analysis} onClick={onAdviceClick} ownerName={profile?.name} />
+                ))}
+              </div>
+            )}
+          </section>
+
+          {/* ---- Ringkasan kandang ---- */}
+          <section>
+            <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 10 }}>
+              <h2 className="t-h2 c-1">Status reproduksi</h2>
+              <button onClick={() => setShareModalOpen(true)} className="btn btn-sm btn-ghost">
+                <Icon.share size={15} /> Bagikan
+              </button>
+            </div>
+            <div className="card card-pad">
+              <ReproStatusChart dbCattle={safeDb} onRowClick={onAdviceClick} />
+            </div>
+          </section>
+        </div>
+      )}
+
+      <ShareSummaryModal open={shareModalOpen} onClose={() => setShareModalOpen(false)}
+        stats={{ total, jantan, betina, pregnant }} profile={profile} dbCattle={safeDb} setAppToast={setAppToast} />
+
+    </div>
+  );
+}
+
+// Konfigurasi kelas daring dikumpulkan di satu tempat. Sebelumnya tautan Zoom
+// masih berisi contoh (zoom.us/j/1234567890) padahal jadwalnya sudah pasti, jadi
+// tombolnya membawa peternak ke ruang rapat kosong.
+const KELAS_DARING = {
+  aktif: false,                 // ubah ke true setelah tautan asli diisi
+  judul: "Konsultasi Peternak Cerdas",
+  ringkas: "Tanya jawab langsung seputar reproduksi dan penanganan sapi majir.",
+  hari: "Selasa",
+  jam: "19.30 WIB",
+  tautan: "",                   // isi dengan tautan Zoom/Meet asli
+};
+
+function AcademyView({ open, onClose }) {
+  const bukaKelas = () => {
+    if (!KELAS_DARING.aktif || !KELAS_DARING.tautan) return;
+    window.open(KELAS_DARING.tautan, "_blank", "noopener,noreferrer");
+  };
+
+  if (!open) return null;
+
+  return (
+    <div style={{ position: "fixed", inset: 0, zIndex: 150, background: "var(--bg)",
+                  overflowY: "auto", maxWidth: "var(--app-w)", margin: "0 auto",
+                  boxShadow: "0 0 0 1px var(--border)" }}>
+      <div className="topbar">
+        <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
+          <button onClick={onClose} className="icon-btn" aria-label="Kembali">
+            <Icon.chevronLeft size={18} stroke={2.2} />
+          </button>
+          <p className="t-h3 c-1" style={{ margin: 0 }}>Kelas &amp; materi</p>
+        </div>
       </div>
-      
-      <div className="p-5 space-y-4">
-        <div className="bg-emerald-700 rounded-[24px] p-6 shadow-lg relative overflow-hidden">
-          <div className="relative z-10">
-            <div className="flex items-center gap-2 mb-4">
-              <span className="bg-emerald-900/50 text-emerald-50 px-3 py-1 rounded-lg text-[10px] font-black tracking-widest uppercase inline-block">E-Book Edukasi</span>
-              <span className="bg-orange-500 text-white px-2 py-0.5 rounded-md text-[8px] font-black tracking-widest uppercase animate-pulse">Segera Hadir</span>
+
+      <div className="page">
+
+      <div className="stack-20 stagger">
+        {/* --- Kelas daring --- */}
+        <section>
+          <p className="t-over" style={{ marginBottom: 9 }}>Kelas daring rutin</p>
+          <div className="card card-pad">
+            <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
+              <div className="row-icon" style={{ background: "var(--info-bg)", color: "var(--info)" }}>
+                <Icon.video size={19} />
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                {!KELAS_DARING.aktif && (
+                  <span className="badge badge-neut" style={{ marginBottom: 5 }}>Belum dibuka</span>
+                )}
+                <h3 className="t-h3 c-1" style={{ marginBottom: 3 }}>{KELAS_DARING.judul}</h3>
+                <p className="t-sm c-2" style={{ margin: 0 }}>{KELAS_DARING.ringkas}</p>
+              </div>
             </div>
-            <h3 className="text-xl font-black mb-2 leading-snug text-white">Panduan Mencegah Kegagalan Kebuntingan pada Sapi</h3>
-            <p className="text-xs font-medium text-emerald-100 mb-6 leading-relaxed">
-              Disusun oleh dokter hewan dan ahli reproduksi ternak, berisi panduan teknis untuk membantu peternak meningkatkan keberhasilan program inseminasi buatan.
-            </p>
-            <button disabled className="w-full bg-emerald-800/50 text-emerald-200 font-black py-3.5 rounded-xl text-sm transition-colors cursor-not-allowed border border-emerald-600">
-              Segera Hadir...
+
+            <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
+              <div style={{ flex: 1, background: "var(--surface-2)", border: "1px solid var(--border)",
+                            borderRadius: "var(--r-sm)", padding: "10px 12px" }}>
+                <p className="t-xs c-3" style={{ margin: 0, fontWeight: 600 }}>Setiap</p>
+                <p className="t-bodystr c-1" style={{ margin: "1px 0 0" }}>{KELAS_DARING.hari}</p>
+              </div>
+              <div style={{ flex: 1, background: "var(--surface-2)", border: "1px solid var(--border)",
+                            borderRadius: "var(--r-sm)", padding: "10px 12px" }}>
+                <p className="t-xs c-3" style={{ margin: 0, fontWeight: 600 }}>Pukul</p>
+                <p className="t-bodystr c-1 tabular" style={{ margin: "1px 0 0" }}>{KELAS_DARING.jam}</p>
+              </div>
+            </div>
+
+            <button onClick={bukaKelas} disabled={!KELAS_DARING.aktif}
+                    className={`btn btn-block ${KELAS_DARING.aktif ? "btn-primary" : "btn-secondary"}`}
+                    style={{ marginTop: 12 }}>
+              {KELAS_DARING.aktif ? <><Icon.video size={17} /> Gabung kelas</> : "Tautan belum tersedia"}
             </button>
+            {!KELAS_DARING.aktif && (
+              <p className="t-xs c-3" style={{ marginTop: 8, textAlign: "center" }}>
+                Petugas akan membagikan tautannya menjelang jadwal.
+              </p>
+            )}
           </div>
-        </div>
+        </section>
 
-        <div>
-          <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-6 mb-3 ml-2">Jadwal Live Edukasi</h3>
-          <div className="bg-white rounded-[24px] border border-slate-200 p-5 shadow-sm">
-            <div className="flex items-start gap-4 mb-4">
-              <div className="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center flex-shrink-0">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-blue-600"><polygon points="23 7 16 12 23 17 23 7"></polygon><rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect></svg>
-              </div>
-              <div className="w-full">
-                <span className="bg-blue-100 text-blue-700 text-[9px] font-black px-2 py-0.5 rounded uppercase tracking-widest">Via Zoom</span>
-                <h4 className="font-black text-sm text-slate-800 mt-1.5 mb-1">Konsultasi Peternak Cerdas</h4>
-                <p className="text-xs text-slate-500 font-medium leading-relaxed">Tanya jawab langsung seputar reproduksi & penanganan sapi majir.</p>
-              </div>
+        {/* --- Materi --- */}
+        <section>
+          <p className="t-over" style={{ marginBottom: 9 }}>Materi belajar</p>
+          <div className="card">
+            <div className="empty" style={{ padding: "34px 24px" }}>
+              <div className="empty-icon"><Icon.book size={24} /></div>
+              <p className="empty-title">Materi sedang disiapkan</p>
+              <p className="empty-text" style={{ marginBottom: 0 }}>
+                Panduan pencegahan kegagalan kebuntingan sedang disusun bersama dokter hewan
+                dan ahli reproduksi ternak.
+              </p>
             </div>
-            
-            <div className="bg-slate-50 rounded-xl p-4 mb-5 border border-slate-100 flex items-center justify-between">
-              <div>
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Rutin Tiap Minggu</p>
-                <p className="font-black text-blue-700 text-sm">Selasa Malam</p>
-              </div>
-              <div className="text-right">
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Pukul</p>
-                <p className="font-black text-slate-700 text-sm">19.30 WIB</p>
-              </div>
-            </div>
+          </div>
+        </section>
 
-            <button onClick={handleJoinZoom} className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold py-4 px-4 rounded-xl shadow-sm transition-colors w-full">
-              Gabung Zoom Meeting
+        {/* --- Sementara materi kosong, arahkan ke bantuan yang sudah ada --- */}
+        <section>
+          <p className="t-over" style={{ marginBottom: 9 }}>Sementara itu</p>
+          <div className="rowlist">
+            <button className="row" onClick={() => { onClose(); if (window.__openHelpGuide) window.__openHelpGuide(); }}>
+              <span className="row-icon" style={{ background: "var(--brand-soft)", color: "var(--brand)" }}>
+                <Icon.book size={18} />
+              </span>
+              <span className="row-main">
+                <span className="row-title">Cara pakai aplikasi</span>
+                <span className="row-sub">10 panduan singkat, dari mendaftar sapi sampai lapor sakit</span>
+              </span>
+              <Icon.chevronRight size={18} className="row-chev" />
             </button>
+            <a className="row" href={waPetugas("Halo Petugas, saya ingin bertanya seputar reproduksi sapi.")}
+               target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none" }}>
+              <span className="row-icon" style={{ background: "#E7F9EE", color: "#1DA851" }}>
+                <Icon.phone size={18} />
+              </span>
+              <span className="row-main">
+                <span className="row-title">Tanya petugas lewat WhatsApp</span>
+                <span className="row-sub">Untuk pertanyaan yang tidak bisa menunggu jadwal kelas</span>
+              </span>
+              <Icon.chevronRight size={18} className="row-chev" />
+            </a>
           </div>
+        </section>
         </div>
-
-        <div>
-          <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-6 mb-3 ml-2">Materi Pembelajaran</h3>
-          <div className="p-6 bg-white rounded-[24px] border border-slate-100 text-center shadow-sm">
-            <div className="w-12 h-12 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-3">
-              <span className="text-xl">📚</span>
-            </div>
-            <p className="text-sm font-bold text-slate-700">Modul sedang disiapkan</p>
-            <p className="text-xs text-slate-500 mt-1">Materi edukasi akan segera hadir di sini.</p>
-          </div>
-        </div>
-
       </div>
     </div>
   );
@@ -1744,7 +2064,7 @@ function AddModal({ open, onClose, onSave, editItem, setAppToast }) {
 
       if (onSave) onSave(); 
       if (onClose) onClose(); 
-    } catch (e) {
+    } catch {
       setIsSaving(false);
       setAppToast({message: "Terjadi kesalahan sistem.", type: "error"});
     }
@@ -1752,123 +2072,149 @@ function AddModal({ open, onClose, onSave, editItem, setAppToast }) {
   
   if (!open) return null; 
   
-  const inp = "w-full border border-slate-200 rounded-xl px-4 py-3 text-sm font-medium focus:outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-50 bg-slate-50 focus:bg-white transition-all";
-  
+    
   return (
-    <div className="fixed inset-0 z-50 flex items-end bg-slate-900/60 backdrop-blur-sm p-0 sm:p-4 sm:items-center">
-      <div className="bg-white w-full max-w-md mx-auto rounded-t-[32px] sm:rounded-[32px] p-6 slide-up shadow-2xl max-h-[90vh] overflow-y-auto">
-        <div className="flex justify-between items-center mb-6"><p className="font-black text-2xl text-slate-900 tracking-tight">{editItem ? "Edit Data Sapi" : "Input Sapi Baru"}</p><button onClick={onClose} className="bg-slate-100 w-9 h-9 rounded-full flex items-center justify-center font-bold text-slate-500 hover:bg-slate-200">✕</button></div>
-        <div className="space-y-2">
-          <FF label="Kode Sapi / Tag"><input className={inp} value={id} onChange={e => setId(e.target.value)} placeholder="Cth: L-01" /></FF>
-          <div className="flex gap-4 mb-4"><div className="flex-1"><FF label="Jenis Kelamin"><select className={inp} value={gender} onChange={e => setGender(e.target.value)}><option value="BETINA">Betina</option><option value="JANTAN">Jantan</option></select></FF></div><div className="flex-1"><FF label="Jenis Ras"><select className={inp} value={ras} onChange={e => setRas(e.target.value)}><option>SIMENTAL SPSI</option><option>Limosin SPLI</option><option>PO SPPO</option><option>Brahman</option></select></FF></div></div>
-          <FF label="Asal Usul Sapi"><select className={inp} value={origin} onChange={e => setOrigin(e.target.value)}><option value="KANDANG">Lahir di Kandang (Breeding)</option><option value="PASAR">Beli dari Luar (Pasar)</option></select></FF>
-          
-          {origin === 'KANDANG' ? (
-            <div className="pop-in"><FF label="Tanggal Lahir (Wajib)"><input type="date" className={inp} value={birthDate} onChange={e => setBirthDate(e.target.value)} /></FF></div>
+    <div className="sheet-overlay" onClick={onClose}>
+      <div className="sheet" onClick={(e) => e.stopPropagation()}>
+        <div className="sheet-grip" />
+        <div className="sheet-head">
+          <div>
+            <p className="t-h2 c-1" style={{ margin: 0 }}>{editItem ? "Ubah data sapi" : "Tambah sapi"}</p>
+            <p className="t-xs c-3" style={{ margin: "2px 0 0", fontWeight: 600 }}>
+              {editItem ? `Sapi ${editItem.code || editItem.id}` : "Isi identitas dasar ternak"}
+            </p>
+          </div>
+          <button onClick={onClose} className="icon-btn" aria-label="Tutup"><Icon.close size={18} /></button>
+        </div>
+
+        <div className="sheet-body">
+          <FF label="Kode sapi / tag" hint="Kode unik yang tertulis di eartag atau yang Anda pakai sehari-hari.">
+            <input className="input" value={id} onChange={(e) => setId(e.target.value)} placeholder="Contoh: L-01" />
+          </FF>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+            <FF label="Jenis kelamin">
+              <select className="select" value={gender} onChange={(e) => setGender(e.target.value)}>
+                <option value="BETINA">Betina</option>
+                <option value="JANTAN">Jantan</option>
+              </select>
+            </FF>
+            <FF label="Ras">
+              <select className="select" value={ras} onChange={(e) => setRas(e.target.value)}>
+                <option>SIMENTAL SPSI</option>
+                <option>Limosin SPLI</option>
+                <option>PO SPPO</option>
+                <option>Brahman</option>
+              </select>
+            </FF>
+          </div>
+
+          <FF label="Asal usul">
+            <select className="select" value={origin} onChange={(e) => setOrigin(e.target.value)}>
+              <option value="KANDANG">Lahir di kandang sendiri</option>
+              <option value="PASAR">Dibeli dari pasar</option>
+            </select>
+          </FF>
+
+          {origin === "KANDANG" ? (
+            <div className="pop-in">
+              <FF label="Tanggal lahir">
+                <input type="date" className="input" value={birthDate} max={todayStr()} onChange={(e) => setBirthDate(e.target.value)} />
+              </FF>
+            </div>
           ) : (
             <div className="pop-in">
-              <FF label="Perkiraan Umur (Cek Gigi Poel)">
-                <select className={`${inp} bg-white`} value={ageInMonths} onChange={e => setAgeInMonths(e.target.value)}>
-                  <option value="">-- Pilih Kondisi Gigi Seri Bawah --</option>
-                  <option value="12">Belum Poel / Gigi Susu Utuh (&lt; 1.5 Tahun)</option>
-                  <option value="24">Poel 1 Pasang / 2 Gigi Tetap (± 2 - 2.5 Tahun)</option>
-                  <option value="36">Poel 2 Pasang / 4 Gigi Tetap (± 3 Tahun)</option>
-                  <option value="48">Poel 3 Pasang / 6 Gigi Tetap (± 4 Tahun)</option>
-                  <option value="60">Poel 4 Pasang / Penuh (Lebih dari 4.5 Tahun)</option>
+              <FF label="Perkiraan umur (cek gigi poel)"
+                  hint="Sistem menghitung perkiraan tanggal lahir otomatis dari kondisi gigi.">
+                <select className="select" value={ageInMonths} onChange={(e) => setAgeInMonths(e.target.value)}>
+                  <option value="">Pilih kondisi gigi seri bawah…</option>
+                  <option value="12">Belum poel, gigi susu utuh — di bawah 1,5 tahun</option>
+                  <option value="24">Poel 1 pasang (2 gigi tetap) — sekitar 2–2,5 tahun</option>
+                  <option value="36">Poel 2 pasang (4 gigi tetap) — sekitar 3 tahun</option>
+                  <option value="48">Poel 3 pasang (6 gigi tetap) — sekitar 4 tahun</option>
+                  <option value="60">Poel 4 pasang (penuh) — di atas 4,5 tahun</option>
                 </select>
               </FF>
-              <p className="text-[10px] text-slate-500 -mt-2 px-2 font-medium">💡 Sistem akan mengestimasi tanggal lahir otomatis dari data poel.</p>
             </div>
           )}
 
-          {/* 👇 PERBAIKAN: Kunci ganda agar kolom Paritas lenyap total untuk pedet/isUnderage */}
-          {gender === 'BETINA' && !isUnderage && phase !== 'CALF' && (
-            <div className="pop-in mt-2 mb-2">
-              <FF label="Sudah Berapa Kali Beranak? (Paritas)">
-                <input type="number" className={inp} value={parity} onChange={e => setParity(e.target.value)} placeholder="Contoh: 2 (Isi 0 jika belum pernah)" min="0" />
+          {gender === "BETINA" && !isUnderage && phase !== "CALF" && (
+            <div className="pop-in">
+              <FF label="Sudah berapa kali beranak?"
+                  hint="Kalau sapi dari pasar dan bertanduk, hitung jumlah cincin di pangkal tanduk untuk memperkirakannya.">
+                <input type="number" className="input" value={parity} min="0"
+                       onChange={(e) => setParity(e.target.value)} placeholder="Isi 0 jika belum pernah" />
               </FF>
-              <p className="text-[10px] text-emerald-700 bg-emerald-50 border border-emerald-100 p-2.5 rounded-lg -mt-2 font-medium leading-relaxed">
-                💡 <strong>Tips Lapangan:</strong> Jika sapi dari pasar (bertanduk), hitung jumlah ruas/cincin pada pangkal tanduk untuk memperkirakan sudah berapa kali ia beranak.
-              </p>
             </div>
           )}
 
           {gender === "BETINA" && editItem && (
-            <div className="mt-2 mb-2 p-4 bg-slate-50 rounded-xl border border-slate-200">
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Status Reproduksi Saat Ini</p>
-              <p className="text-sm font-black text-slate-700 mb-2">{analyzeCattle(editItem).statusLabel}</p>
-              <p className="text-[11px] text-slate-500 font-medium leading-relaxed">Untuk mengubah status (kawin, pemeriksaan kebuntingan, kelahiran, sakit, dll), gunakan tombol <strong>"Catat Kondisi"</strong> di kartu sapi. Edit di sini hanya untuk memperbaiki data identitas sapi.</p>
+            <div className="callout callout-neut" style={{ marginBottom: 16 }}>
+              <Icon.info size={17} stroke={2} />
+              <span>
+                Status sekarang: <strong>{tidyLabel(analyzeCattle(editItem).statusLabel)}</strong>.
+                Untuk mengubahnya (kawin, hasil periksa, melahirkan, sakit), pakai tombol
+                <strong> Catat kondisi</strong> — halaman ini hanya untuk memperbaiki identitas sapi.
+              </span>
             </div>
           )}
 
           {gender === "BETINA" && !editItem && (
-            <FF label="Status Reproduksi Saat Ini">
-              <select className={inp} value={phase} onChange={e => {
-                setPhase(e.target.value);
-                
-                if (origin === 'PASAR' && !isUnderage && (e.target.value === 'OPEN' || e.target.value === 'PREGNANT')) {
-                  setAppToast({ 
-                    message: "🚨 Sapi Pasar Dewasa WAJIB diperiksa Dokter Hewan!", 
-                    type: "error" 
-                  });
-                }
-              }} disabled={isUnderage}>
-                
-                {!(origin === 'PASAR' && !isUnderage) && (
-                  <option value="CALF">Pedet / Dara Belum Kawin</option>
-                )}
-                
-                {!isUnderage && (
-                  <option value="OPEN">Kosong (Siap Kawin)</option>
-                )}
-                
-                {!isUnderage && origin === 'KANDANG' && (
-                  <option value="BRED">Sudah Kawin (Belum Diperiksa)</option>
-                )}
-                
-                {!isUnderage && origin === 'PASAR' && (
-                  <option value="PREGNANT">Bunting (Dari Pasar)</option>
-                )}
-                
-                {!isUnderage && origin === 'KANDANG' && (
-                  <option value="PREGNANT">Bunting</option>
-                )}
-              </select>
+            <>
+              <FF label="Status reproduksi saat ini">
+                <select
+                  className="select"
+                  value={phase}
+                  disabled={isUnderage}
+                  onChange={(e) => {
+                    setPhase(e.target.value);
+                    if (origin === "PASAR" && !isUnderage && (e.target.value === "OPEN" || e.target.value === "PREGNANT")) {
+                      setAppToast({ message: "Sapi pasar dewasa wajib diperiksa petugas untuk memastikan statusnya.", type: "error" });
+                    }
+                  }}
+                >
+                  {!(origin === "PASAR" && !isUnderage) && <option value="CALF">Pedet / dara belum kawin</option>}
+                  {!isUnderage && <option value="OPEN">Kosong, siap kawin</option>}
+                  {!isUnderage && origin === "KANDANG" && <option value="BRED">Sudah kawin, belum diperiksa</option>}
+                  {!isUnderage && <option value="PREGNANT">Bunting</option>}
+                </select>
+              </FF>
 
-              {(phase === 'BRED' || (phase === 'PREGNANT' && origin === 'KANDANG')) && (
-                <div className="pop-in mt-3 p-3 bg-blue-50 border border-blue-100 rounded-xl">
-                  <p className="text-[10px] font-bold text-blue-800 mb-1.5 uppercase tracking-widest">Tanggal Kawin Terakhir</p>
-                  <input 
-                    type="date" 
-                    className={`${inp} bg-white`} 
-                    value={lastMatingDate} 
-                    onChange={e => setLastMatingDate(e.target.value)} 
-                  />
+              {(phase === "BRED" || (phase === "PREGNANT" && origin === "KANDANG")) && (
+                <div className="pop-in">
+                  <FF label="Tanggal kawin terakhir">
+                    <input type="date" className="input" value={lastMatingDate} max={todayStr()}
+                           onChange={(e) => setLastMatingDate(e.target.value)} />
+                  </FF>
                 </div>
               )}
 
-              {origin === 'PASAR' && !isUnderage && (phase === 'OPEN' || phase === 'PREGNANT') && (
-                <div className="pop-in mt-3 p-3 bg-rose-50 border border-rose-200 rounded-xl shadow-sm">
-                  <p className="text-[10px] font-black text-rose-800 mb-1.5 uppercase tracking-widest flex items-center gap-1">🚨 Wajib Pemeriksaan Medis</p>
-                  <p className="text-[11px] text-rose-700 font-bold leading-relaxed">
-                    Peternak tidak bisa memastikan sapi pasar kosong atau bunting hanya dari fisik. <strong>Wajib laporkan ke petugas medis/dokter hewan</strong> untuk dilakukan pemeriksaan kebuntingan agar tidak salah penanganan!
-                  </p>
+              {origin === "PASAR" && !isUnderage && (phase === "OPEN" || phase === "PREGNANT") && (
+                <div className="callout callout-crit pop-in" style={{ marginBottom: 16 }}>
+                  <Icon.alert size={17} stroke={2} />
+                  <span>
+                    Status sapi pasar tidak bisa dipastikan dari fisiknya saja.
+                    Laporkan ke petugas untuk pemeriksaan kebuntingan sebelum diberi penanganan.
+                  </span>
                 </div>
               )}
 
-              {origin === 'KANDANG' && (phase === 'OPEN' || phase === 'PREGNANT') && (
-                <div className="pop-in mt-3 p-3 bg-emerald-50 border border-emerald-200 rounded-xl">
-                  <p className="text-[11px] text-emerald-800 font-semibold leading-relaxed">
-                    <strong>💡 Rekomendasi:</strong> Sangat disarankan untuk dilakukan pemeriksaan oleh petugas/dokter hewan untuk memastikan status reproduksi dan kesehatan rahim secara akurat.
-                  </p>
+              {origin === "KANDANG" && (phase === "OPEN" || phase === "PREGNANT") && (
+                <div className="callout callout-info pop-in" style={{ marginBottom: 16 }}>
+                  <Icon.info size={17} stroke={2} />
+                  <span>Disarankan tetap minta petugas memastikan status reproduksi dan kondisi rahimnya.</span>
                 </div>
               )}
-            </FF>
+            </>
           )}
         </div>
-        <button onClick={save} disabled={isSaving} className={`w-full font-bold py-4 rounded-xl mt-6 text-sm shadow-lg transition-colors ${isSaving ? 'bg-slate-400 text-white cursor-not-allowed' : 'bg-emerald-600 text-white hover:bg-emerald-700'}`}>
-          {isSaving ? 'Menyimpan...' : 'Simpan Data Ternak'}
-        </button>
+
+        <div className="sheet-foot">
+          <button onClick={onClose} className="btn btn-secondary" style={{ flex: "0 0 auto" }}>Batal</button>
+          <button onClick={save} disabled={isSaving} className="btn btn-primary" style={{ flex: 1 }}>
+            {isSaving ? "Menyimpan…" : editItem ? "Simpan perubahan" : "Simpan data ternak"}
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -1901,7 +2247,7 @@ function EditProfileModal({ open, onClose, onSave, currentProfile, setAppToast }
        
        if (result.success) { setPhoto(result.url); setAppToast({message: "Foto berhasil diupload!", type: "success"}); } 
        else setAppToast({message: "Gagal upload foto: " + result.error, type: "error"});
-    } catch(e) {
+    } catch {
        setAppToast({message: "Terjadi kesalahan server", type: "error"});
     }
     setIsLoading(false);
@@ -1938,21 +2284,21 @@ function EditProfileModal({ open, onClose, onSave, currentProfile, setAppToast }
       onSave({ ...updateResult.user, alamat: address.trim() });
       setAppToast({message: "Profil berhasil diperbarui!", type: "success"});
       onClose();
-    } catch(e) {
+    } catch {
       setAppToast({message: "Terjadi kesalahan sistem", type: "error"});
     }
     setIsLoading(false);
   };
 
   if (!open) return null;
-  const inp = "w-full border border-slate-200 rounded-xl px-4 py-3 text-sm font-medium focus:outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-50 bg-slate-50 focus:bg-white transition-all disabled:opacity-50";
+  const inp = "input";
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm px-4">
-      <div className="bg-white w-full max-w-sm rounded-[24px] p-6 pop-in shadow-2xl max-h-[90vh] overflow-y-auto">
-        <h3 className="font-black text-xl text-slate-900 mb-5 tracking-tight">Edit Profil</h3>
+    <div className="sheet-overlay" style={{ alignItems: "center", padding: 16, zIndex: 60 }}>
+      <div className="card pop-in" style={{ width: "100%", maxWidth: 400, padding: 22, maxHeight: "88dvh", overflowY: "auto", boxShadow: "var(--sh-xl)" }}>
+        <h3 className="t-h2 c-1">Edit Profil</h3>
         <div className="flex flex-col items-center mb-6">
-          <div className="w-24 h-24 rounded-full bg-slate-100 flex items-center justify-center text-4xl font-black text-slate-400 mb-3 shadow-inner overflow-hidden border-4 border-white">
+          <div className="w-24 h-24 rounded-full bg-slate-100 flex items-center justify-center text-4xl font-black text-slate-500 mb-3 shadow-inner overflow-hidden border-4 border-white">
             {photo ? <img src={photo} alt="Profil" className="w-full h-full object-cover" /> : <span>{name ? name.charAt(0).toUpperCase() : "U"}</span>}
           </div>
           <input type="file" ref={fileInputRef} onChange={handlePhotoChange} className="hidden" accept="image/*" disabled={isLoading} />
@@ -1970,7 +2316,7 @@ function EditProfileModal({ open, onClose, onSave, currentProfile, setAppToast }
         </div>
         <div className="flex gap-3 mt-8">
           <button onClick={onClose} className="flex-1 py-3.5 rounded-xl border border-slate-200 text-sm font-bold text-slate-600 hover:bg-slate-50 transition-colors disabled:opacity-50" disabled={isLoading}>Batal</button>
-          <button onClick={handleSave} className="flex-1 py-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold shadow-lg shadow-emerald-500/30 transition-all disabled:opacity-50" disabled={isLoading}>{isLoading ? 'Menyimpan...' : 'Simpan Profil'}</button>
+          <button onClick={handleSave} className="btn btn-primary" style={{ flex: 1 }} disabled={isLoading}>{isLoading ? 'Menyimpan...' : 'Simpan Profil'}</button>
         </div>
       </div>
     </div>
@@ -1987,55 +2333,63 @@ const ICON_HONESTY = <svg width="28" height="28" viewBox="0 0 24 24" fill="none"
 
 function OnboardingTutorial({ open, onClose }) {
   const [step, setStep] = useState(0);
-
   useEffect(() => { if (open) setStep(0); }, [open]);
 
   const slides = [
-    { icon: ICON_HOME, title: "Selamat Datang di SIRAPI", desc: "Aplikasi ini membantu Anda mencatat dan memantau kondisi reproduksi sapi — mulai dari kawin, bunting, melahirkan, hingga kesehatan. Berikut gambaran singkat tiap menu di bawah." },
-    { icon: ICON_HONESTY, title: "Isi Data Sejujurnya", desc: "Sistem menganalisa kondisi sapi berdasarkan tanggal dan data yang Anda masukkan. Semakin jujur dan akurat pengisiannya (tanggal kawin, kelahiran, gejala sakit, dll), semakin valid pula saran dan prediksi yang diberikan sistem." },
-    { icon: ICON_CHART, title: "Tab Beranda", desc: "Ringkasan kondisi seluruh sapi Anda, saran otomatis untuk yang butuh perhatian, dan tombol hijau 'Tambah Ternak' untuk mendaftarkan sapi baru." },
-    { icon: ICON_COW, title: "Tab Rekam Medis", desc: "Daftar lengkap sapi Anda beserta riwayat medis dan reproduksinya. Ketuk salah satu sapi untuk melapor kawin, pemeriksaan kebuntingan, kelahiran, atau sakit." },
-    { icon: ICON_CALENDAR, title: "Tab Kalender", desc: "Prediksi otomatis jadwal birahi, jadwal pemeriksaan kebuntingan, dan perkiraan tanggal lahir untuk setiap sapi betina." },
-    { icon: ICON_BOOK, title: "Tab Akademi & Profil", desc: "Akademi berisi materi edukasi peternakan. Profil untuk mengelola data diri, keamanan akun, mengaktifkan notifikasi harian, dan membuka kembali panduan ini kapan saja." },
-    { icon: ICON_INFO, title: "Butuh Panduan Lebih Detail?", desc: "Buka Profil > Bantuan > 'Cara Pakai Aplikasi' untuk panduan langkah-demi-langkah setiap fitur, lengkap dan bisa dibaca ulang kapan saja." },
+    { icon: Icon.sparkle, title: "Selamat datang di SIRAPI",
+      desc: "Aplikasi ini membantu Anda mencatat dan memantau kondisi reproduksi sapi — dari kawin, bunting, melahirkan, sampai kesehatan." },
+    { icon: Icon.checkCircle, title: "Isi data apa adanya",
+      desc: "Semua saran dan prediksi dihitung dari tanggal yang Anda masukkan. Makin akurat isinya, makin bisa dipercaya hasilnya." },
+    { icon: Icon.home, title: "Beranda",
+      desc: "Ringkasan kandang dan daftar sapi yang perlu tindakan hari ini, diurutkan dari yang paling genting." },
+    { icon: Icon.cow, title: "Ternak",
+      desc: "Daftar semua sapi Anda. Ketuk satu baris untuk melihat riwayatnya, lalu Catat kondisi untuk melapor kawin, hasil periksa, kelahiran, atau sakit." },
+    { icon: Icon.calendar, title: "Kalender",
+      desc: "Perkiraan jadwal birahi, jadwal pemeriksaan kebuntingan, dan tanggal lahir — dihitung otomatis untuk tiap sapi betina." },
+    { icon: Icon.book, title: "Akademi dan Profil",
+      desc: "Akademi berisi materi belajar dan jadwal kelas. Profil untuk data diri, notifikasi harian, dan panduan lengkap." },
+    { icon: Icon.help, title: "Butuh panduan lebih detail?",
+      desc: "Buka Profil → Cara pakai aplikasi. Isinya panduan langkah demi langkah, bisa dibaca ulang kapan saja." },
   ];
 
   if (!open) return null;
   const isLast = step === slides.length - 1;
-  const current = slides[step];
+  const s = slides[step];
+  const SlideIcon = s.icon;
 
   return (
-    <div className="fixed inset-0 z-[150] flex items-center justify-center bg-slate-900/70 backdrop-blur-sm px-4">
-      <div className="relative bg-white w-full max-w-sm rounded-[28px] shadow-2xl pop-in max-h-[88vh] flex flex-col overflow-hidden">
-        <button onClick={onClose} className="absolute top-5 right-5 z-10 text-slate-300 hover:text-slate-500 text-[11px] font-bold">Lewati</button>
-
-        <div className="overflow-y-auto p-7 pb-4 text-center">
-          <div className="w-16 h-16 bg-emerald-50 rounded-2xl flex items-center justify-center mx-auto mb-5 text-emerald-600">{current.icon}</div>
-          <h3 className="font-black text-lg text-slate-900 mb-2">{current.title}</h3>
-          <p className="text-sm text-slate-500 font-medium leading-relaxed">{current.desc}</p>
-
-          {current.steps && (
-            <ol className="text-left space-y-2.5 mt-5 bg-slate-50 rounded-2xl p-4">
-              {current.steps.map((s, i) => (
-                <li key={i} className="flex items-start gap-2.5">
-                  <span className="shrink-0 w-5 h-5 rounded-full bg-emerald-600 text-white text-[10px] font-black flex items-center justify-center mt-0.5">{i + 1}</span>
-                  <span className="text-xs text-slate-600 font-medium leading-relaxed">{s}</span>
-                </li>
-              ))}
-            </ol>
-          )}
+    <div className="sheet-overlay" style={{ alignItems: "center", padding: 16, zIndex: 150 }}>
+      <div className="card pop-in" style={{ width: "100%", maxWidth: 380, overflow: "hidden", boxShadow: "var(--sh-xl)" }}>
+        <div style={{ padding: "26px 24px 20px", textAlign: "center", position: "relative" }}>
+          <button onClick={onClose} className="t-xs"
+                  style={{ position: "absolute", top: 14, right: 16, background: "none", border: 0,
+                           color: "var(--text-3)", fontWeight: 700, cursor: "pointer" }}>
+            Lewati
+          </button>
+          <div className="empty-icon" style={{ background: "var(--brand-soft)", color: "var(--brand)", marginBottom: 16 }}>
+            <SlideIcon size={24} />
+          </div>
+          <h3 className="t-h2 c-1" style={{ margin: "0 0 7px" }}>{s.title}</h3>
+          <p className="t-sm c-2" style={{ margin: 0 }}>{s.desc}</p>
         </div>
 
-        <div className="px-7 pb-7 pt-3 border-t border-slate-100 shrink-0">
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Langkah {step + 1} dari {slides.length}</span>
+        <div style={{ padding: "16px 24px 22px", borderTop: "1px solid var(--border)" }}>
+          <div style={{ display: "flex", gap: 5, marginBottom: 16 }}>
+            {slides.map((_, i) => (
+              <span key={i} style={{
+                flex: 1, height: 3, borderRadius: 999,
+                background: i <= step ? "var(--brand)" : "var(--border)",
+                transition: "background .25s ease",
+              }} />
+            ))}
           </div>
-          <div className="h-1.5 rounded-full bg-slate-100 mb-4 overflow-hidden">
-            <div className="h-full rounded-full bg-emerald-600 transition-all" style={{ width: `${((step + 1) / slides.length) * 100}%` }}></div>
-          </div>
-          <div className="flex gap-3">
-            {step > 0 && <button onClick={() => setStep(step - 1)} className="flex-1 py-3.5 rounded-xl border border-slate-200 text-sm font-bold text-slate-600 hover:bg-slate-50 transition-colors">Kembali</button>}
-            <button onClick={() => isLast ? onClose() : setStep(step + 1)} className="flex-1 py-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold shadow-lg shadow-emerald-500/30 transition-all">{isLast ? "Mulai Pakai" : "Lanjut"}</button>
+          <div style={{ display: "flex", gap: 10 }}>
+            {step > 0 && (
+              <button onClick={() => setStep(step - 1)} className="btn btn-secondary" style={{ flex: 1 }}>Kembali</button>
+            )}
+            <button onClick={() => (isLast ? onClose() : setStep(step + 1))} className="btn btn-primary" style={{ flex: 1 }}>
+              {isLast ? "Mulai pakai" : "Lanjut"}
+            </button>
           </div>
         </div>
       </div>
@@ -2046,43 +2400,73 @@ function OnboardingTutorial({ open, onClose }) {
 function HelpGuideScreen({ open, onClose }) {
   const [openSection, setOpenSection] = useState(0);
 
+  // Panduan disusun mengikuti urutan yang benar-benar dialami peternak,
+  // dan memakai nama menu yang sama persis dengan yang ada di layar.
   const sections = [
-    { title: "Pentingnya Mengisi Data Sejujurnya", body: "Sistem menganalisa kondisi dan memberi saran berdasarkan tanggal dan data yang Anda masukkan (tanggal kawin, kelahiran, gejala sakit, dll). Semakin jujur dan akurat pengisiannya, semakin valid pula hasil analisa, prediksi kalender, dan saran yang diberikan sistem." },
-    { title: "Menambah Data Sapi Baru", body: "Di tab Beranda, ketuk tombol hijau 'Tambah Ternak' di pojok kanan bawah. Isi data sapi (kode, jenis kelamin, ras, asal usul, tanggal lahir/masuk), lalu simpan." },
-    { title: "Melaporkan Kawin (Inseminasi Buatan)", body: "Ketuk salah satu sapi betina di tab Rekam Medis, pilih tab Reproduksi, lalu pilih aksi 'Kawin (IB)' dan isi tanggalnya. Status sapi otomatis berubah menjadi sudah kawin." },
-    { title: "Melaporkan Pemeriksaan Kebuntingan", body: "Sekitar 60 hari setelah kawin, petugas akan memeriksa kebuntingan. Catat hasilnya lewat tab Reproduksi pada sapi tersebut — pilih hasil Bunting atau Tidak Bunting." },
-    { title: "Melaporkan Kelahiran", body: "Saat sapi melahirkan, buka tab Reproduksi sapi tersebut, pilih aksi 'Lapor Melahirkan', lalu isi tanggal kelahirannya." },
-    { title: "Melaporkan Sapi Sakit", body: "Buka detail sapi, pilih tab Medis, lalu catat gejala yang muncul. Petugas akan menindaklanjuti laporan tersebut." },
-    { title: "Membaca Kalender Birahi", body: "Tab Kalender menunjukkan perkiraan jadwal birahi, jadwal pemeriksaan kebuntingan, dan perkiraan tanggal lahir. Ketuk menu dropdown 'Pilih Sapi' di bagian atas untuk beralih ke sapi betina lain — semua dihitung otomatis dari data yang Anda masukkan." },
-    { title: "Memahami Tab Beranda", body: "Tab Beranda menampilkan ringkasan status reproduksi seluruh sapi dan daftar sapi yang butuh perhatian segera, lengkap dengan tombol hubungi petugas." },
-    { title: "Menghubungi Petugas", body: "Setiap saran yang membutuhkan tindak lanjut akan menampilkan tombol 'Hubungi Petugas' — ketuk untuk langsung membuka percakapan WhatsApp dengan petugas." },
-    { title: "Mengaktifkan Notifikasi Harian", body: "Buka Profil, nyalakan toggle 'Notifikasi Harian SIRAPI'. Anda akan menerima sapaan harian dan informasi penting tentang sapi Anda meski aplikasi tertutup. Di iPhone, tambahkan dulu aplikasi ini ke Homescreen (Safari > tombol Share > 'Add to Home Screen') supaya notifikasi bisa berfungsi." },
+    { t: "Kenapa data harus diisi apa adanya",
+      b: "Semua analisa, prediksi kalender, dan saran dihitung dari tanggal yang Anda masukkan. Kalau tanggal kawin atau kelahiran diisi asal, jadwal pemeriksaan kebuntingan dan perkiraan tanggal lahir ikut meleset." },
+    { t: "Menambah sapi baru",
+      b: "Di tab Beranda atau Ternak, ketuk tombol + di pojok kanan bawah. Isi kode sapi, jenis kelamin, ras, asal usul, dan tanggal lahir. Kalau sapi dibeli dari pasar dan tanggal lahirnya tidak diketahui, pilih perkiraan umur lewat kondisi gigi poel." },
+    { t: "Melaporkan kawin (inseminasi buatan)",
+      b: "Buka tab Ternak, ketuk sapinya, lalu Catat kondisi → Reproduksi → Inseminasi buatan (IB). Isi tanggal IB-nya. Status sapi berubah otomatis." },
+    { t: "Melaporkan hasil pemeriksaan kebuntingan",
+      b: "Sekitar 60 hari setelah IB, petugas akan memeriksa. Catat hasilnya lewat Catat kondisi → Reproduksi → Hasil periksa: bunting atau tidak bunting." },
+    { t: "Melaporkan kelahiran",
+      b: "Catat kondisi → Reproduksi → Melahirkan, lalu isi tanggalnya. Pilihan ini hanya muncul untuk sapi yang statusnya bunting." },
+    { t: "Melaporkan sapi sakit",
+      b: "Catat kondisi → Kesehatan. Tulis apa yang Anda lihat pada sapi, apa adanya. Anda tidak perlu menebak penyakitnya — petugas yang akan menentukan." },
+    { t: "Membaca kalender",
+      b: "Tab Kalender menampilkan perkiraan jadwal birahi, pemeriksaan kebuntingan, dan tanggal lahir. Pilih sapi lewat menu di atas, dan ketuk tanggal berwarna untuk melihat keterangannya." },
+    { t: "Membaca Beranda",
+      b: "Empat kotak di atas adalah ringkasan kandang. Di bawahnya, daftar Perlu tindakan diurutkan dari yang paling genting — merah berarti perlu petugas, kuning berarti bisa Anda tangani sendiri." },
+    { t: "Menghubungi petugas",
+      b: "Sapi yang perlu diperiksa petugas akan menampilkan tombol Hubungi petugas. Ketuk untuk langsung membuka percakapan WhatsApp, lengkap dengan kode sapi dan kondisinya." },
+    { t: "Menyalakan notifikasi harian",
+      b: "Buka Profil, nyalakan Notifikasi harian. Anda akan menerima sapaan dan info penting tiap hari meski aplikasi tertutup. Di iPhone, tambahkan dulu aplikasi ini ke layar utama lewat Safari → Bagikan → Tambahkan ke Layar Utama." },
   ];
 
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-[150] bg-cream overflow-y-auto">
-      <div className="bg-white px-5 pt-8 pb-6 border-b border-slate-200 shadow-sm flex items-center gap-3 sticky top-0 z-10">
-        <button onClick={onClose} className="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 shrink-0">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
-        </button>
-        <h2 className="text-xl font-black text-slate-900 tracking-tight">Cara Pakai Aplikasi</h2>
+    <div style={{ position: "fixed", inset: 0, zIndex: 150, background: "var(--bg)",
+                  overflowY: "auto", maxWidth: "var(--app-w)", margin: "0 auto",
+                  boxShadow: "0 0 0 1px var(--border)" }}>
+      <div className="topbar">
+        <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
+          <button onClick={onClose} className="icon-btn" aria-label="Kembali">
+            <Icon.chevronLeft size={18} stroke={2.2} />
+          </button>
+          <p className="t-h3 c-1" style={{ margin: 0 }}>Cara pakai aplikasi</p>
+        </div>
       </div>
-      <div className="p-5 space-y-3 pb-12">
-        {sections.map((s, i) => (
-          <div key={i} className="bg-white rounded-[20px] border border-slate-100 shadow-sm overflow-hidden">
-            <button onClick={() => setOpenSection(openSection === i ? -1 : i)} className="w-full flex items-center justify-between p-4 text-left">
-              <span className="font-bold text-sm text-slate-700 pr-2">{i + 1}. {s.title}</span>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={`text-slate-400 shrink-0 transition-transform ${openSection === i ? "rotate-180" : ""}`}><polyline points="6 9 12 15 18 9"></polyline></svg>
-            </button>
-            {openSection === i && (
-              <div className="px-4 pb-4 -mt-1">
-                <p className="text-xs text-slate-500 font-medium leading-relaxed">{s.body}</p>
-              </div>
-            )}
-          </div>
-        ))}
+
+      <div className="page">
+        <div className="rowlist">
+          {sections.map((sec, i) => (
+            <div key={i}>
+              <button className="row" onClick={() => setOpenSection(openSection === i ? -1 : i)}
+                      aria-expanded={openSection === i} style={{ alignItems: "flex-start" }}>
+                <span style={{
+                  width: 22, height: 22, borderRadius: "50%", flexShrink: 0, marginTop: 1,
+                  background: "var(--brand-soft)", color: "var(--brand)", fontSize: 11.5, fontWeight: 700,
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                }}>{i + 1}</span>
+                <span className="row-main">
+                  <span className="row-title" style={{ whiteSpace: "normal" }}>{sec.t}</span>
+                </span>
+                <span className="row-chev" style={{ transform: openSection === i ? "rotate(180deg)" : "none",
+                                                    transition: "transform .2s ease", marginTop: 2 }}>
+                  <Icon.chevronDown size={17} />
+                </span>
+              </button>
+              {openSection === i && (
+                <div className="fade-in" style={{ padding: "0 14px 15px 48px" }}>
+                  <p className="t-sm c-2" style={{ margin: 0 }}>{sec.b}</p>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );
@@ -2120,30 +2504,30 @@ function ChangePasswordModal({ open, onClose, currentProfile, setAppToast }) {
       }
       setAppToast({ message: "Password berhasil diubah!", type: "success" });
       onClose();
-    } catch (e) {
+    } catch {
       setAppToast({ message: "Terjadi kesalahan sistem.", type: "error" });
     }
     setIsLoading(false);
   };
 
   if (!open) return null;
-  const inp = "w-full border border-slate-200 rounded-xl px-4 py-3 text-sm font-medium focus:outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-50 bg-slate-50 focus:bg-white transition-all disabled:opacity-50";
+  const inp = "input";
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm px-4">
-      <div className="bg-white w-full max-w-sm rounded-[24px] p-6 pop-in shadow-2xl max-h-[90vh] overflow-y-auto">
-        <h3 className="font-black text-xl text-slate-900 mb-5 tracking-tight">Ganti Password</h3>
+    <div className="sheet-overlay" style={{ alignItems: "center", padding: 16, zIndex: 60 }}>
+      <div className="card pop-in" style={{ width: "100%", maxWidth: 400, padding: 22, maxHeight: "88dvh", overflowY: "auto", boxShadow: "var(--sh-xl)" }}>
+        <h3 className="t-h2 c-1">Ganti Password</h3>
         <div className="space-y-4">
           <FF label="Password Lama">
             <div className="relative">
               <input type={showOld ? "text" : "password"} className={inp.replace("px-4", "pl-4 pr-12")} value={oldPassword} onChange={e => setOldPassword(e.target.value)} disabled={isLoading} placeholder="Masukkan password lama" />
-              <button type="button" onClick={() => setShowOld(!showOld)} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-emerald-600 transition-colors">{showOld ? '🙈' : '👁️'}</button>
+              <button type="button" onClick={() => setShowOld(!showOld)} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-emerald-600 transition-colors">{showOld ? '🙈' : '👁️'}</button>
             </div>
           </FF>
           <FF label="Password Baru">
             <div className="relative">
               <input type={showNew ? "text" : "password"} className={inp.replace("px-4", "pl-4 pr-12")} value={newPassword} onChange={e => setNewPassword(e.target.value)} disabled={isLoading} placeholder="Minimal 6 karakter" />
-              <button type="button" onClick={() => setShowNew(!showNew)} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-emerald-600 transition-colors">{showNew ? '🙈' : '👁️'}</button>
+              <button type="button" onClick={() => setShowNew(!showNew)} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-emerald-600 transition-colors">{showNew ? '🙈' : '👁️'}</button>
             </div>
           </FF>
           <FF label="Konfirmasi Password Baru">
@@ -2152,7 +2536,7 @@ function ChangePasswordModal({ open, onClose, currentProfile, setAppToast }) {
         </div>
         <div className="flex gap-3 mt-8">
           <button onClick={onClose} className="flex-1 py-3.5 rounded-xl border border-slate-200 text-sm font-bold text-slate-600 hover:bg-slate-50 transition-colors disabled:opacity-50" disabled={isLoading}>Batal</button>
-          <button onClick={handleSubmit} className="flex-1 py-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold shadow-lg shadow-emerald-500/30 transition-all disabled:opacity-50" disabled={isLoading}>{isLoading ? 'Menyimpan...' : 'Simpan Password'}</button>
+          <button onClick={handleSubmit} className="btn btn-primary" style={{ flex: 1 }} disabled={isLoading}>{isLoading ? 'Menyimpan...' : 'Simpan Password'}</button>
         </div>
       </div>
     </div>
@@ -2184,25 +2568,25 @@ function ResetPasswordScreen({ onDone, setAppToast }) {
     onDone();
   };
 
-  const inp = "w-full border border-slate-200 rounded-xl px-4 py-3 text-sm font-medium focus:outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-50 bg-slate-50 focus:bg-white transition-all disabled:opacity-50";
+  const inp = "input";
 
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center bg-cream px-4">
-      <form onSubmit={handleSubmit} className="bg-white w-full max-w-sm rounded-[24px] p-7 shadow-2xl">
+      <form onSubmit={handleSubmit} className="card pop-in" style={{ width: "100%", maxWidth: 400, padding: 24, boxShadow: "var(--sh-xl)" }}>
         <h2 className="text-xl font-black text-slate-900 mb-2 tracking-tight">Buat Password Baru</h2>
-        <p className="text-xs text-slate-500 font-medium mb-5 leading-relaxed">Tautan reset terverifikasi. Masukkan password baru untuk akun Anda.</p>
+        <p className="t-sm c-2" style={{ marginBottom: 18 }}>Tautan reset terverifikasi. Masukkan password baru untuk akun Anda.</p>
         <div className="space-y-4">
           <FF label="Password Baru">
             <div className="relative">
               <input type={showPw ? "text" : "password"} className={inp.replace("px-4", "pl-4 pr-12")} value={newPassword} onChange={e => setNewPassword(e.target.value)} disabled={isLoading} placeholder="Minimal 6 karakter" autoFocus />
-              <button type="button" onClick={() => setShowPw(!showPw)} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-emerald-600 transition-colors">{showPw ? '🙈' : '👁️'}</button>
+              <button type="button" onClick={() => setShowPw(!showPw)} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-emerald-600 transition-colors">{showPw ? '🙈' : '👁️'}</button>
             </div>
           </FF>
           <FF label="Konfirmasi Password Baru">
             <input type={showPw ? "text" : "password"} className={inp} value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} disabled={isLoading} placeholder="Ulangi password baru" />
           </FF>
         </div>
-        <button type="submit" disabled={isLoading} className="w-full mt-6 bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-400 text-white font-bold py-4 rounded-xl text-sm shadow-lg shadow-emerald-500/30 transition-all">{isLoading ? "Menyimpan..." : "Simpan Password Baru"}</button>
+        <button type="submit" disabled={isLoading} className="btn btn-primary btn-block" style={{ marginTop: 20 }}>{isLoading ? "Menyimpan..." : "Simpan Password Baru"}</button>
       </form>
     </div>
   );
@@ -2236,17 +2620,54 @@ class ErrorBoundary extends React.Component {
   }
 }
 
+
+// Menutup lapisan teratas satu per satu (modal -> sheet -> layar bantuan),
+// baru keluar aplikasi kalau memang tidak ada apa-apa lagi yang terbuka.
+function useBackButton() {
+  useEffect(() => {
+    const closeTop = () => {
+      if (typeof window.__sirapiCloseTop === "function") return window.__sirapiCloseTop();
+      return false;
+    };
+
+    const onKey = (e) => { if (e.key === "Escape") closeTop(); };
+    window.addEventListener("keydown", onKey);
+
+    let remove = null;
+    // @capacitor/app hanya ada di build Android/iOS; di web impor ini gagal
+    // dengan tenang dan aplikasi tetap jalan seperti biasa.
+    import("@capacitor/app")
+      .then(({ App: CapApp }) => {
+        if (!CapApp?.addListener) return;
+        const h = CapApp.addListener("backButton", ({ canGoBack }) => {
+          const handled = closeTop();
+          if (!handled && !canGoBack) CapApp.exitApp();
+        });
+        remove = () => Promise.resolve(h).then((x) => x?.remove?.());
+      })
+      .catch(() => {});
+
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      if (remove) remove();
+    };
+  }, []);
+}
+
 function AppContent() {
+  // Tombol kembali Android & tombol Esc. Sebelumnya tidak ditangani sama sekali:
+  // di APK, menekan "kembali" saat modal terbuka menutup APLIKASI, bukan modalnya.
+  useBackButton();
+
   const [dbCattle, setDbCattle] = useState([]);
   const [profile, setProfile] = useState(() => {
     try { return JSON.parse(localStorage.getItem("srtt_user_profile")) || null; } 
-    catch (e) { return null; }
+    catch { return null; }
   });
   
   const [appToast, setAppToast] = useState(null); 
   const [appConfirm, setAppConfirm] = useState({ open: false }); 
   
-  const [showAuthScreen, setShowAuthScreen] = useState(false);
   const [hasStarted, setHasStarted] = useState(profile !== null);
   const [nav, setNav] = useState("dashboard"); 
   const [addOpen, setAddOpen] = useState(false); 
@@ -2262,6 +2683,35 @@ function AppContent() {
   const [recoveryMode, setRecoveryMode] = useState(false);
   const [tutorialOpen, setTutorialOpen] = useState(false);
   const [helpGuideOpen, setHelpGuideOpen] = useState(false);
+  const [rewindOpen, setRewindOpen] = useState(false);
+  const [akademiOpen, setAkademiOpen] = useState(false);
+  const [shareRewind, setShareRewind] = useState(null);
+
+  // Satu tempat yang tahu urutan lapisan yang terbuka, dipakai oleh tombol
+  // kembali Android dan tombol Esc. Urutannya dari yang paling atas.
+  useEffect(() => {
+    window.__openHelpGuide = () => setHelpGuideOpen(true);
+    window.__sirapiCloseTop = () => {
+      if (appConfirm?.open)   { setAppConfirm({ open: false }); return true; }
+      if (rewindOpen)         { setRewindOpen(false); return true; }
+      if (tutorialOpen)       { setTutorialOpen(false); return true; }
+      if (helpGuideOpen)      { setHelpGuideOpen(false); return true; }
+      if (akademiOpen)        { setAkademiOpen(false); return true; }
+      if (changePasswordOpen) { setChangePasswordOpen(false); return true; }
+      if (editProfileOpen)    { setEditProfileOpen(false); return true; }
+      if (detailItem)         { setDetailItem(null); return true; }
+      if (actionItem)         { setActionItem(null); return true; }
+      if (addOpen)            { setAddOpen(false); setEditItem(null); return true; }
+      if (nav !== "dashboard"){ setNav("dashboard"); return true; }
+      return false;
+    };
+    return () => {
+      delete window.__sirapiCloseTop;
+      delete window.__openHelpGuide;
+    };
+  }, [appConfirm, rewindOpen, tutorialOpen, helpGuideOpen, akademiOpen, changePasswordOpen, editProfileOpen,
+      detailItem, actionItem, addOpen, nav]);
+
   const [pushSubscribed, setPushSubscribed] = useState(false);
   const [pushLoading, setPushLoading] = useState(false);
 
@@ -2302,7 +2752,7 @@ function AppContent() {
   }, [profile]);
 
   useEffect(() => { setTimeout(() => setHideSplashDOM(true), 2500); }, []);
-  useEffect(() => { try { if (profile) localStorage.setItem("srtt_user_profile", JSON.stringify(profile)); } catch(e) {} }, [profile]);
+  useEffect(() => { try { if (profile) localStorage.setItem("srtt_user_profile", JSON.stringify(profile)); } catch { /* storage penuh/diblokir browser — abaikan */ } }, [profile]);
 
   useEffect(() => {
     const loadCattleData = async () => {
@@ -2341,7 +2791,7 @@ function AppContent() {
           setDbCattle(result.cattle);
         }
       }
-    } catch (error) {
+    } catch {
       setAppToast({ message: "Data tersimpan, namun gagal memuat ulang daftar. Silakan refresh halaman.", type: "error" });
     }
   };
@@ -2465,7 +2915,7 @@ function AppContent() {
         return;
       }
       setAppToast({ message: "Laporan reproduksi berhasil disimpan", type: "success" });
-    } catch (error) {
+    } catch {
       setAppToast({ message: "Gagal terhubung ke server. Periksa koneksi internet.", type: "error" });
     }
   };
@@ -2504,7 +2954,7 @@ function AppContent() {
         return;
       }
       setAppToast({ message: type === 'SEMBUH' ? "Sapi dinyatakan sembuh!" : "Laporan gejala berhasil disimpan", type: "success" });
-    } catch (error) {
+    } catch {
       setAppToast({ message: "Gagal terhubung ke server. Periksa koneksi internet.", type: "error" });
     }
   };
@@ -2520,7 +2970,7 @@ function AppContent() {
 
   if (recoveryMode) {
     return (
-      <div className="min-h-screen bg-cream font-sans text-slate-800 relative flex flex-col">
+      <div className="app-shell flex flex-col">
         <GlobalStyle />
         <ToastNotification message={appToast?.message} type={appToast?.type} onClose={() => setAppToast(null)} />
         <ResetPasswordScreen onDone={() => setRecoveryMode(false)} setAppToast={setAppToast} />
@@ -2529,7 +2979,7 @@ function AppContent() {
   }
 
   return (
-    <div className="min-h-screen bg-cream font-sans text-slate-800 pb-20 relative flex flex-col">
+    <div className="app-shell flex flex-col">
       <GlobalStyle />
       
       <DialogSystem />
@@ -2538,192 +2988,391 @@ function AppContent() {
       
       {!hideSplashDOM && (
         <div className="splash-container">
-          <div className="splash-logo-wrap bg-white rounded-[28px] p-4 shadow-2xl">
-            <img src={logoTuban} alt="Logo Tuban" className="w-16 h-auto object-contain" />
+          <HeroScene />
+          <div className="splash-inner">
+            <div className="splash-logo-wrap">
+              <img src={logoTuban} alt="" style={{ width: 46, height: "auto", display: "block" }} />
+            </div>
+            <h1 className="splash-title">SIRAPI</h1>
+            <p className="splash-subtitle">Sistem Informasi Reproduksi Sapi</p>
+            <div className="splash-loader" />
           </div>
-          <h1 className="splash-title text-5xl font-black text-white tracking-tighter mt-6">SIRAPI</h1>
-          <p className="splash-subtitle text-[10px] font-bold text-emerald-200 uppercase tracking-widest mt-2 text-center px-10">Sistem Informasi Reproduksi Sapi</p>
-          <div className="splash-loader mt-9"></div>
+          <p className="splash-foot">
+            Dinas Ketahanan Pangan, Pertanian dan Perikanan<br />Kabupaten Tuban
+          </p>
         </div>
       )}
 
       {hideSplashDOM && !hasStarted && !profile && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-50 px-4 slide-up">
-           <div className="bg-white w-full max-w-sm rounded-[32px] p-8 shadow-2xl border border-slate-100 text-center">
-             <div className="flex justify-center mb-5"><img src={logoTuban} alt="Logo Tuban" className="w-20 h-auto object-contain drop-shadow-sm" /></div>
-             <p className="text-[8.5px] font-black text-emerald-600 uppercase tracking-widest mb-6 leading-snug">Dinas Ketahanan Pangan, Pertanian, dan Perikanan<br/>Kabupaten Tuban</p>
-             <h1 className="text-2xl font-black text-slate-900 tracking-tight mb-1">SIRAPI</h1>
-             <p className="text-[10px] font-bold text-slate-500 mb-8 leading-relaxed">(Sistem Informasi Reproduksi Sapi)</p>
-             <button onClick={() => { setHasStarted(true); setShowAuthScreen(true); }} className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-4 rounded-xl text-sm shadow-lg shadow-emerald-500/30 transition-all">Mulai Sistem Pendataan</button>
-           </div>
+        <div className="intro fade-in">
+          <HeroScene />
+
+          <div className="intro-top">
+            <span className="glass-pill">
+              <img src={logoTuban} alt="" style={{ width: 17, height: 17, objectFit: "contain" }} />
+              Kabupaten Tuban
+            </span>
+          </div>
+
+          {/* Cuplikan kartu asli dari dalam aplikasi. Bagian atas layar sambutan
+              biasanya kosong melompong; diisi ini, calon pengguna langsung
+              melihat wujud produknya sebelum menekan apa pun. */}
+          <div className="intro-peek" aria-hidden="true">
+            <div className="peek-card peek-a">
+              <span className="peek-badge peek-warn">Perlu tindakan</span>
+              <p className="peek-code">SPI-005</p>
+              <p className="peek-sub">Waktunya pemeriksaan kebuntingan</p>
+            </div>
+            <div className="peek-card peek-b">
+              <span className="peek-badge peek-ok">Aman</span>
+              <p className="peek-code">SPI-006</p>
+              <p className="peek-sub">Bunting aktif · perkiraan lahir 31 Des</p>
+            </div>
+          </div>
+
+          <div className="intro-body">
+            <h1 className="intro-title rise-in">
+              Kandang Anda,<br />terpantau tiap hari.
+            </h1>
+            <p className="intro-lead rise-in" style={{ animationDelay: ".06s" }}>
+              Catat kawin, bunting, kelahiran, dan kesehatan sapi — SIRAPI yang mengingatkan
+              kapan tiap ekor perlu diurus.
+            </p>
+
+            <ul className="intro-points rise-in" style={{ animationDelay: ".12s" }}>
+              {[
+                { icon: Icon.calendar, t: "Jadwal dihitung otomatis", d: "Birahi, pemeriksaan kebuntingan, perkiraan lahir" },
+                { icon: Icon.alertCircle, t: "Peringatan sebelum terlambat", d: "Tahu lebih dulu sapi mana yang perlu petugas" },
+                { icon: Icon.bell, t: "Pengingat harian", d: "Sampai ke HP meski aplikasi tertutup" },
+              ].map((p) => (
+                <li key={p.t}>
+                  <span className="intro-ic"><p.icon size={17} stroke={2} /></span>
+                  <span>
+                    <strong>{p.t}</strong>
+                    <em>{p.d}</em>
+                  </span>
+                </li>
+              ))}
+            </ul>
+
+            <div className="intro-cta rise-in" style={{ animationDelay: ".18s" }}>
+              <button onClick={() => { setHasStarted(true); }} className="btn btn-lg btn-block intro-btn">
+                Mulai <Icon.arrowRight size={18} stroke={2.2} />
+              </button>
+              <p className="intro-foot">
+                Dinas Ketahanan Pangan, Pertanian dan Perikanan Kabupaten Tuban
+              </p>
+            </div>
+          </div>
         </div>
       )}
 
       {hideSplashDOM && hasStarted && !profile && (
-        <AuthScreen setProfile={(userData) => { setProfile(userData); setShowAuthScreen(false); setAppToast({message: "Berhasil Login!", type: "success"}) }} />
+        <AuthScreen setProfile={(userData) => { setProfile(userData); setAppToast({message: "Berhasil Login!", type: "success"}) }} />
       )}
 
       {hideSplashDOM && hasStarted && profile && (
         <>
-          <div className="bg-white px-2 sm:px-5 pt-3 pb-3 sm:pt-4 sm:pb-4 border-b border-slate-200 shadow-sm mb-3 z-40 relative">
-            <div className="flex items-center justify-between w-full">
-              <div className="flex items-center justify-start gap-2 sm:gap-3">
-                <img src={logoTuban} alt="Logo Tuban" className="w-7 sm:w-9 h-auto object-contain drop-shadow-sm shrink-0" />
-                <p className="text-[7px] sm:text-[8.5px] font-black text-slate-900 uppercase tracking-widest leading-tight">DINAS KETAHANAN PANGAN,<br/>PERTANIAN DAN PERIKANAN<br/>KABUPATEN TUBAN</p>
-              </div>
-              <div className="flex items-center">
-                <div className="bg-slate-900 px-3 py-1.5 shadow-sm">
-                  <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight leading-none">SIRAPI</h1>
-                </div>
+          <header className="topbar">
+            <div className="topbar-brand">
+              <img src={logoTuban} alt="" className="topbar-logo" />
+              <div className="min-w-0">
+                <p className="topbar-name">SIRAPI</p>
+                <p className="topbar-sub">Dinas Ketahanan Pangan, Pertanian dan Perikanan Tuban</p>
               </div>
             </div>
-          </div>
+          </header>
 
           <div className="flex-1">
             {nav === "dashboard" && <DashboardView dbCattle={safeDb} onAdviceClick={handleAdviceClick} profile={profile} setAppToast={setAppToast} onAddNew={() => { setEditItem(null); setAddOpen(true); }} />}
             {nav === "assets" && (
-              <div className="pb-28 fade-in bg-cream">
-                <div className="sticky top-0 z-30 bg-slate-50/90 backdrop-blur-md px-5 py-4 border-b border-slate-200">
-                   <div><h2 className="font-black text-xl text-slate-900">Rekam Medis</h2><p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{filteredCattle.length} dari {safeDb.length} Ekor</p></div>
-                   <div className="mt-4 relative">
-                     <select
-                       value={searchQuery}
-                       onChange={(e) => setSearchQuery(e.target.value)}
-                       className="w-full border border-slate-200 rounded-xl pl-4 pr-10 py-3 text-sm font-bold text-slate-700 bg-white focus:outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-50 appearance-none"
-                     >
-                       <option value="">Semua Sapi</option>
-                       {[...safeDb].filter(c => c && c.id).sort((a, b) => (a.code || a.id).localeCompare(b.code || b.id, undefined, { numeric: true })).map(c => (
-                         <option key={c.id} value={c.code || c.id}>{c.code || c.id}</option>
-                       ))}
-                     </select>
-                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-slate-400"><polyline points="6 9 12 15 18 9"></polyline></svg>
-                   </div>
-                   <div className="mt-3 p-1 bg-slate-200 rounded-xl flex gap-1">
-                      <button onClick={() => setGenderFilter("ALL")} className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${genderFilter === 'ALL' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>Semua</button>
-                      <button onClick={() => setGenderFilter("BETINA")} className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${genderFilter === 'BETINA' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>Betina</button>
-                      <button onClick={() => setGenderFilter("JANTAN")} className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${genderFilter === 'JANTAN' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>Jantan</button>
-                   </div>
+              <div className="fade-in">
+                <div style={{ position: "sticky", top: "calc(56px + env(safe-area-inset-top))", zIndex: 30,
+                              background: "rgba(244,245,247,.92)", backdropFilter: "blur(10px)",
+                              WebkitBackdropFilter: "blur(10px)", borderBottom: "1px solid var(--border)",
+                              padding: "14px 16px 12px" }}>
+                  <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 11 }}>
+                    <h1 className="t-h1 c-1">Ternak</h1>
+                    <span className="t-xs c-3 tabular" style={{ fontWeight: 600 }}>
+                      {filteredCattle.length === safeDb.length
+                        ? `${safeDb.length} ekor`
+                        : `${filteredCattle.length} dari ${safeDb.length} ekor`}
+                    </span>
+                  </div>
+
+                  {/* Pencarian sekarang input teks sungguhan. Sebelumnya berupa
+                      dropdown berisi seluruh kode sapi — tidak terpakai begitu
+                      jumlah ternak lewat 20 ekor. */}
+                  <div className="input-icon">
+                    <Icon.search size={18} />
+                    <input
+                      type="search"
+                      className="input"
+                      inputMode="search"
+                      placeholder="Cari kode sapi…"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="segmented" style={{ marginTop: 10 }}>
+                    {[
+                      { k: "ALL", l: "Semua" },
+                      { k: "BETINA", l: "Betina" },
+                      { k: "JANTAN", l: "Jantan" },
+                    ].map((g) => (
+                      <button key={g.k} onClick={() => setGenderFilter(g.k)} className={genderFilter === g.k ? "active" : ""}>
+                        {g.l}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-                <div className="p-5 space-y-4 mt-2">
-                  {filteredCattle.map((item) => item ? <AssetRecordCard key={item.id || Math.random()} item={item} onEdit={(i) => {setEditItem(i); setAddOpen(true);}} onOpenAction={setActionItem} onDelete={handleDeleteRequest} onOpenDetail={setDetailItem} highlightedId={highlightedId} setHighlightedId={setHighlightedId} /> : null)}
+
+                <div className="page" style={{ paddingTop: 14 }}>
                   {safeDb.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center text-center pt-16 px-6">
-                      <div className="w-16 h-16 bg-emerald-50 rounded-2xl flex items-center justify-center mb-4 text-emerald-600">{ICON_COW}</div>
-                      <p className="font-black text-slate-700 text-sm">Belum Ada Data Sapi</p>
-                      <p className="text-xs font-medium text-slate-400 mt-1.5 max-w-xs">Tambahkan sapi pertama Anda lewat tombol hijau "Tambah Ternak" di tab Beranda.</p>
+                    <div className="card">
+                      <div className="empty">
+                        <div className="empty-icon"><Icon.cow size={26} /></div>
+                        <p className="empty-title">Belum ada data sapi</p>
+                        <p className="empty-text">Tambahkan sapi pertama Anda lewat tombol + di tab Beranda.</p>
+                      </div>
+                    </div>
+                  ) : filteredCattle.length === 0 ? (
+                    <div className="card">
+                      <div className="empty">
+                        <div className="empty-icon"><Icon.search size={24} /></div>
+                        <p className="empty-title">Tidak ditemukan</p>
+                        <p className="empty-text">
+                          Tidak ada sapi dengan kode &ldquo;{searchQuery}&rdquo;
+                          {genderFilter !== "ALL" ? ` pada filter ${genderFilter.toLowerCase()}` : ""}.
+                        </p>
+                        <button onClick={() => { setSearchQuery(""); setGenderFilter("ALL"); }} className="btn btn-sm btn-secondary">
+                          Bersihkan pencarian
+                        </button>
+                      </div>
                     </div>
                   ) : (
-                    searchQuery && filteredCattle.length === 0 && <p className="text-center text-slate-500 font-medium pt-10">Sapi dengan kode "{searchQuery}" tidak ditemukan.</p>
+                    <div className="stack-8 stagger">
+                      {filteredCattle.map((item) =>
+                        item ? (
+                          <AssetRecordCard
+                            key={item.id}
+                            item={item}
+                            onEdit={(i) => { setEditItem(i); setAddOpen(true); }}
+                            onOpenAction={setActionItem}
+                            onDelete={handleDeleteRequest}
+                            onOpenDetail={setDetailItem}
+                            highlightedId={highlightedId}
+                            setHighlightedId={setHighlightedId}
+                          />
+                        ) : null
+                      )}
+                    </div>
                   )}
                 </div>
-              </div>
-            )}
-            {nav === "calendar" && <CalendarView dbCattle={safeDb} profile={profile} />}
-            {nav === "academy" && <AcademyView />}
-            {nav === "profile" && (
-              <div className="pb-32 fade-in bg-cream min-h-screen">
-                <div className="bg-white px-5 pt-8 pb-8 border-b border-slate-200 shadow-sm flex flex-col items-center">
-                  <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center text-3xl font-black text-slate-400 mb-3 shadow-inner overflow-hidden border-4 border-white">
-                    {profile.photo ? <img src={profile.photo} alt="Profil" className="w-full h-full object-cover" /> : <span>{profile.name ? profile.name.charAt(0).toUpperCase() : "U"}</span>}
-                  </div>
-                  <h2 className="text-2xl font-black text-slate-900 tracking-tight">{profile.name}</h2>
-                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">{profile.alamat || profile.desa || "Tuban"} Area</p>
-                  <button onClick={() => setEditProfileOpen(true)} className="mt-4 px-6 py-2 bg-slate-100 text-slate-700 font-bold text-xs rounded-full hover:bg-slate-200 transition-colors">Edit Profil</button>
-                </div>
 
-                <div className="px-5 mt-6 space-y-6">
-                  <div>
-                    <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 ml-2">Pengaturan Akun</h3>
-                    <div className="bg-white rounded-[20px] border border-slate-100 shadow-sm overflow-hidden">
-                      <div onClick={() => setChangePasswordOpen(true)} className="flex items-center justify-between p-4 cursor-pointer hover:bg-slate-50 transition-colors">
-                         <div className="flex items-center gap-3">
-                           <div className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center text-blue-600"><svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg></div>
-                           <span className="font-bold text-sm text-slate-700">Keamanan & Password</span>
-                         </div>
-                         <span className="text-slate-300 font-bold">❯</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div>
-                    <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 ml-2">Notifikasi</h3>
-                    <div className="bg-white rounded-[20px] border border-slate-100 shadow-sm overflow-hidden">
-                      <div className="flex items-center justify-between p-4">
-                         <div className="flex items-center gap-3 min-w-0">
-                           <div className="w-8 h-8 rounded-full bg-amber-50 flex items-center justify-center text-amber-600 shrink-0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg></div>
-                           <div className="min-w-0">
-                             <p className="font-bold text-sm text-slate-700">Notifikasi Harian SIRAPI</p>
-                             <p className="text-[10px] text-slate-400 font-medium">Sapaan & info penting tiap hari, meski aplikasi tertutup</p>
-                           </div>
-                         </div>
-                         <button
-                           onClick={handleTogglePush}
-                           disabled={pushLoading}
-                           className={`relative w-12 h-7 rounded-full shrink-0 transition-colors ${pushSubscribed ? "bg-emerald-600" : "bg-slate-200"} disabled:opacity-50`}
-                         >
-                           <span className={`absolute top-1 left-1 w-5 h-5 rounded-full bg-white shadow-sm transition-transform ${pushSubscribed ? "translate-x-5" : "translate-x-0"}`}></span>
-                         </button>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div>
-                    <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 ml-2">Bantuan</h3>
-                    <div className="bg-white rounded-[20px] border border-slate-100 shadow-sm overflow-hidden divide-y divide-slate-100">
-                      <div onClick={() => setHelpGuideOpen(true)} className="flex items-center justify-between p-4 cursor-pointer hover:bg-slate-50 transition-colors">
-                         <div className="flex items-center gap-3">
-                           <div className="w-8 h-8 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-600"><svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg></div>
-                           <span className="font-bold text-sm text-slate-700">Cara Pakai Aplikasi</span>
-                         </div>
-                         <span className="text-slate-300 font-bold">❯</span>
-                      </div>
-                      <div onClick={() => setTutorialOpen(true)} className="flex items-center justify-between p-4 cursor-pointer hover:bg-slate-50 transition-colors">
-                         <div className="flex items-center gap-3">
-                           <div className="w-8 h-8 rounded-full bg-violet-50 flex items-center justify-center text-violet-600"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 1 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg></div>
-                           <span className="font-bold text-sm text-slate-700">Tutorial Interaktif</span>
-                         </div>
-                         <span className="text-slate-300 font-bold">❯</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <button onClick={() => { 
-                    setAppConfirm({
-                      open: true,
-                      title: "Keluar Aplikasi?",
-                      message: "Sesi Anda akan diakhiri. Pastikan semua data ternak Anda sudah tersimpan.",
-                      isDestructive: true,
-                      confirmText: "Ya, Keluar",
-                      onConfirm: () => {
-                        setDbCattle([]);
-                        localStorage.removeItem("srtt_user_profile");
-                        setProfile(null);
-                        setNav("dashboard");
-                        setSearchQuery("");
-                        setGenderFilter("ALL");
-                        setDetailItem(null);
-                        setActionItem(null);
-                        setEditItem(null);
-                        setAddOpen(false);
-                        setHighlightedId(null);
-                      }
-                    });
-                  }} className="w-full bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-100 font-bold py-4 rounded-[20px] text-sm transition-colors shadow-sm mt-4">
-                    Keluar Akun (Logout)
+                <div className="fab-wrap">
+                  <button onClick={() => { setEditItem(null); setAddOpen(true); }} className="fab" aria-label="Tambah ternak">
+                    <Icon.plus size={24} stroke={2.3} />
                   </button>
                 </div>
               </div>
             )}
+            {nav === "calendar" && <CalendarView dbCattle={safeDb} profile={profile} />}
+            {nav === "laporan" && (
+              <LaporanView
+                dbCattle={safeDb}
+                onBukaRewind={() => setRewindOpen(true)}
+                onPilihSapi={handleAdviceClick}
+              />
+            )}
+            {nav === "profile" && (
+              <div className="page fade-in">
+                <div className="card card-pad" style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 20 }}>
+                  <div style={{ width: 56, height: 56, borderRadius: "var(--r-full)", overflow: "hidden",
+                                background: "var(--brand-soft)", color: "var(--brand)", flexShrink: 0,
+                                display: "flex", alignItems: "center", justifyContent: "center",
+                                fontSize: 22, fontWeight: 700 }}>
+                    {profile.photo
+                      ? <img src={profile.photo} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                      : <span>{profile.name ? profile.name.charAt(0).toUpperCase() : "P"}</span>}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p className="t-h2 c-1 truncate-1" style={{ margin: 0 }}>{profile.name}</p>
+                    <p className="t-sm c-3 truncate-1" style={{ margin: "2px 0 0" }}>
+                      {[profile.dusun, profile.desa, profile.kecamatan].filter(Boolean).join(", ") || "Tuban"}
+                    </p>
+                  </div>
+                  <button onClick={() => setEditProfileOpen(true)} className="btn btn-sm btn-secondary">Ubah</button>
+                </div>
+
+                <div className="stack-20">
+                  <section>
+                    <p className="t-over" style={{ marginBottom: 9 }}>Notifikasi</p>
+                    <div className="rowlist">
+                      <div className="row" style={{ cursor: "default" }}>
+                        <span className="row-icon" style={{ background: "var(--warn-bg)", color: "var(--warn)" }}>
+                          <Icon.bell size={18} />
+                        </span>
+                        <span className="row-main">
+                          <span className="row-title">Notifikasi harian</span>
+                          <span className="row-sub">Sapaan dan info penting tiap hari, meski aplikasi tertutup</span>
+                        </span>
+                        <button
+                          onClick={handleTogglePush}
+                          disabled={pushLoading}
+                          role="switch"
+                          aria-checked={pushSubscribed}
+                          aria-label="Notifikasi harian"
+                          style={{
+                            position: "relative", width: 46, height: 27, borderRadius: 999, border: 0,
+                            flexShrink: 0, cursor: "pointer", opacity: pushLoading ? .5 : 1,
+                            background: pushSubscribed ? "var(--brand)" : "var(--border-strong)",
+                            transition: "background .2s ease",
+                          }}
+                        >
+                          <span style={{
+                            position: "absolute", top: 3, left: 3, width: 21, height: 21, borderRadius: "50%",
+                            background: "#fff", boxShadow: "0 1px 3px rgba(16,24,40,.2)",
+                            transform: pushSubscribed ? "translateX(19px)" : "translateX(0)",
+                            transition: "transform .2s cubic-bezier(.34,1.4,.64,1)",
+                          }} />
+                        </button>
+                      </div>
+                    </div>
+                  </section>
+
+                  <section>
+                    <p className="t-over" style={{ marginBottom: 9 }}>Bantuan</p>
+                    <div className="rowlist">
+                      <button className="row" onClick={() => setHelpGuideOpen(true)}>
+                        <span className="row-icon" style={{ background: "var(--brand-soft)", color: "var(--brand)" }}>
+                          <Icon.book size={18} />
+                        </span>
+                        <span className="row-main"><span className="row-title">Cara pakai aplikasi</span></span>
+                        <Icon.chevronRight size={18} className="row-chev" />
+                      </button>
+                      <button className="row" onClick={() => setTutorialOpen(true)}>
+                        <span className="row-icon" style={{ background: "var(--info-bg)", color: "var(--info)" }}>
+                          <Icon.help size={18} />
+                        </span>
+                        <span className="row-main"><span className="row-title">Tutorial interaktif</span></span>
+                        <Icon.chevronRight size={18} className="row-chev" />
+                      </button>
+                      <button className="row" onClick={() => setAkademiOpen(true)}>
+                        <span className="row-icon" style={{ background: "var(--warn-bg)", color: "var(--warn)" }}>
+                          <Icon.video size={18} />
+                        </span>
+                        <span className="row-main">
+                          <span className="row-title">Kelas &amp; materi</span>
+                          <span className="row-sub">Jadwal kelas daring dan panduan belajar</span>
+                        </span>
+                        <Icon.chevronRight size={18} className="row-chev" />
+                      </button>
+                      <a className="row" style={{ textDecoration: "none" }} target="_blank" rel="noopener noreferrer"
+                         href={waPetugas(`Halo Petugas, saya ${profile?.name || "Peternak"}. Saya butuh bantuan.`)}>
+                        <span className="row-icon" style={{ background: "#E7F9EE", color: "#1DA851" }}>
+                          <Icon.phone size={18} />
+                        </span>
+                        <span className="row-main"><span className="row-title">Hubungi petugas</span></span>
+                        <Icon.chevronRight size={18} className="row-chev" />
+                      </a>
+                    </div>
+                  </section>
+
+                  <section>
+                    <p className="t-over" style={{ marginBottom: 9 }}>Akun</p>
+                    <div className="rowlist">
+                      <button className="row" onClick={() => setChangePasswordOpen(true)}>
+                        <span className="row-icon" style={{ background: "var(--neut-bg)", color: "var(--text-2)" }}>
+                          <Icon.lock size={18} />
+                        </span>
+                        <span className="row-main"><span className="row-title">Ubah kata sandi</span></span>
+                        <Icon.chevronRight size={18} className="row-chev" />
+                      </button>
+                      <button
+                        className="row"
+                        onClick={() => {
+                          setAppConfirm({
+                            open: true,
+                            title: "Keluar dari akun?",
+                            message: "Sesi Anda akan diakhiri. Data ternak tetap tersimpan dan bisa dibuka lagi setelah masuk kembali.",
+                            isDestructive: true,
+                            confirmText: "Keluar",
+                            onConfirm: () => {
+                              setDbCattle([]);
+                              localStorage.removeItem("srtt_user_profile");
+                              setProfile(null); setNav("dashboard"); setSearchQuery("");
+                              setGenderFilter("ALL"); setDetailItem(null); setActionItem(null);
+                              setEditItem(null); setAddOpen(false); setHighlightedId(null);
+                            },
+                          });
+                        }}
+                      >
+                        <span className="row-icon" style={{ background: "var(--crit-bg)", color: "var(--crit)" }}>
+                          <Icon.logout size={18} />
+                        </span>
+                        <span className="row-main">
+                          <span className="row-title" style={{ color: "var(--crit)" }}>Keluar akun</span>
+                        </span>
+                      </button>
+                    </div>
+                  </section>
+
+                  <p className="t-xs c-3" style={{ textAlign: "center", lineHeight: 1.6, marginTop: 4 }}>
+                    SIRAPI · Sistem Informasi Reproduksi Sapi<br />
+                    Dinas Ketahanan Pangan, Pertanian dan Perikanan Kabupaten Tuban
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
           
-          <div className="nav-bar">
-            <button onClick={() => setNav("dashboard")} className={`nav-item ${nav === "dashboard" ? "active" : ""}`}><span className="nav-icon"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 2L2 12h3v8h6v-6h2v6h6v-8h3z"/></svg></span><span>Beranda</span></button>
-            <button onClick={() => setNav("assets")} className={`nav-item ${nav === "assets" ? "active" : ""}`}><span className="nav-icon"><svg viewBox="0 0 100 100" className="w-6 h-6 fill-current"><path d="M85.9,46.1c-1.9-2.2-4.1-4-6.5-5.3c0,0-11-6-11.4-6.3c-0.1,0-0.1-0.1-0.2-0.1c-1.3-1-3.1-1.3-4.7-0.7 c-0.7,0.3-1.4,0.7-1.9,1.3c-2.3,2.4-5.3,4.6-8.3,4.6c-2.6,0-5.1-1.6-7-4.1c-1.7-2.3-3.6-3.8-5.6-4.6c-0.1,0-0.2-0.1-0.3-0.1 C38,30.3,36.1,30.7,34.8,32c-0.1,0.1-0.1,0.1-0.2,0.1C33,33.5,22,41.4,22,41.4c-2.2,1.6-3.7,3.9-4,6.4c-0.3,2.5,0.7,5,2.6,6.6 c0.1,0.1,0.1,0.1,0.2,0.1c0.1,0,0.1,0,0.2,0.1c2.1,1.5,4.7,2.1,7.2,1.7c1.3-0.2,2.5-0.7,3.6-1.5c0.1-0.1,0.2-0.1,0.3-0.2 c2-1.9,4.5-2.8,7.1-2.8c2.9,0,5.6,1.2,7.4,3.1c1.8,1.9,4.1,3,6.6,3c2,0,3.9-0.8,5.3-2.2c0.1-0.1,0.1-0.1,0.2-0.1 c1.8-2,4.6-3,7.3-2.6c1.1,0.2,2.2,0.6,3.2,1.2c0.1,0.1,0.1,0.1,0.2,0.1c1.9,1.1,4.1,1.4,6.1,0.8c2-0.6,3.8-2,5-3.8 C86.7,50,86.9,48,85.9,46.1z M52.5,41.4c0,2.1-1.7,3.8-3.8,3.8c-2.1,0-3.8-1.7-3.8-3.8c0-2.1,1.7-3.8,3.8-3.8C50.8,37.6,52.5,39.3,52.5,41.4 z"/></svg></span><span>Rekam Medis</span></button>
-            <button onClick={() => setNav("calendar")} className={`nav-item ${nav === "calendar" ? "active" : ""}`}><span className="nav-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M9 11H7v2h2v-2zm4 0h-2v2h2v-2zm4 0h-2v2h2v-2zm2-7h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 1.99 2H19c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V9h14v11z"/></svg></span><span>Kalender</span></button>
-            <button onClick={() => setNav("academy")} className={`nav-item ${nav === "academy" ? "active" : ""}`}><span className="nav-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M12 3L1 9l4 2.18v6L12 21l7-3.82v-6l2-1.09V17h2V9L12 3zm6.82 6L12 12.72 5.18 9 12 5.28 18.82 9zM17 15.99l-5 2.73-5-2.73v-3.72L12 15l5-2.73v3.72z"/></svg></span><span>Akademi</span></button>
-            <button onClick={() => setNav("profile")} className={`nav-item ${nav === "profile" ? "active" : ""}`}><span className="nav-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg></span><span>Profil</span></button>
-          </div>
+          <nav className="nav-bar" aria-label="Navigasi utama">
+            {[
+              { key: "dashboard", label: "Beranda",     icon: Icon.home },
+              { key: "assets",    label: "Ternak",      icon: Icon.cow },
+              { key: "calendar",  label: "Kalender",    icon: Icon.calendar },
+              { key: "laporan",   label: "Laporan",     icon: Icon.trendUp },
+              { key: "profile",   label: "Profil",      icon: Icon.user },
+            ].map((t) => (
+              <button
+                key={t.key}
+                onClick={() => setNav(t.key)}
+                className={`nav-item ${nav === t.key ? "active" : ""}`}
+                aria-current={nav === t.key ? "page" : undefined}
+              >
+                <span className="nav-icon">
+                  <t.icon size={23} stroke={nav === t.key ? 2.1 : 1.75} />
+                </span>
+                <span>{t.label}</span>
+              </button>
+            ))}
+          </nav>
           
+          {rewindOpen && (
+            <RewindView
+              dbCattle={safeDb}
+              tahun={new Date().getFullYear()}
+              onTutup={() => setRewindOpen(false)}
+              onBagikan={() => { setRewindOpen(false); setShareRewind(true); }}
+            />
+          )}
+
+          <ShareSummaryModal
+            open={!!shareRewind}
+            onClose={() => setShareRewind(null)}
+            stats={{
+              total: safeDb.length,
+              jantan: safeDb.filter((i) => i && (i.jenis_kelamin === "JANTAN" || i.gender === "JANTAN")).length,
+              betina: safeDb.filter((i) => i && (i.jenis_kelamin === "BETINA" || i.gender === "BETINA")).length,
+              pregnant: safeDb.filter((i) => i && (i.status_reproduksi === "PREGNANT" || i.phase === "PREGNANT")).length,
+            }}
+            profile={profile}
+            dbCattle={safeDb}
+            setAppToast={setAppToast}
+          />
+
           <AddModal open={addOpen} onClose={() => { setAddOpen(false); setEditItem(null); }} onSave={handleSaveAdd} editItem={editItem} setAppToast={setAppToast} />
           <ActionModal open={!!actionItem} item={actionItem} onClose={() => setActionItem(null)} onSaveRepro={handleSaveRepro} onSaveHealth={handleSaveHealth} setAppToast={setAppToast} />
           <DetailModal item={detailItem} onClose={() => setDetailItem(null)} onDeleteLog={handleDeleteLog} setAppToast={setAppToast} setAppConfirm={setAppConfirm} />
@@ -2731,6 +3380,7 @@ function AppContent() {
           <ChangePasswordModal open={changePasswordOpen} onClose={() => setChangePasswordOpen(false)} currentProfile={profile} setAppToast={setAppToast} />
           <OnboardingTutorial open={tutorialOpen} onClose={() => { setTutorialOpen(false); localStorage.setItem("srtt_tutorial_seen", "1"); }} />
           <HelpGuideScreen open={helpGuideOpen} onClose={() => setHelpGuideOpen(false)} />
+          <AcademyView open={akademiOpen} onClose={() => setAkademiOpen(false)} />
         </>
       )}
     </div>

@@ -1,8 +1,10 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { dialog } from "./core/helpers";
 import { TUBAN_DATA } from "./core/constants";
 import { FF } from "./core/components/SharedUI";
 import { authService } from "./core/authService";
+import { Icon } from "./core/components/Icons";
+import { HeroScene } from "./core/components/Hero";
 import logoTuban from "./Tubankab.png";
 
 export function AuthScreen({ setProfile }) {
@@ -26,7 +28,7 @@ export function AuthScreen({ setProfile }) {
   const [registerPhone, setRegisterPhone] = useState("");
   const [registerPassword, setRegisterPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [passwordMatch, setPasswordMatch] = useState(null);
+  const passwordMatch = confirmPassword === "" ? null : registerPassword === confirmPassword;
   const [profileData, setProfileData] = useState({
     name: "",
     kecamatan: "Tuban",
@@ -36,17 +38,6 @@ export function AuthScreen({ setProfile }) {
     dusun: "",
     photo: null
   });
-
-  // Monitor password confirmation
-  useEffect(() => {
-    if (confirmPassword === "") {
-      setPasswordMatch(null);
-    } else if (registerPassword === confirmPassword) {
-      setPasswordMatch(true);
-    } else {
-      setPasswordMatch(false);
-    }
-  }, [registerPassword, confirmPassword]);
 
   const handleKecamatanChange = (kec) => {
     const newDesa = TUBAN_DATA[kec]?.[0] || "";
@@ -127,7 +118,6 @@ export function AuthScreen({ setProfile }) {
       setRegisterPhone("");
       setRegisterPassword("");
       setConfirmPassword("");
-      setPasswordMatch(null);
       setProfileData({
         name: "",
         kecamatan: "Tuban",
@@ -143,52 +133,77 @@ export function AuthScreen({ setProfile }) {
     }
   };
 
-  const inp = "w-full border border-slate-200 rounded-xl px-4 py-3 text-sm font-medium focus:outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-50 bg-slate-50 focus:bg-white transition-all";
+  const inp = "input";
 
   return (
     <>
-    <div className="fixed inset-0 z-[100] bg-cream flex flex-col overflow-hidden slide-up">
-      <div className="pb-6 px-6 bg-white rounded-b-[32px] shadow-sm z-10 relative" style={{ paddingTop: 'calc(env(safe-area-inset-top) + 3rem)' }}>
-        <div className="flex justify-center mb-4"><div className="w-16 h-16 bg-emerald-50 rounded-full flex items-center justify-center p-3"><img src={logoTuban} alt="Logo Tuban" className="w-full h-full object-contain" /></div></div>
-        <h1 className="text-2xl font-black text-center text-slate-900 tracking-tight">SIRAPI</h1>
-        <p className="text-[10px] font-bold text-center text-slate-500 uppercase tracking-widest mt-1">Kabupaten Tuban</p>
-        <div className="flex bg-slate-100 p-1.5 rounded-2xl mt-6">
-          <button type="button" onClick={() => setIsLogin(true)} className={`flex-1 py-3 text-xs font-bold rounded-xl transition-all ${isLogin ? "bg-white text-emerald-600 shadow-sm" : "text-slate-500"}`}>Masuk</button>
-          <button type="button" onClick={() => setIsLogin(false)} className={`flex-1 py-3 text-xs font-bold rounded-xl transition-all ${!isLogin ? "bg-white text-emerald-600 shadow-sm" : "text-slate-500"}`}>Daftar Baru</button>
+    <div className="app-shell fade-in" style={{ position: "fixed", inset: 0, zIndex: 100, display: "flex", flexDirection: "column", overflow: "hidden", background: "#02241C" }}>
+      <div className="auth-hero">
+        <HeroScene variant="compact" />
+        <div className="auth-hero-in">
+          <div style={{ display: "flex", alignItems: "center", gap: 11, marginBottom: 18 }}>
+            <span style={{ width: 42, height: 42, borderRadius: 13, background: "rgba(255,255,255,.95)",
+                           display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+                           boxShadow: "0 10px 22px -10px rgba(0,0,0,.5)" }}>
+              <img src={logoTuban} alt="" style={{ width: 26, height: "auto" }} />
+            </span>
+            <div style={{ minWidth: 0 }}>
+              <p style={{ margin: 0, fontSize: 21, fontWeight: 800, color: "#fff", letterSpacing: "-.03em", lineHeight: 1.1 }}>SIRAPI</p>
+              <p style={{ margin: "2px 0 0", fontSize: 12.5, fontWeight: 500, color: "rgba(255,255,255,.6)", lineHeight: 1.2 }}>
+                Sistem Informasi Reproduksi Sapi
+              </p>
+            </div>
+          </div>
+
+          <p style={{ margin: 0, fontSize: 22, fontWeight: 700, color: "#fff", letterSpacing: "-.025em", lineHeight: 1.25 }}>
+            {isLogin ? "Selamat datang kembali." : "Buat akun peternak."}
+          </p>
+          <p style={{ margin: "5px 0 0", fontSize: 13.5, color: "rgba(255,255,255,.62)", lineHeight: 1.5 }}>
+            {isLogin
+              ? "Masuk untuk melanjutkan pencatatan kandang Anda."
+              : "Isi sekali, lalu semua ternak Anda tercatat rapi."}
+          </p>
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-6 pb-12">
+      <div className="auth-sheet">
+        <div className="segmented" style={{ marginBottom: 20 }}>
+          <button type="button" onClick={() => setIsLogin(true)} className={isLogin ? "active" : ""}>Masuk</button>
+          <button type="button" onClick={() => setIsLogin(false)} className={!isLogin ? "active" : ""}>Daftar baru</button>
+        </div>
         {isLogin ? (
           <form onSubmit={handleLogin} className="space-y-4 fade-in">
-            <FF label="Email atau No. Handphone"><input type="text" className={inp} placeholder="Email atau 0812xxxx" value={loginEmailOrPhone} onChange={e => setLoginEmailOrPhone(e.target.value)} /></FF>
+            <FF label="Email atau nomor HP"><input type="text" className="input" placeholder="nama@email.com atau 0812…" value={loginEmailOrPhone} onChange={e => setLoginEmailOrPhone(e.target.value)} /></FF>
             <div>
-              <FF label="Kata Sandi (Password)">
+              <FF label="Kata sandi">
                 <div className="relative">
-                  <input type={showPassword ? "text" : "password"} className={inp.replace("px-4", "pl-4 pr-12")} placeholder="••••••••" value={loginPassword} onChange={e => setLoginPassword(e.target.value)} />
-                  <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-emerald-600 transition-colors">{showPassword ? '🙈' : '👁️'}</button>
+                  <input type={showPassword ? "text" : "password"} className={`${inp} pr-12`} placeholder="••••••••" value={loginPassword} onChange={e => setLoginPassword(e.target.value)} />
+                  <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2" style={{ color: "var(--text-3)", background: "none", border: 0, cursor: "pointer", display: "flex", padding: 4 }}>{showPassword ? <Icon.eyeOff size={19} /> : <Icon.eye size={19} />}</button>
                 </div>
               </FF>
               <div className="flex justify-between items-center -mt-2">
-                <label className="flex items-center gap-1.5 cursor-pointer"><input type="checkbox" className="w-3.5 h-3.5 accent-emerald-600 rounded border-slate-300" checked={rememberMe} onChange={(e) => setRememberMe(e.target.checked)} /><span className="text-[11px] font-bold text-slate-500">Ingat Saya</span></label>
-                <button type="button" onClick={() => { setForgotEmail(""); setForgotPasswordOpen(true); }} className="text-[11px] font-bold text-emerald-600 hover:text-emerald-700 transition-colors">Lupa Password?</button>
+                <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", minHeight: 44 }}>
+                  <input type="checkbox" checked={rememberMe} onChange={(e) => setRememberMe(e.target.checked)} />
+                  <span className="t-sm c-2" style={{ fontWeight: 600 }}>Ingat saya</span>
+                </label>
+                <button type="button" onClick={() => { setForgotEmail(""); setForgotPasswordOpen(true); }} className="text-[13px] font-bold text-emerald-600 hover:text-emerald-700 transition-colors">Lupa kata sandi?</button>
               </div>
             </div>
-            <button type="submit" disabled={isLoading} className="w-full flex justify-center items-center gap-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-400 text-white font-bold py-4 rounded-xl mt-4 text-sm shadow-lg shadow-emerald-500/30 transition-all">{isLoading ? "Memproses..." : "Masuk ke Aplikasi"}</button>
+            <button type="submit" disabled={isLoading} className="btn btn-primary btn-lg btn-block" style={{ marginTop: 8 }}>{isLoading ? "Memproses..." : "Masuk"}</button>
           </form>
         ) : (
           <form onSubmit={handleRegister} className="space-y-4 fade-in pb-10">
-            <FF label="Email Address"><input type="email" className={inp} value={registerEmail} onChange={e => setRegisterEmail(e.target.value)} placeholder="your@email.com" /></FF>
-            <FF label="No. Handphone (Aktif WA)"><input type="tel" className={inp} value={registerPhone} onChange={e => setRegisterPhone(e.target.value)} placeholder="Cth: 0812xxxx" /></FF>
-            <FF label="Buat Kata Sandi"><input type="password" className={inp} value={registerPassword} onChange={e => setRegisterPassword(e.target.value)} placeholder="Minimal 6 karakter" /></FF>
+            <FF label="Email"><input type="email" className="input" value={registerEmail} onChange={e => setRegisterEmail(e.target.value)} placeholder="your@email.com" /></FF>
+            <FF label="Nomor HP (aktif WhatsApp)"><input type="tel" className="input" value={registerPhone} onChange={e => setRegisterPhone(e.target.value)} placeholder="08xx xxxx xxxx" /></FF>
+            <FF label="Buat kata sandi"><input type="password" className="input" value={registerPassword} onChange={e => setRegisterPassword(e.target.value)} placeholder="Minimal 6 karakter" /></FF>
             
             {/* Konfirmasi Password dengan indikator */}
             <div>
-              <FF label="Konfirmasi Kata Sandi">
+              <FF label="Ulangi kata sandi">
                 <div className="relative">
                   <input 
                     type={showConfirmPassword ? "text" : "password"} 
-                    className={`${inp.replace("px-4", "pl-4 pr-12")} ${
+                    className={`${`${inp} pr-12`} ${
                       confirmPassword === "" ? "border-slate-200" : 
                       passwordMatch ? "border-emerald-500 bg-emerald-50" : 
                       "border-rose-500 bg-rose-50"
@@ -200,44 +215,43 @@ export function AuthScreen({ setProfile }) {
                   <button 
                     type="button" 
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)} 
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-emerald-600 transition-colors"
+                    className="absolute right-3 top-1/2 -translate-y-1/2" style={{ color: "var(--text-3)", background: "none", border: 0, cursor: "pointer", display: "flex", padding: 4 }}
                   >
-                    {showConfirmPassword ? '🙈' : '👁️'}
+                    {showConfirmPassword ? <Icon.eyeOff size={19} /> : <Icon.eye size={19} />}
                   </button>
                 </div>
               </FF>
               {/* Indikator status */}
               {confirmPassword !== "" && (
-                <p className={`text-[11px] font-bold mt-1 ml-1 ${
-                  passwordMatch ? "text-emerald-600" : "text-rose-600"
-                }`}>
-                  {passwordMatch ? "✅ Kata sandi cocok" : "❌ Kata sandi tidak cocok"}
+                <p className="t-xs" style={{ marginTop: -10, marginBottom: 16, fontWeight: 600,
+                     color: passwordMatch ? "var(--ok)" : "var(--crit)" }}>
+                  {passwordMatch ? "Kata sandi cocok" : "Kata sandi belum cocok"}
                 </p>
               )}
             </div>
 
-            <div className="h-px bg-slate-200 my-6"></div>
-            <p className="text-[11px] font-black text-slate-800 uppercase tracking-widest mb-4">Profil Identitas Peternak</p>
-            <FF label="Nama Lengkap Pemilik"><input className={inp} value={profileData.name} onChange={e => setProfileData({...profileData, name: e.target.value})} placeholder="Nama lengkap" /></FF>
-            <FF label="Kecamatan"><select className={inp} value={profileData.kecamatan} onChange={e => handleKecamatanChange(e.target.value)}>{Object.keys(TUBAN_DATA).map(k => <option key={k} value={k}>{k}</option>)}</select></FF>
-            <FF label="Desa / Kelurahan"><select className={inp} value={profileData.desa} onChange={e => setProfileData({...profileData, desa: e.target.value})}>{(TUBAN_DATA[profileData.kecamatan] || []).map(d => <option key={d} value={d}>{d}</option>)}</select></FF>
-            <FF label="Dusun (Opsional)"><input type="text" className={inp} value={profileData.dusun} onChange={e => setProfileData({...profileData, dusun: e.target.value})} placeholder="Nama dusun (opsional)" /></FF>
-            <div className="flex gap-4"><div className="flex-1"><FF label="RT"><input type="number" className={inp} value={profileData.rt} onChange={e => setProfileData({...profileData, rt: e.target.value})} placeholder="RT" /></FF></div><div className="flex-1"><FF label="RW"><input type="number" className={inp} value={profileData.rw} onChange={e => setProfileData({...profileData, rw: e.target.value})} placeholder="RW" /></FF></div></div>
-            <button type="submit" disabled={isLoading || passwordMatch === false} className={`w-full text-white font-bold py-4 rounded-xl mt-6 text-sm transition-all ${isLoading || passwordMatch === false ? "bg-slate-400 cursor-not-allowed" : "bg-emerald-600 hover:bg-emerald-700 shadow-lg shadow-emerald-500/30"}`}>{isLoading ? "Memproses..." : "Daftar Akun Baru"}</button>
+            <hr className="divider" style={{ margin: "24px 0 18px" }} />
+            <p className="t-over" style={{ marginBottom: 14 }}>Identitas peternak</p>
+            <FF label="Nama lengkap"><input className="input" value={profileData.name} onChange={e => setProfileData({...profileData, name: e.target.value})} placeholder="Nama lengkap" /></FF>
+            <FF label="Kecamatan"><select className="select" value={profileData.kecamatan} onChange={e => handleKecamatanChange(e.target.value)}>{Object.keys(TUBAN_DATA).map(k => <option key={k} value={k}>{k}</option>)}</select></FF>
+            <FF label="Desa atau kelurahan"><select className="select" value={profileData.desa} onChange={e => setProfileData({...profileData, desa: e.target.value})}>{(TUBAN_DATA[profileData.kecamatan] || []).map(d => <option key={d} value={d}>{d}</option>)}</select></FF>
+            <FF label="Dusun (boleh dikosongkan)"><input type="text" className="input" value={profileData.dusun} onChange={e => setProfileData({...profileData, dusun: e.target.value})} placeholder="Nama dusun (opsional)" /></FF>
+            <div className="flex gap-4"><div className="flex-1"><FF label="RT"><input type="number" className="input" value={profileData.rt} onChange={e => setProfileData({...profileData, rt: e.target.value})} placeholder="RT" /></FF></div><div className="flex-1"><FF label="RW"><input type="number" className="input" value={profileData.rw} onChange={e => setProfileData({...profileData, rw: e.target.value})} placeholder="RW" /></FF></div></div>
+            <button type="submit" disabled={isLoading || passwordMatch === false} className="btn btn-primary btn-lg btn-block" style={{ marginTop: 20 }}>{isLoading ? "Memproses..." : "Buat akun"}</button>
           </form>
         )}
       </div>
     </div>
 
     {forgotPasswordOpen && (
-      <div className="fixed inset-0 z-[110] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm px-4">
-        <form onSubmit={handleForgotPassword} className="bg-white w-full max-w-sm rounded-[24px] p-6 pop-in shadow-2xl">
-          <h3 className="font-black text-xl text-slate-900 mb-2 tracking-tight">Lupa Password?</h3>
-          <p className="text-xs text-slate-500 font-medium mb-5 leading-relaxed">Masukkan email yang terdaftar. Kami akan mengirimkan link untuk membuat password baru.</p>
-          <FF label="Email Terdaftar">
-            <input type="email" className={inp} placeholder="nama@email.com" value={forgotEmail} onChange={e => setForgotEmail(e.target.value)} disabled={isSendingReset} autoFocus />
+      <div className="sheet-overlay" style={{ alignItems: "center", padding: 16, zIndex: 110 }}>
+        <form onSubmit={handleForgotPassword} className="card pop-in" style={{ width: "100%", maxWidth: 400, padding: 22, boxShadow: "var(--sh-xl)" }}>
+          <h3 className="t-h2 c-1" style={{ margin: "0 0 6px" }}>Lupa kata sandi?</h3>
+          <p className="t-sm c-2" style={{ margin: "0 0 18px" }}>Masukkan email yang terdaftar. Kami akan mengirimkan link untuk membuat password baru.</p>
+          <FF label="Email terdaftar">
+            <input type="email" className="input" placeholder="nama@email.com" value={forgotEmail} onChange={e => setForgotEmail(e.target.value)} disabled={isSendingReset} autoFocus />
           </FF>
-          <p className="text-[10px] text-slate-400 font-medium mb-2 -mt-1 px-1 leading-relaxed">Jika akun Anda dibuat sebelum sistem ini diperbarui dan link reset tidak berhasil terkirim, silakan hubungi petugas/admin dinas secara langsung.</p>
+          <p className="text-[12.5px] text-slate-500 font-medium mb-2 -mt-1 px-1 leading-relaxed">Jika akun Anda dibuat sebelum sistem ini diperbarui dan link reset tidak berhasil terkirim, silakan hubungi petugas/admin dinas secara langsung.</p>
           <div className="flex gap-3 mt-6">
             <button type="button" onClick={() => setForgotPasswordOpen(false)} disabled={isSendingReset} className="flex-1 py-3.5 rounded-xl border border-slate-200 text-sm font-bold text-slate-600 hover:bg-slate-50 transition-colors disabled:opacity-50">Batal</button>
             <button type="submit" disabled={isSendingReset} className="flex-1 py-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold shadow-lg shadow-emerald-500/30 transition-all disabled:opacity-50">{isSendingReset ? "Mengirim..." : "Kirim Link Reset"}</button>

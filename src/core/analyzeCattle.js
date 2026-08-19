@@ -7,7 +7,7 @@ export const daysDiff = (a, b = new Date()) => Math.floor((new Date(b) - new Dat
 
 export const fmtDate = (d) => {
   try { return new Date(d).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "2-digit" }); }
-  catch (e) { return "-"; }
+  catch { return "-"; }
 };
 
 export function analyzeCattle(item) {
@@ -140,7 +140,7 @@ export function analyzeCattle(item) {
       else { res.statusLabel = "Siap Dikawinkan Kembali"; res.color = "emerald"; res.advice = `Hari ke-${d} pasca melahirkan. Sapi telah siap menerima IB kembali. Lakukan IB segera saat tanda birahi muncul (3A: Abang, Abuh, Anget). Jangan menunda agar calving interval tetap ideal (12-13 bulan).`; }
     }
     return res;
-  } catch (error) {
+  } catch {
     return { color: "rose", statusLabel: "DATA TIDAK VALID", advice: "Format tanggal atau riwayat sapi ini tidak valid.", isUrgent: true, adviceColor: "text-rose-900 bg-rose-50" };
   }
 }

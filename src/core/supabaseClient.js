@@ -11,7 +11,7 @@ export const getStoredUser = () => {
   try {
     const user = localStorage.getItem('sirapi_user');
     return user ? JSON.parse(user) : null;
-  } catch (e) {
+  } catch {
     return null;
   }
 };

@@ -1,6 +1,14 @@
 @import "tailwindcss";
+@import "./styles/design-system.css";
 
 @theme {
-  --color-cream: #FAF6EC;
-  --color-cream-dark: #F0E8D4;
+  --color-brand:        #047857;
+  --color-brand-hover:  #065F46;
+  --color-brand-soft:   #ECFDF5;
+  --color-surface:      #FFFFFF;
+  --color-page:         #F4F5F7;
+  --color-line:         #E4E7EC;
+  --color-ink:          #101828;
+  --color-ink-2:        #475467;
+  --color-ink-3:        #667085;
 }

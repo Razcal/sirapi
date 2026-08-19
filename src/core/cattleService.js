@@ -63,7 +63,7 @@ export const cattleService = {
   updateCattle: async (cattleId, cattleData) => {
     try {
       // 1. Buang ID dan data bawaan agar tidak bentrok dengan Primary Key Supabase
-      const { id, created_at, farm_id, user_id, ...safeUpdateData } = cattleData;
+      const { id: _id, created_at: _created_at, farm_id: _farm_id, user_id: _user_id, ...safeUpdateData } = cattleData;
 
       // 2. Pastikan kode sapi selalu kapital jika ikut di-update
       if (safeUpdateData.code) {

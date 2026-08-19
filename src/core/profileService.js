@@ -14,7 +14,7 @@ export const profileService = {
       console.log('File path:', fileName);
 
       // First check if bucket exists by trying to list files
-      const { data: bucketTest, error: bucketError } = await supabase.storage
+      const { data: _bucketTest, error: bucketError } = await supabase.storage
         .from('farm-photos')
         .list('users', { limit: 1 });
 

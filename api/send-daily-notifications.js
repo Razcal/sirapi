@@ -43,7 +43,7 @@ export default async function handler(req, res) {
     const importantByUser = {};
     for (const item of cattleList || []) {
       let analysis = null;
-      try { analysis = analyzeCattle(item); } catch (e) { continue; }
+      try { analysis = analyzeCattle(item); } catch { continue; }
       if (analysis?.isUrgent) {
         if (!importantByUser[item.user_id]) importantByUser[item.user_id] = [];
         importantByUser[item.user_id].push({ code: item.code || item.id, label: analysis.statusLabel });

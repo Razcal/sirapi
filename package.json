@@ -11,21 +11,18 @@
   },
   "dependencies": {
     "@capacitor/android": "^8.2.0",
+    "@capacitor/app": "^8.1.1",
     "@capacitor/cli": "^8.2.0",
     "@capacitor/core": "^8.2.0",
-    "@reduxjs/toolkit": "^2.11.2",
-    "@supabase/supabase-js": "^2.99.3",
+    "@supabase/supabase-js": "^2.112.3",
     "@tailwindcss/vite": "^4.2.1",
     "bcryptjs": "^3.0.3",
     "html-to-image": "^1.11.13",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
-    "react-redux": "^9.2.0",
-    "recharts": "^3.9.0",
     "web-push": "^3.6.7"
   },
   "devDependencies": {
-    "@capacitor/assets": "^3.0.5",
     "@eslint/js": "^9.39.1",
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
@@ -38,5 +35,8 @@
     "postcss": "^8.5.8",
     "tailwindcss": "^4.2.1",
     "vite": "^7.3.1"
+  },
+  "overrides": {
+    "uuid": "^11.1.1"
   }
 }
