@@ -1,2 +1,0 @@
-sh
-npm run build
