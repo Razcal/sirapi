@@ -11,10 +11,10 @@ if (keystorePropertiesFile.exists()) {
 }
 
 android {
-    namespace = "com.proverti.tuban"
+    namespace = "com.sirapi.tuban"
     compileSdk = rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId "com.proverti.tuban"
+        applicationId "com.sirapi.tuban"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1

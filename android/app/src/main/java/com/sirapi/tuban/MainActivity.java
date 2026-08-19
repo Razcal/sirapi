@@ -1,4 +1,4 @@
-package com.proverti.tuban;
+package com.sirapi.tuban;
 
 import com.getcapacitor.BridgeActivity;
 

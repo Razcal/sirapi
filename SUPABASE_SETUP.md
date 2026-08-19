@@ -1,4 +1,4 @@
-# PROVERTI - Supabase Setup Guide
+# SIRAPI - Supabase Setup Guide
 
 ## 📋 Langkah 1: Setup Database Supabase
 
@@ -118,8 +118,8 @@ Validasi:
 
 ### Local Storage Keys
 ```javascript
-proverti_user    // User profile data
-proverti_token   // Session access token
+sirapi_user    // User profile data
+sirapi_token   // Session access token
 ```
 
 ### User Profile Structure
@@ -183,7 +183,7 @@ src/
 
 ## ⚠️ Important Notes
 
-1. **Phone Email Format**: Nomor HP di-format menjadi email `{phone}@proverti.app` untuk Supabase Auth
+1. **Phone Email Format**: Nomor HP di-format menjadi email `{phone}@sirapi.app` untuk Supabase Auth
 2. **Security**: Jangan commit `.env.local` ke git
 3. **Password Hashing**: Supabase otomatis hash password
 4. **RLS**: Row Level Security aktif untuk data protection

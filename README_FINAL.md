@@ -2,7 +2,7 @@
 
 Halo Ahmad! 👋
 
-Selamat! Saya sudah menyelesaikan integrasi **Supabase Authentication** lengkap untuk aplikasi PROVERTI Anda.
+Selamat! Saya sudah menyelesaikan integrasi **Supabase Authentication** lengkap untuk aplikasi SIRAPI Anda.
 
 ---
 
@@ -221,7 +221,7 @@ http://localhost:5173/
 Aplikasi menampilkan:
 ```
 ┌─────────────────────────────┐
-│        PROVERTI             │
+│        SIRAPI             │
 │     Kabupaten Tuban         │
 ├─────────────────────────────┤
 │   [Masuk] [Daftar Baru]     │

@@ -1,8 +1,8 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'com.proverti.tuban',
-  appName: 'PROVERTI',
+  appId: 'com.sirapi.tuban',
+  appName: 'SIRAPI',
   webDir: 'dist',
   plugins: {
     GoogleAuth: {

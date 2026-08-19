@@ -171,8 +171,8 @@ Dalam urutan prioritas:
 
 ### Di Browser Local Storage
 ```javascript
-localStorage.getItem('proverti_user');   // User profile
-localStorage.getItem('proverti_token');  // Access token
+localStorage.getItem('sirapi_user');   // User profile
+localStorage.getItem('sirapi_token');  // Access token
 ```
 
 ## 🔄 Flow Navigation
