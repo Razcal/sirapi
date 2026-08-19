@@ -2,7 +2,9 @@ import React, { useState, useEffect } from "react";
 import { toPng } from "html-to-image";
 import { AuthScreen } from "./AuthScreen";
 import { DialogSystem } from "./core/components/SharedUI";
+import { TUBAN_DATA } from "./core/constants";
 import { supabase } from "./core/supabaseClient";
+import { authService } from "./core/authService";
 import { daysDiff, fmtDate, analyzeCattle } from "./core/analyzeCattle";
 import { Icon } from "./core/components/Icons";
 import Donut from "./core/components/Donut";
@@ -1895,6 +1897,84 @@ function AcademyView({ open, onClose }) {
   );
 }
 
+// Muncul saat pengguna yang masuk lewat Google (belum punya baris di tabel
+// `users`) menekan "Tambah sapi" pertama kali. Google cuma kirim nama/email/
+// foto — phone/kecamatan/desa (wajib di skema) diminta di sini, sekali saja.
+// Begitu tersimpan, onComplete langsung membuka form tambah sapi.
+function CompleteProfileModal({ open, googleUser, onClose, onComplete, setAppToast }) {
+  const [phone, setPhone] = useState("");
+  const [name, setName] = useState("");
+  const [kecamatan, setKecamatan] = useState("Tuban");
+  const [desa, setDesa] = useState("Baturetno");
+  const [dusun, setDusun] = useState("");
+  const [rt, setRt] = useState("");
+  const [rw, setRw] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    if (open) {
+      setPhone("");
+      setName(googleUser?.name || "");
+      setKecamatan("Tuban");
+      setDesa("Baturetno");
+      setDusun("");
+      setRt("");
+      setRw("");
+      setIsSaving(false);
+    }
+  }, [open, googleUser]);
+
+  if (!open || !googleUser) return null;
+
+  const handleKecamatanChange = (kec) => {
+    setKecamatan(kec);
+    setDesa(TUBAN_DATA[kec]?.[0] || "");
+  };
+
+  const save = async () => {
+    if (!phone.trim() || !name.trim() || !rt || !rw) {
+      return setAppToast({ message: "Harap lengkapi semua kolom yang wajib!", type: "error" });
+    }
+    setIsSaving(true);
+    const result = await authService.completeGoogleProfile(googleUser, {
+      name: name.trim(), phone: phone.trim(), kecamatan, desa, dusun, rt, rw, photo: googleUser.photo,
+    });
+    setIsSaving(false);
+
+    if (result.success) {
+      onComplete(result.user);
+    } else {
+      setAppToast({ message: result.error || "Gagal menyimpan profil", type: "error" });
+    }
+  };
+
+  return (
+    <div className="sheet-overlay" style={{ alignItems: "center", padding: 16, zIndex: 110 }}>
+      <div className="card pop-in" style={{ width: "100%", maxWidth: 420, padding: 22, boxShadow: "var(--sh-xl)", maxHeight: "88vh", overflowY: "auto" }}>
+        <h3 className="t-h2 c-1" style={{ margin: "0 0 6px" }}>Lengkapi data peternak</h3>
+        <p className="t-sm c-2" style={{ margin: "0 0 18px" }}>
+          Masuk sebagai <strong>{googleUser.email}</strong>. Google tidak mengirim nomor HP dan alamat — isi sekali di sini sebelum menambah sapi pertama.
+        </p>
+        <div className="space-y-4">
+          <FF label="Nomor HP (aktif WhatsApp)"><input type="tel" className="input" value={phone} onChange={e => setPhone(e.target.value)} placeholder="08xx xxxx xxxx" autoFocus /></FF>
+          <FF label="Nama lengkap"><input className="input" value={name} onChange={e => setName(e.target.value)} placeholder="Nama lengkap" /></FF>
+          <FF label="Kecamatan"><select className="select" value={kecamatan} onChange={e => handleKecamatanChange(e.target.value)}>{Object.keys(TUBAN_DATA).map(k => <option key={k} value={k}>{k}</option>)}</select></FF>
+          <FF label="Desa atau kelurahan"><select className="select" value={desa} onChange={e => setDesa(e.target.value)}>{(TUBAN_DATA[kecamatan] || []).map(d => <option key={d} value={d}>{d}</option>)}</select></FF>
+          <FF label="Dusun (boleh dikosongkan)"><input type="text" className="input" value={dusun} onChange={e => setDusun(e.target.value)} placeholder="Nama dusun (opsional)" /></FF>
+          <div className="flex gap-4">
+            <div className="flex-1"><FF label="RT"><input type="number" className="input" value={rt} onChange={e => setRt(e.target.value)} placeholder="RT" /></FF></div>
+            <div className="flex-1"><FF label="RW"><input type="number" className="input" value={rw} onChange={e => setRw(e.target.value)} placeholder="RW" /></FF></div>
+          </div>
+        </div>
+        <div className="flex gap-3 mt-6">
+          <button type="button" onClick={onClose} disabled={isSaving} className="flex-1 py-3.5 rounded-xl border border-slate-200 text-sm font-bold text-slate-600 hover:bg-slate-50 transition-colors disabled:opacity-50">Nanti saja</button>
+          <button type="button" onClick={save} disabled={isSaving} className="flex-1 py-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold shadow-lg shadow-emerald-500/30 transition-all disabled:opacity-50">{isSaving ? "Menyimpan..." : "Simpan & lanjut"}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function AddModal({ open, onClose, onSave, editItem, setAppToast }) {
   const [id, setId] = useState(""); 
   const [ras, setRas] = useState("SIMENTAL SPSI"); 
@@ -2670,8 +2750,13 @@ function AppContent() {
   
   const [hasStarted, setHasStarted] = useState(profile !== null);
   const [nav, setNav] = useState("dashboard"); 
-  const [addOpen, setAddOpen] = useState(false); 
-  const [editItem, setEditItem] = useState(null); 
+  const [addOpen, setAddOpen] = useState(false);
+  const [editItem, setEditItem] = useState(null);
+  // Pengguna yang masuk lewat Google pertama kali belum punya baris di tabel
+  // `users` (Google tidak kirim phone/kecamatan/desa yang wajib diisi) —
+  // ditahan dulu sampai mereka benar-benar mau menambah sapi pertama,
+  // lihat openAddCattle() di bawah.
+  const [completeProfileOpen, setCompleteProfileOpen] = useState(false);
   const [actionItem, setActionItem] = useState(null); 
   const [hideSplashDOM, setHideSplashDOM] = useState(false);
   const [detailItem, setDetailItem] = useState(null);
@@ -2775,8 +2860,21 @@ function AppContent() {
     };
 
     loadCattleData();
-  }, [profile?.id]); 
-  
+  }, [profile?.id]);
+
+  // Satu pintu masuk untuk "tambah sapi baru" dari mana pun tombolnya
+  // dipencet. Kalau profil belum lengkap (bekas login Google pertama kali),
+  // minta lengkapi dulu — begitu tersimpan, langsung lanjut ke form sapi
+  // tanpa perlu tekan tombol tambah lagi.
+  const openAddCattle = () => {
+    if (profile?.profileIncomplete) {
+      setCompleteProfileOpen(true);
+      return;
+    }
+    setEditItem(null);
+    setAddOpen(true);
+  };
+
   const handleSaveAdd = async () => {
     if (!profile || !profile.id) return;
 
@@ -3084,7 +3182,7 @@ function AppContent() {
           </header>
 
           <div className="flex-1">
-            {nav === "dashboard" && <DashboardView dbCattle={safeDb} onAdviceClick={handleAdviceClick} profile={profile} setAppToast={setAppToast} onAddNew={() => { setEditItem(null); setAddOpen(true); }} />}
+            {nav === "dashboard" && <DashboardView dbCattle={safeDb} onAdviceClick={handleAdviceClick} profile={profile} setAppToast={setAppToast} onAddNew={openAddCattle} />}
             {nav === "assets" && (
               <div className="fade-in">
                 <div style={{ position: "sticky", top: "calc(56px + env(safe-area-inset-top))", zIndex: 30,
@@ -3172,7 +3270,7 @@ function AppContent() {
                 </div>
 
                 <div className="fab-wrap">
-                  <button onClick={() => { setEditItem(null); setAddOpen(true); }} className="fab" aria-label="Tambah ternak">
+                  <button onClick={openAddCattle} className="fab" aria-label="Tambah ternak">
                     <Icon.plus size={24} stroke={2.3} />
                   </button>
                 </div>
@@ -3374,6 +3472,18 @@ function AppContent() {
           />
 
           <AddModal open={addOpen} onClose={() => { setAddOpen(false); setEditItem(null); }} onSave={handleSaveAdd} editItem={editItem} setAppToast={setAppToast} />
+          <CompleteProfileModal
+            open={completeProfileOpen}
+            googleUser={profile}
+            onClose={() => setCompleteProfileOpen(false)}
+            onComplete={(updatedUser) => {
+              setProfile(updatedUser);
+              setCompleteProfileOpen(false);
+              setEditItem(null);
+              setAddOpen(true);
+            }}
+            setAppToast={setAppToast}
+          />
           <ActionModal open={!!actionItem} item={actionItem} onClose={() => setActionItem(null)} onSaveRepro={handleSaveRepro} onSaveHealth={handleSaveHealth} setAppToast={setAppToast} />
           <DetailModal item={detailItem} onClose={() => setDetailItem(null)} onDeleteLog={handleDeleteLog} setAppToast={setAppToast} setAppConfirm={setAppConfirm} />
           <EditProfileModal open={editProfileOpen} onClose={() => setEditProfileOpen(false)} onSave={setProfile} currentProfile={profile} setAppToast={setAppToast} />

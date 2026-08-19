@@ -51,13 +51,12 @@ export function AuthScreen({ setProfile }) {
     photo: null
   });
 
-  // Sign-in Google: googlePending diisi kalau akun Google ini baru pertama
-  // kali dipakai di SIRAPI dan belum punya baris di tabel `users` — perlu
-  // lengkapi phone/kecamatan/desa dulu (Google tidak mengirim data itu)
-  // sebelum bisa masuk ke dashboard.
+  // Sign-in Google: kalau akun ini baru pertama kali dipakai di SIRAPI,
+  // belum ada baris di tabel `users` (phone/kecamatan/desa Google tidak
+  // pernah kirim itu). Daripada menahan mereka di layar login, langsung
+  // masuk ke dashboard — App.jsx yang akan minta lengkapi data itu nanti,
+  // pas mereka menekan "Tambah sapi pertama" (lihat profileIncomplete).
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
-  const [googlePending, setGooglePending] = useState(null);
-  const [googlePhone, setGooglePhone] = useState("");
   const googleInitialized = useRef(false);
 
   const handleGoogleLogin = async () => {
@@ -80,8 +79,7 @@ export function AuthScreen({ setProfile }) {
       if (!authResult.success) throw new Error(authResult.error || "Gagal masuk dengan Google");
 
       if (authResult.needsProfile) {
-        setGooglePending(authResult.googleUser);
-        setProfileData(p => ({ ...p, name: authResult.googleUser.name || p.name, photo: authResult.googleUser.photo || p.photo }));
+        setProfile({ ...authResult.googleUser, profileIncomplete: true });
       } else {
         dialog.alert(`Selamat datang kembali, ${authResult.user.name}!`, "Sukses");
         setProfile(authResult.user);
@@ -90,24 +88,6 @@ export function AuthScreen({ setProfile }) {
       dialog.alert(err.message || "Gagal masuk dengan Google", "Gagal");
     } finally {
       setIsGoogleLoading(false);
-    }
-  };
-
-  const handleCompleteGoogleProfile = async (e) => {
-    e.preventDefault();
-    if (!googlePhone.trim() || !profileData.name || !profileData.rt || !profileData.rw) {
-      return dialog.alert("Harap lengkapi semua kolom yang wajib!", "Perhatian");
-    }
-
-    setIsLoading(true);
-    const result = await authService.completeGoogleProfile(googlePending, { ...profileData, phone: googlePhone.trim() });
-    setIsLoading(false);
-
-    if (result.success) {
-      dialog.alert(`Selamat datang, ${result.user.name}!`, "Akun Berhasil Dibuat");
-      setProfile(result.user);
-    } else {
-      dialog.alert(result.error || "Gagal menyimpan profil", "Gagal");
     }
   };
 
@@ -239,23 +219,6 @@ export function AuthScreen({ setProfile }) {
       </div>
 
       <div className="auth-sheet">
-        {googlePending ? (
-          <form onSubmit={handleCompleteGoogleProfile} className="space-y-4 fade-in pb-10">
-            <p className="t-h2 c-1" style={{ margin: "0 0 4px" }}>Lengkapi data peternak</p>
-            <p className="t-sm c-2" style={{ margin: "0 0 18px" }}>
-              Masuk sebagai <strong>{googlePending.email}</strong>. Google tidak mengirim nomor HP dan alamat — isi sekali di bawah ini, ke depannya tinggal masuk dengan Google lagi.
-            </p>
-            <FF label="Nomor HP (aktif WhatsApp)"><input type="tel" className="input" value={googlePhone} onChange={e => setGooglePhone(e.target.value)} placeholder="08xx xxxx xxxx" autoFocus /></FF>
-            <FF label="Nama lengkap"><input className="input" value={profileData.name} onChange={e => setProfileData({...profileData, name: e.target.value})} placeholder="Nama lengkap" /></FF>
-            <FF label="Kecamatan"><select className="select" value={profileData.kecamatan} onChange={e => handleKecamatanChange(e.target.value)}>{Object.keys(TUBAN_DATA).map(k => <option key={k} value={k}>{k}</option>)}</select></FF>
-            <FF label="Desa atau kelurahan"><select className="select" value={profileData.desa} onChange={e => setProfileData({...profileData, desa: e.target.value})}>{(TUBAN_DATA[profileData.kecamatan] || []).map(d => <option key={d} value={d}>{d}</option>)}</select></FF>
-            <FF label="Dusun (boleh dikosongkan)"><input type="text" className="input" value={profileData.dusun} onChange={e => setProfileData({...profileData, dusun: e.target.value})} placeholder="Nama dusun (opsional)" /></FF>
-            <div className="flex gap-4"><div className="flex-1"><FF label="RT"><input type="number" className="input" value={profileData.rt} onChange={e => setProfileData({...profileData, rt: e.target.value})} placeholder="RT" /></FF></div><div className="flex-1"><FF label="RW"><input type="number" className="input" value={profileData.rw} onChange={e => setProfileData({...profileData, rw: e.target.value})} placeholder="RW" /></FF></div></div>
-            <button type="submit" disabled={isLoading} className="btn btn-primary btn-lg btn-block" style={{ marginTop: 8 }}>{isLoading ? "Menyimpan..." : "Simpan & masuk"}</button>
-            <button type="button" onClick={() => { setGooglePending(null); setGooglePhone(""); }} className="btn btn-block" style={{ background: "none", border: 0, color: "var(--text-3)", fontWeight: 600 }}>Batal</button>
-          </form>
-        ) : (
-        <>
         <div className="segmented" style={{ marginBottom: 20 }}>
           <button type="button" onClick={() => setIsLogin(true)} className={isLogin ? "active" : ""}>Masuk</button>
           <button type="button" onClick={() => setIsLogin(false)} className={!isLogin ? "active" : ""}>Daftar baru</button>
@@ -341,8 +304,6 @@ export function AuthScreen({ setProfile }) {
             <div className="flex gap-4"><div className="flex-1"><FF label="RT"><input type="number" className="input" value={profileData.rt} onChange={e => setProfileData({...profileData, rt: e.target.value})} placeholder="RT" /></FF></div><div className="flex-1"><FF label="RW"><input type="number" className="input" value={profileData.rw} onChange={e => setProfileData({...profileData, rw: e.target.value})} placeholder="RW" /></FF></div></div>
             <button type="submit" disabled={isLoading || passwordMatch === false} className="btn btn-primary btn-lg btn-block" style={{ marginTop: 20 }}>{isLoading ? "Memproses..." : "Buat akun"}</button>
           </form>
-        )}
-        </>
         )}
       </div>
     </div>
