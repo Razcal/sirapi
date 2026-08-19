@@ -1,11 +1,23 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
+import { SocialLogin } from "@capgo/capacitor-social-login";
 import { dialog } from "./core/helpers";
-import { TUBAN_DATA } from "./core/constants";
+import { TUBAN_DATA, GOOGLE_WEB_CLIENT_ID } from "./core/constants";
 import { FF } from "./core/components/SharedUI";
 import { authService } from "./core/authService";
 import { Icon } from "./core/components/Icons";
 import { HeroScene } from "./core/components/Hero";
 import logoTuban from "./Tubankab.png";
+
+// Logo "G" resmi Google — bukan bagian dari set Icon.* (ikon garis generik),
+// jadi ditulis terpisah di sini karena harus 4 warna sesuai brand guideline.
+const GoogleG = ({ size = 20 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true">
+    <path fill="#4285F4" d="M23.5 12.27c0-.85-.08-1.67-.22-2.45H12v4.64h6.46a5.52 5.52 0 0 1-2.4 3.63v3h3.87c2.27-2.09 3.57-5.17 3.57-8.82Z" />
+    <path fill="#34A853" d="M12 24c3.24 0 5.95-1.07 7.93-2.9l-3.87-3.01c-1.07.72-2.45 1.15-4.06 1.15-3.13 0-5.78-2.11-6.72-4.96H1.28v3.1A12 12 0 0 0 12 24Z" />
+    <path fill="#FBBC05" d="M5.28 14.28a7.2 7.2 0 0 1 0-4.6v-3.1H1.28a12 12 0 0 0 0 10.8l4-3.1Z" />
+    <path fill="#EA4335" d="M12 4.75c1.76 0 3.35.61 4.6 1.8l3.44-3.44C17.94 1.19 15.24 0 12 0A12 12 0 0 0 1.28 6.58l4 3.1C6.22 6.86 8.87 4.75 12 4.75Z" />
+  </svg>
+);
 
 export function AuthScreen({ setProfile }) {
   const [isLogin, setIsLogin] = useState(true);
@@ -38,6 +50,66 @@ export function AuthScreen({ setProfile }) {
     dusun: "",
     photo: null
   });
+
+  // Sign-in Google: googlePending diisi kalau akun Google ini baru pertama
+  // kali dipakai di SIRAPI dan belum punya baris di tabel `users` — perlu
+  // lengkapi phone/kecamatan/desa dulu (Google tidak mengirim data itu)
+  // sebelum bisa masuk ke dashboard.
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const [googlePending, setGooglePending] = useState(null);
+  const [googlePhone, setGooglePhone] = useState("");
+  const googleInitialized = useRef(false);
+
+  const handleGoogleLogin = async () => {
+    if (GOOGLE_WEB_CLIENT_ID.startsWith("ISI_DENGAN_")) {
+      return dialog.alert("Masuk dengan Google belum diaktifkan admin. Silakan gunakan email/password, atau hubungi admin dinas.", "Belum Tersedia");
+    }
+
+    setIsGoogleLoading(true);
+    try {
+      if (!googleInitialized.current) {
+        await SocialLogin.initialize({ google: { webClientId: GOOGLE_WEB_CLIENT_ID } });
+        googleInitialized.current = true;
+      }
+
+      const { result } = await SocialLogin.login({ provider: "google", options: { scopes: ["email", "profile"] } });
+      const idToken = result?.idToken;
+      if (!idToken) throw new Error("Google tidak mengembalikan token. Coba lagi.");
+
+      const authResult = await authService.loginWithGoogleIdToken(idToken);
+      if (!authResult.success) throw new Error(authResult.error || "Gagal masuk dengan Google");
+
+      if (authResult.needsProfile) {
+        setGooglePending(authResult.googleUser);
+        setProfileData(p => ({ ...p, name: authResult.googleUser.name || p.name, photo: authResult.googleUser.photo || p.photo }));
+      } else {
+        dialog.alert(`Selamat datang kembali, ${authResult.user.name}!`, "Sukses");
+        setProfile(authResult.user);
+      }
+    } catch (err) {
+      dialog.alert(err.message || "Gagal masuk dengan Google", "Gagal");
+    } finally {
+      setIsGoogleLoading(false);
+    }
+  };
+
+  const handleCompleteGoogleProfile = async (e) => {
+    e.preventDefault();
+    if (!googlePhone.trim() || !profileData.name || !profileData.rt || !profileData.rw) {
+      return dialog.alert("Harap lengkapi semua kolom yang wajib!", "Perhatian");
+    }
+
+    setIsLoading(true);
+    const result = await authService.completeGoogleProfile(googlePending, { ...profileData, phone: googlePhone.trim() });
+    setIsLoading(false);
+
+    if (result.success) {
+      dialog.alert(`Selamat datang, ${result.user.name}!`, "Akun Berhasil Dibuat");
+      setProfile(result.user);
+    } else {
+      dialog.alert(result.error || "Gagal menyimpan profil", "Gagal");
+    }
+  };
 
   const handleKecamatanChange = (kec) => {
     const newDesa = TUBAN_DATA[kec]?.[0] || "";
@@ -167,10 +239,40 @@ export function AuthScreen({ setProfile }) {
       </div>
 
       <div className="auth-sheet">
+        {googlePending ? (
+          <form onSubmit={handleCompleteGoogleProfile} className="space-y-4 fade-in pb-10">
+            <p className="t-h2 c-1" style={{ margin: "0 0 4px" }}>Lengkapi data peternak</p>
+            <p className="t-sm c-2" style={{ margin: "0 0 18px" }}>
+              Masuk sebagai <strong>{googlePending.email}</strong>. Google tidak mengirim nomor HP dan alamat — isi sekali di bawah ini, ke depannya tinggal masuk dengan Google lagi.
+            </p>
+            <FF label="Nomor HP (aktif WhatsApp)"><input type="tel" className="input" value={googlePhone} onChange={e => setGooglePhone(e.target.value)} placeholder="08xx xxxx xxxx" autoFocus /></FF>
+            <FF label="Nama lengkap"><input className="input" value={profileData.name} onChange={e => setProfileData({...profileData, name: e.target.value})} placeholder="Nama lengkap" /></FF>
+            <FF label="Kecamatan"><select className="select" value={profileData.kecamatan} onChange={e => handleKecamatanChange(e.target.value)}>{Object.keys(TUBAN_DATA).map(k => <option key={k} value={k}>{k}</option>)}</select></FF>
+            <FF label="Desa atau kelurahan"><select className="select" value={profileData.desa} onChange={e => setProfileData({...profileData, desa: e.target.value})}>{(TUBAN_DATA[profileData.kecamatan] || []).map(d => <option key={d} value={d}>{d}</option>)}</select></FF>
+            <FF label="Dusun (boleh dikosongkan)"><input type="text" className="input" value={profileData.dusun} onChange={e => setProfileData({...profileData, dusun: e.target.value})} placeholder="Nama dusun (opsional)" /></FF>
+            <div className="flex gap-4"><div className="flex-1"><FF label="RT"><input type="number" className="input" value={profileData.rt} onChange={e => setProfileData({...profileData, rt: e.target.value})} placeholder="RT" /></FF></div><div className="flex-1"><FF label="RW"><input type="number" className="input" value={profileData.rw} onChange={e => setProfileData({...profileData, rw: e.target.value})} placeholder="RW" /></FF></div></div>
+            <button type="submit" disabled={isLoading} className="btn btn-primary btn-lg btn-block" style={{ marginTop: 8 }}>{isLoading ? "Menyimpan..." : "Simpan & masuk"}</button>
+            <button type="button" onClick={() => { setGooglePending(null); setGooglePhone(""); }} className="btn btn-block" style={{ background: "none", border: 0, color: "var(--text-3)", fontWeight: 600 }}>Batal</button>
+          </form>
+        ) : (
+        <>
         <div className="segmented" style={{ marginBottom: 20 }}>
           <button type="button" onClick={() => setIsLogin(true)} className={isLogin ? "active" : ""}>Masuk</button>
           <button type="button" onClick={() => setIsLogin(false)} className={!isLogin ? "active" : ""}>Daftar baru</button>
         </div>
+
+        <button type="button" onClick={handleGoogleLogin} disabled={isGoogleLoading} className="btn btn-lg btn-block"
+                style={{ marginBottom: 18, background: "#fff", border: "1.5px solid var(--line)", color: "var(--text-1)",
+                         display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}>
+          <GoogleG size={19} />
+          {isGoogleLoading ? "Menghubungkan..." : (isLogin ? "Masuk dengan Google" : "Daftar dengan Google")}
+        </button>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, margin: "0 0 18px" }}>
+          <hr className="divider" style={{ flex: 1, margin: 0 }} />
+          <span className="t-xs c-3" style={{ fontWeight: 700 }}>ATAU</span>
+          <hr className="divider" style={{ flex: 1, margin: 0 }} />
+        </div>
+
         {isLogin ? (
           <form onSubmit={handleLogin} className="space-y-4 fade-in">
             <FF label="Email atau nomor HP"><input type="text" className="input" placeholder="nama@email.com atau 0812…" value={loginEmailOrPhone} onChange={e => setLoginEmailOrPhone(e.target.value)} /></FF>
@@ -239,6 +341,8 @@ export function AuthScreen({ setProfile }) {
             <div className="flex gap-4"><div className="flex-1"><FF label="RT"><input type="number" className="input" value={profileData.rt} onChange={e => setProfileData({...profileData, rt: e.target.value})} placeholder="RT" /></FF></div><div className="flex-1"><FF label="RW"><input type="number" className="input" value={profileData.rw} onChange={e => setProfileData({...profileData, rw: e.target.value})} placeholder="RW" /></FF></div></div>
             <button type="submit" disabled={isLoading || passwordMatch === false} className="btn btn-primary btn-lg btn-block" style={{ marginTop: 20 }}>{isLoading ? "Memproses..." : "Buat akun"}</button>
           </form>
+        )}
+        </>
         )}
       </div>
     </div>

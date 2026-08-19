@@ -5,10 +5,16 @@ const config: CapacitorConfig = {
   appName: 'SIRAPI',
   webDir: 'dist',
   plugins: {
-    GoogleAuth: {
-      scopes: ['profile', 'email'],
-      serverClientId: '640859770536-uc58dsoiaka67huadtkmhj0qdoufjmqp.apps.googleusercontent.com',
-      forceCodeForRefreshToken: true,
+    // Sign-in Google native (@capgo/capacitor-social-login). webClientId
+    // sesungguhnya diisi lewat SocialLogin.initialize() di src/App.jsx —
+    // lihat GOOGLE_WEB_CLIENT_ID di src/core/constants.js.
+    SocialLogin: {
+      providers: {
+        google: true,
+        facebook: false,
+        apple: false,
+        twitter: false,
+      },
     },
   },
 };

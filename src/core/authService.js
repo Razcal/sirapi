@@ -199,6 +199,89 @@ export const authService = {
     }
   },
 
+  // Masuk dengan Google (native, via idToken dari @capgo/capacitor-social-login).
+  // Kalau akun ini belum pernah dipakai di SIRAPI, tabel `users` mewajibkan
+  // phone/kecamatan/desa (NOT NULL) yang tidak disediakan Google — jadi hasilnya
+  // needsProfile:true, dan pemanggil (AuthScreen) wajib tampilkan langkah
+  // lengkapi data sebelum bisa masuk ke dashboard.
+  loginWithGoogleIdToken: async (idToken) => {
+    try {
+      const { data: authData, error: authError } = await supabase.auth.signInWithIdToken({
+        provider: 'google',
+        token: idToken,
+      });
+      if (authError) throw new Error(authError.message);
+
+      const authUser = authData.user;
+      if (!authUser) throw new Error('Gagal masuk dengan Google');
+
+      const token = authData.session?.access_token;
+      if (token) saveTokenToStorage(token);
+
+      const { data: userRecord, error: fetchError } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', authUser.id)
+        .maybeSingle();
+
+      if (fetchError) throw new Error(fetchError.message);
+
+      if (userRecord) {
+        const { password_hash: _password_hash, ...safeUserRecord } = userRecord;
+        saveUserToStorage(safeUserRecord);
+        return { success: true, needsProfile: false, user: safeUserRecord, token };
+      }
+
+      return {
+        success: true,
+        needsProfile: true,
+        googleUser: {
+          id: authUser.id,
+          email: authUser.email,
+          name: authUser.user_metadata?.full_name || authUser.user_metadata?.name || '',
+          photo: authUser.user_metadata?.avatar_url || authUser.user_metadata?.picture || null,
+        },
+        token,
+      };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  },
+
+  // Lengkapi profil peternak setelah Google sign-in pertama kali (phone,
+  // kecamatan, desa, dll — field yang tidak dikirim Google sama sekali).
+  completeGoogleProfile: async (googleUser, profileData) => {
+    try {
+      const userInsertData = {
+        id: googleUser.id,
+        email: googleUser.email,
+        phone: profileData.phone,
+        name: profileData.name,
+        kecamatan: profileData.kecamatan,
+        desa: profileData.desa,
+        dusun: profileData.dusun,
+        rt: profileData.rt,
+        rw: profileData.rw,
+        photo: profileData.photo || googleUser.photo || null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+
+      const { data: newUser, error } = await supabase
+        .from('users')
+        .insert([userInsertData])
+        .select()
+        .single();
+
+      if (error) throw new Error(`Gagal menyimpan profil: ${error.message}`);
+
+      saveUserToStorage(newUser);
+      return { success: true, user: newUser };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  },
+
   // Logout
   logout: async () => {
     try {
