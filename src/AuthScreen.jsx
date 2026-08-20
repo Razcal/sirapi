@@ -305,8 +305,6 @@ export function AuthScreen({ setProfile }) {
             <FF label="Nama lengkap"><input className="input" value={profileData.name} onChange={e => setProfileData({...profileData, name: e.target.value})} placeholder="Nama lengkap" /></FF>
             <FF label="Kecamatan"><select className="select" value={profileData.kecamatan} onChange={e => handleKecamatanChange(e.target.value)}>{Object.keys(TUBAN_DATA).map(k => <option key={k} value={k}>{k}</option>)}</select></FF>
             <FF label="Desa atau kelurahan"><select className="select" value={profileData.desa} onChange={e => setProfileData({...profileData, desa: e.target.value})}>{(TUBAN_DATA[profileData.kecamatan] || []).map(d => <option key={d} value={d}>{d}</option>)}</select></FF>
-            <FF label="Dusun (boleh dikosongkan)"><input type="text" className="input" value={profileData.dusun} onChange={e => setProfileData({...profileData, dusun: e.target.value})} placeholder="Nama dusun (opsional)" /></FF>
-            <div className="flex gap-4"><div className="flex-1"><FF label="RT (boleh dikosongkan)"><input type="number" className="input" value={profileData.rt} onChange={e => setProfileData({...profileData, rt: e.target.value})} placeholder="RT" /></FF></div><div className="flex-1"><FF label="RW (boleh dikosongkan)"><input type="number" className="input" value={profileData.rw} onChange={e => setProfileData({...profileData, rw: e.target.value})} placeholder="RW" /></FF></div></div>
             <button type="submit" disabled={isLoading || passwordMatch === false} className="btn btn-primary btn-lg btn-block" style={{ marginTop: 20 }}>{isLoading ? "Memproses..." : "Buat akun"}</button>
           </form>
         )}
