@@ -2802,7 +2802,7 @@ function AppContent() {
     setPushLoading(true);
     const { pushService } = await import('./core/pushService');
     if (pushSubscribed) {
-      await pushService.unsubscribe();
+      await pushService.unsubscribe(profile?.id);
       setPushSubscribed(false);
       setAppToast({ message: "Notifikasi dimatikan.", type: "success" });
     } else {
