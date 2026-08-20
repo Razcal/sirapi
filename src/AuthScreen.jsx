@@ -71,7 +71,12 @@ export function AuthScreen({ setProfile }) {
         googleInitialized.current = true;
       }
 
-      const { result } = await SocialLogin.login({ provider: "google", options: { scopes: ["email", "profile"] } });
+      // Tanpa scopes tambahan — kita cuma butuh idToken dasar (email/nama sudah
+      // ikut di dalamnya). Sempat dites pakai scopes ["email","profile"] dan
+      // Android menolak: "You CANNOT use scopes without modifying the main
+      // activity" — itu jalur khusus untuk otorisasi API Google lain yang
+      // butuh setup native tambahan, tidak kita perlukan di sini.
+      const { result } = await SocialLogin.login({ provider: "google", options: {} });
       const idToken = result?.idToken;
       if (!idToken) throw new Error("Google tidak mengembalikan token. Coba lagi.");
 
@@ -137,7 +142,7 @@ export function AuthScreen({ setProfile }) {
     e.preventDefault();
     
     // Validasi wajib diisi
-    if (!registerEmail || !registerPhone || !registerPassword || !confirmPassword || !profileData.name || !profileData.rt || !profileData.rw) {
+    if (!registerEmail || !registerPhone || !registerPassword || !confirmPassword || !profileData.name) {
       return dialog.alert("Harap lengkapi semua kolom yang wajib!", "Perhatian");
     }
 
@@ -301,7 +306,7 @@ export function AuthScreen({ setProfile }) {
             <FF label="Kecamatan"><select className="select" value={profileData.kecamatan} onChange={e => handleKecamatanChange(e.target.value)}>{Object.keys(TUBAN_DATA).map(k => <option key={k} value={k}>{k}</option>)}</select></FF>
             <FF label="Desa atau kelurahan"><select className="select" value={profileData.desa} onChange={e => setProfileData({...profileData, desa: e.target.value})}>{(TUBAN_DATA[profileData.kecamatan] || []).map(d => <option key={d} value={d}>{d}</option>)}</select></FF>
             <FF label="Dusun (boleh dikosongkan)"><input type="text" className="input" value={profileData.dusun} onChange={e => setProfileData({...profileData, dusun: e.target.value})} placeholder="Nama dusun (opsional)" /></FF>
-            <div className="flex gap-4"><div className="flex-1"><FF label="RT"><input type="number" className="input" value={profileData.rt} onChange={e => setProfileData({...profileData, rt: e.target.value})} placeholder="RT" /></FF></div><div className="flex-1"><FF label="RW"><input type="number" className="input" value={profileData.rw} onChange={e => setProfileData({...profileData, rw: e.target.value})} placeholder="RW" /></FF></div></div>
+            <div className="flex gap-4"><div className="flex-1"><FF label="RT (boleh dikosongkan)"><input type="number" className="input" value={profileData.rt} onChange={e => setProfileData({...profileData, rt: e.target.value})} placeholder="RT" /></FF></div><div className="flex-1"><FF label="RW (boleh dikosongkan)"><input type="number" className="input" value={profileData.rw} onChange={e => setProfileData({...profileData, rw: e.target.value})} placeholder="RW" /></FF></div></div>
             <button type="submit" disabled={isLoading || passwordMatch === false} className="btn btn-primary btn-lg btn-block" style={{ marginTop: 20 }}>{isLoading ? "Memproses..." : "Buat akun"}</button>
           </form>
         )}

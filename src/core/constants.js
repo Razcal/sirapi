@@ -1,7 +1,7 @@
 // Web Client ID dari Google Cloud Console (OAuth client tipe "Web application"),
 // BUKAN yang tipe "Android". Wajib diisi sebelum tombol "Masuk dengan Google"
 // bisa dipakai — lihat SETUP-GOOGLE-SIGNIN.md untuk langkah lengkapnya.
-export const GOOGLE_WEB_CLIENT_ID = "ISI_DENGAN_WEB_CLIENT_ID_DARI_GOOGLE_CLOUD_CONSOLE";
+export const GOOGLE_WEB_CLIENT_ID = "640306832188-o1hpf4dsq2hn0kfsri4c8qia1fcjamma.apps.googleusercontent.com";
 
 export const COLOR = {
   emerald: { bg: "bg-emerald-100", text: "text-emerald-800", border: "border-emerald-200" },

@@ -1906,9 +1906,6 @@ function CompleteProfileModal({ open, googleUser, onClose, onComplete, setAppToa
   const [name, setName] = useState("");
   const [kecamatan, setKecamatan] = useState("Tuban");
   const [desa, setDesa] = useState("Baturetno");
-  const [dusun, setDusun] = useState("");
-  const [rt, setRt] = useState("");
-  const [rw, setRw] = useState("");
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
@@ -1917,9 +1914,6 @@ function CompleteProfileModal({ open, googleUser, onClose, onComplete, setAppToa
       setName(googleUser?.name || "");
       setKecamatan("Tuban");
       setDesa("Baturetno");
-      setDusun("");
-      setRt("");
-      setRw("");
       setIsSaving(false);
     }
   }, [open, googleUser]);
@@ -1931,13 +1925,16 @@ function CompleteProfileModal({ open, googleUser, onClose, onComplete, setAppToa
     setDesa(TUBAN_DATA[kec]?.[0] || "");
   };
 
+  // Dusun/RT/RW sengaja tak ditanya di sini — nullable di skema, dan alur
+  // Google ini justru dibuat supaya cepat. Bisa diisi belakangan lewat
+  // Ubah Profil kalau peternak mau melengkapinya.
   const save = async () => {
-    if (!phone.trim() || !name.trim() || !rt || !rw) {
+    if (!phone.trim() || !name.trim()) {
       return setAppToast({ message: "Harap lengkapi semua kolom yang wajib!", type: "error" });
     }
     setIsSaving(true);
     const result = await authService.completeGoogleProfile(googleUser, {
-      name: name.trim(), phone: phone.trim(), kecamatan, desa, dusun, rt, rw, photo: googleUser.photo,
+      name: name.trim(), phone: phone.trim(), kecamatan, desa, dusun: "", rt: "", rw: "", photo: googleUser.photo,
     });
     setIsSaving(false);
 
@@ -1960,11 +1957,6 @@ function CompleteProfileModal({ open, googleUser, onClose, onComplete, setAppToa
           <FF label="Nama lengkap"><input className="input" value={name} onChange={e => setName(e.target.value)} placeholder="Nama lengkap" /></FF>
           <FF label="Kecamatan"><select className="select" value={kecamatan} onChange={e => handleKecamatanChange(e.target.value)}>{Object.keys(TUBAN_DATA).map(k => <option key={k} value={k}>{k}</option>)}</select></FF>
           <FF label="Desa atau kelurahan"><select className="select" value={desa} onChange={e => setDesa(e.target.value)}>{(TUBAN_DATA[kecamatan] || []).map(d => <option key={d} value={d}>{d}</option>)}</select></FF>
-          <FF label="Dusun (boleh dikosongkan)"><input type="text" className="input" value={dusun} onChange={e => setDusun(e.target.value)} placeholder="Nama dusun (opsional)" /></FF>
-          <div className="flex gap-4">
-            <div className="flex-1"><FF label="RT"><input type="number" className="input" value={rt} onChange={e => setRt(e.target.value)} placeholder="RT" /></FF></div>
-            <div className="flex-1"><FF label="RW"><input type="number" className="input" value={rw} onChange={e => setRw(e.target.value)} placeholder="RW" /></FF></div>
-          </div>
         </div>
         <div className="flex gap-3 mt-6">
           <button type="button" onClick={onClose} disabled={isSaving} className="flex-1 py-3.5 rounded-xl border border-slate-200 text-sm font-bold text-slate-600 hover:bg-slate-50 transition-colors disabled:opacity-50">Nanti saja</button>
