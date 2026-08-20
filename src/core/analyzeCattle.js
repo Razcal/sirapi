@@ -10,6 +10,27 @@ export const fmtDate = (d) => {
   catch { return "-"; }
 };
 
+// ibLog tidak pernah dikosongkan saat sapi melahirkan (lihat handleSaveRepro
+// di App.jsx, res==="CALVED" cuma reset conceptionDate, bukan ibLog) — jadi
+// ini riwayat IB SEUMUR HIDUP sapi, bisa mencakup beberapa periode laktasi
+// sekaligus. Fungsi ini menyaring ke IB yang relevan untuk siklus BERJALAN
+// saja (setelah tanggal melahirkan terakhir), dipakai di sini maupun di
+// App.jsx (form pencatatan Reproduksi) — supaya kriterianya konsisten di
+// kedua tempat, tidak ada yang lupa disaring lalu salah menyimpan
+// conceptionDate dari kehamilan yang sudah lama selesai.
+export const ibSinceCalving = (item) => {
+  return [...(item?.ibLog || [])]
+    .filter(entry => {
+      const d = typeof entry === 'object' ? entry.date : entry;
+      return !item?.calvingDate || new Date(d) > new Date(item.calvingDate);
+    })
+    .sort((a, b) => {
+      const da = typeof a === 'object' ? a.date : a;
+      const db = typeof b === 'object' ? b.date : b;
+      return new Date(da) - new Date(db);
+    });
+};
+
 export function analyzeCattle(item) {
   if (!item) return { color: "slate", statusLabel: "DATA TIDAK VALID", advice: "Data tidak valid", isUrgent: false, adviceColor: "text-slate-600 bg-slate-50" };
 
@@ -49,21 +70,7 @@ export function analyzeCattle(item) {
 
     const daysOpen = item.calvingDate ? daysDiff(item.calvingDate) : 0;
 
-    // PENTING: ibLog tidak pernah dikosongkan saat sapi melahirkan (lihat
-    // handleSaveRepro di App.jsx, res==="CALVED" cuma reset conceptionDate,
-    // bukan ibLog) — jadi ini riwayat IB SEUMUR HIDUP sapi, bisa mencakup
-    // beberapa periode laktasi sekaligus. Kalau dipakai mentah-mentah untuk
-    // menghitung "berapa kali IB di siklus ini" atau "jarak antar IB
-    // mencurigakan", riwayat lama dari kehamilan sebelumnya (yang sudah
-    // berhasil, sudah lama selesai) bisa ikut terhitung dan memicu
-    // peringatan "Gagal Bunting Berulang"/"Nymphomania" yang keliru pada
-    // sapi yang catatannya sebenarnya bersih di siklus sekarang. Makanya
-    // disaring dulu: hanya IB setelah tanggal melahirkan TERAKHIR yang
-    // relevan untuk siklus berjalan.
-    const logIBDates = [...(item.ibLog || [])]
-      .map(entry => (typeof entry === 'object' ? entry.date : entry))
-      .filter(d => !item.calvingDate || new Date(d) > new Date(item.calvingDate))
-      .sort((a,b) => new Date(a) - new Date(b));
+    const logIBDates = ibSinceCalving(item).map(entry => (typeof entry === 'object' ? entry.date : entry));
 
     const lastIB = logIBDates.length > 0 ? logIBDates[logIBDates.length - 1] : null;
     const daysSinceLastIB = lastIB ? daysDiff(lastIB) : 0;

@@ -5,7 +5,7 @@ import { DialogSystem } from "./core/components/SharedUI";
 import { TUBAN_DATA } from "./core/constants";
 import { supabase } from "./core/supabaseClient";
 import { authService } from "./core/authService";
-import { daysDiff, fmtDate, analyzeCattle } from "./core/analyzeCattle";
+import { daysDiff, fmtDate, analyzeCattle, ibSinceCalving } from "./core/analyzeCattle";
 import { Icon } from "./core/components/Icons";
 import Donut from "./core/components/Donut";
 import { HeroScene } from "./core/components/Hero";
@@ -1203,8 +1203,7 @@ function ActionModal({ open, item, onClose, onSaveRepro, onSaveHealth, setAppToa
     if (resRepro !== 'POSITIVE' && resRepro !== 'NEGATIVE' && !dRepro) return setAppToast({ message: "Tanggal tindakan/kejadian wajib diisi", type: "error" });
 
     if (resRepro === "POSITIVE") {
-      const sortedIB = [...(item?.ibLog || [])];
-      const hasIB = sortedIB.length > 0;
+      const hasIB = ibSinceCalving(item).length > 0;
       if (!hasIB) {
         const monthNum = Number(pregMonth);
         if (!pregMonth || isNaN(monthNum) || monthNum <= 0 || monthNum > 9) {
@@ -1228,7 +1227,7 @@ function ActionModal({ open, item, onClose, onSaveRepro, onSaveHealth, setAppToa
   // Kebuntingan: Positif" — mustahil secara biologis, dan salah pilih akan
   // mengacaukan seluruh perhitungan kalender sapi itu.
   const phase = String(item?.status_reproduksi || item?.phase || "").toUpperCase();
-  const punyaIB = (item?.ibLog || []).length > 0;
+  const punyaIB = ibSinceCalving(item).length > 0;
 
   const OPSI = [
     { v: "IB",       t: "Inseminasi buatan (IB)",             show: ["CALF", "OPEN", "BRED", "POSTPARTUM"] },
@@ -1295,11 +1294,7 @@ function ActionModal({ open, item, onClose, onSaveRepro, onSaveHealth, setAppToa
               {resRepro === "POSITIVE" && (
                 <div className="pop-in" style={{ marginBottom: 16 }}>
                   {(() => {
-                    const sortedIB = [...(item?.ibLog || [])].sort((a, b) => {
-                      const da = typeof a === "object" ? a.date : a;
-                      const db = typeof b === "object" ? b.date : b;
-                      return new Date(da) - new Date(db);
-                    });
+                    const sortedIB = ibSinceCalving(item);
                     const hasIB = sortedIB.length > 0;
                     const lastIBDate = hasIB
                       ? (typeof sortedIB[sortedIB.length - 1] === "object" ? sortedIB[sortedIB.length - 1].date : sortedIB[sortedIB.length - 1])
@@ -2952,15 +2947,14 @@ function AppContent() {
       current.phase = "BRED"; current.status_reproduksi = "BRED";
       current.ibLog = [...(current.ibLog || []), { date: d, isSuspect: false }];
     } 
-    else if (res === "POSITIVE") { 
+    else if (res === "POSITIVE") {
       let calculatedConception = todayStr();
-      
-      const sortedIB = [...(current.ibLog || [])].sort((a, b) => {
-         const dateA = typeof a === 'object' ? a.date : a;
-         const dateB = typeof b === 'object' ? b.date : b;
-         return new Date(dateA) - new Date(dateB);
-      }); 
-      
+
+      // ibSinceCalving, bukan current.ibLog mentah — kalau tidak disaring,
+      // sapi yang belum pernah di-IB di siklus SEKARANG tapi punya riwayat
+      // IB lama (dari kehamilan sebelumnya yang sudah lama selesai) bisa
+      // ketiban conceptionDate dari IB bertahun-tahun lalu itu.
+      const sortedIB = ibSinceCalving(current);
       const hasIB = sortedIB.length > 0;
 
       if (hasIB) {
