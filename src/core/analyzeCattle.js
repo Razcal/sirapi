@@ -49,12 +49,25 @@ export function analyzeCattle(item) {
 
     const daysOpen = item.calvingDate ? daysDiff(item.calvingDate) : 0;
 
-    const logIBDates = [...(item.ibLog || [])].map(entry => {
-        return typeof entry === 'object' ? entry.date : entry;
-    }).sort((a,b) => new Date(a) - new Date(b));
+    // PENTING: ibLog tidak pernah dikosongkan saat sapi melahirkan (lihat
+    // handleSaveRepro di App.jsx, res==="CALVED" cuma reset conceptionDate,
+    // bukan ibLog) — jadi ini riwayat IB SEUMUR HIDUP sapi, bisa mencakup
+    // beberapa periode laktasi sekaligus. Kalau dipakai mentah-mentah untuk
+    // menghitung "berapa kali IB di siklus ini" atau "jarak antar IB
+    // mencurigakan", riwayat lama dari kehamilan sebelumnya (yang sudah
+    // berhasil, sudah lama selesai) bisa ikut terhitung dan memicu
+    // peringatan "Gagal Bunting Berulang"/"Nymphomania" yang keliru pada
+    // sapi yang catatannya sebenarnya bersih di siklus sekarang. Makanya
+    // disaring dulu: hanya IB setelah tanggal melahirkan TERAKHIR yang
+    // relevan untuk siklus berjalan.
+    const logIBDates = [...(item.ibLog || [])]
+      .map(entry => (typeof entry === 'object' ? entry.date : entry))
+      .filter(d => !item.calvingDate || new Date(d) > new Date(item.calvingDate))
+      .sort((a,b) => new Date(a) - new Date(b));
 
     const lastIB = logIBDates.length > 0 ? logIBDates[logIBDates.length - 1] : null;
     const daysSinceLastIB = lastIB ? daysDiff(lastIB) : 0;
+    const hasIbAfterCalving = logIBDates.length > 0;
 
     let cycles = 1;
     let suspectSistaGap = 0;
@@ -69,8 +82,6 @@ export function analyzeCattle(item) {
       }
     }
 
-    let hasIbAfterCalving = lastIB && (!item.calvingDate || new Date(lastIB) > new Date(item.calvingDate));
-
     if (phase === "ABORTUS_PENDING") {
       res.statusLabel = "LAPOR PETUGAS";
       res.color = "rose"; res.isUrgent = true; res.needsVet = true;
@@ -81,7 +92,7 @@ export function analyzeCattle(item) {
       if (!item.calvingDate && umurHari > 1095) { res.statusLabel = "Gangguan Reproduksi: Belum Pernah Birahi"; res.color = "rose"; res.isUrgent = true; res.needsVet = true; res.advice = `Sapi dara berusia lebih dari 3 tahun belum pernah menunjukkan tanda birahi maupun menerima IB. Ini baru indikasi awal (suspect), diduga Anestrus akibat Hipoplasia Ovarium, gangguan hormonal, atau kekurangan nutrisi kronis — namun penyebab pasti belum dapat dipastikan tanpa pemeriksaan. Wajib laporkan ke petugas/dokter hewan untuk pemeriksaan ginekologi mendalam terhadap fungsi ovarium.`; res.adviceColor = "text-rose-900 bg-rose-50 border border-rose-200 font-bold shadow-sm"; }
       else if (umurHari > 730) { res.statusLabel = "AWAS: DARA TERLAMBAT IB"; res.color = "orange"; res.isUrgent = true; res.advice = `Sapi dara berusia lebih dari 2 tahun belum pernah menerima IB. Usia ideal IB pertama adalah 18-24 bulan (Noakes et al., 2019). Amati tanda birahi secara rutin pagi dan sore. Jika belum pernah menunjukkan tanda birahi, laporkan ke petugas agar dilakukan pemeriksaan lebih lanjut terhadap fungsi ovarium.`; res.adviceColor = "text-orange-900 bg-orange-50 border border-orange-200 font-bold shadow-sm"; }
       else if (umurHari >= 540) { res.statusLabel = "DARA SIAP KAWIN"; res.color = "emerald"; res.advice = `Usia ${Math.floor(umurHari/30)} bulan — usia ideal untuk IB pertama (18-24 bulan). Amati tanda birahi: gelisah, sering menaiki sapi lain, vulva membengkak dan kemerahan, serta keluar lendir bening dari vulva. Lakukan IB saat sapi menunjukkan birahi aktif.`; }
-      else if (umurHari >= 365) { res.statusLabel = "DARA PRA-BIRAHI"; res.color = "violet"; res.advice = `Usia ${Math.floor(umurHari/30)} bulan. Pubertas pada sapi betina umumnya terjadi pada usia 6-12 bulan, namun IB pertama disarankan pada usia 18-24 bulan agar pertumbuhan tubuh optimal. Fokuskan pada pencapaian bobot badan ideal.`; }
+      else if (umurHari >= 365) { res.statusLabel = "DARA BELUM SAATNYA IB"; res.color = "violet"; res.advice = `Usia ${Math.floor(umurHari/30)} bulan. Pubertas pada sapi betina umumnya sudah terjadi sejak usia 6-12 bulan, tapi IB pertama tetap disarankan pada usia 18-24 bulan agar pertumbuhan tubuh optimal — bukan berarti belum birahi, hanya belum waktunya dikawinkan. Fokuskan pada pencapaian bobot badan ideal.`; }
       else { res.statusLabel = "DARA PERTUMBUHAN"; res.color = "blue"; res.advice = `Usia ${Math.floor(umurHari/30)} bulan. Masa pra-pubertas. Berikan pakan lengkap (hijauan dan konsentrat) untuk mencapai target pertumbuhan bobot badan ideal sebelum IB pertama.`; }
     }
     else if (phase === "OPEN") {
@@ -97,7 +108,7 @@ export function analyzeCattle(item) {
       else { res.statusLabel = "SIAP IB"; res.color = "amber"; res.advice = "Fase kosong, sapi siap menerima IB. Amati tanda birahi (3A: Abang, Abuh, Anget) disertai kegelisahan dan kecenderungan menaiki sapi lain. Lakukan IB tepat saat sapi menunjukkan birahi aktif."; }
     }
     else if (phase === "BRED") {
-      if (cycles >= 4) { res.color = "rose"; res.statusLabel = "Gangguan Reproduksi: Gagal Bunting Berulang"; res.isUrgent = true; res.needsVet = true; res.advice = `Sapi telah menjalani ${cycles - 1} kali IB dengan siklus birahi normal (jarak 18-24 hari) namun gagal bunting, dan kini memasuki IB ke-${cycles}. Status sementara: Repeat Breeder. Kemungkinan penyebab (belum pasti): gangguan ovarium, endometritis subklinis, ketidaktepatan waktu IB, atau kualitas semen/teknik IB — penyebab sebenarnya hanya bisa dipastikan lewat pemeriksaan. Wajib laporkan ke petugas/dokter hewan untuk pemeriksaan mendalam sebelum IB berikutnya.`; res.adviceColor = "text-rose-800 bg-rose-50 border border-rose-200 font-bold shadow-sm"; }
+      if (cycles >= 4) { res.color = "rose"; res.statusLabel = "Gangguan Reproduksi: Gagal Bunting Berulang"; res.isUrgent = true; res.needsVet = true; res.advice = `Sapi telah menjalani ${cycles - 1} kali IB (jarak antar IB minimal 18 hari, bukan birahi susulan di siklus yang sama) namun gagal bunting, dan kini memasuki IB ke-${cycles}. Status sementara: Repeat Breeder. Kemungkinan penyebab (belum pasti): gangguan ovarium, endometritis subklinis, ketidaktepatan waktu IB, atau kualitas semen/teknik IB — penyebab sebenarnya hanya bisa dipastikan lewat pemeriksaan. Wajib laporkan ke petugas/dokter hewan untuk pemeriksaan mendalam sebelum IB berikutnya.`; res.adviceColor = "text-rose-800 bg-rose-50 border border-rose-200 font-bold shadow-sm"; }
       else if (suspectSistaGap > 0) { res.color = "rose"; res.statusLabel = "Gangguan Reproduksi: Birahi Tidak Normal"; res.isUrgent = true; res.needsVet = true; res.advice = `Ditemukan jarak antar IB hanya ${suspectSistaGap} hari, padahal siklus birahi normal sapi adalah 18-24 hari. Pola birahi yang terlalu sering dan pendek seperti ini diduga mengarah pada Sista Folikuler (Nymphomania) — namun ini baru indikasi awal, bukan diagnosa pasti. Wajib laporkan ke petugas/dokter hewan untuk pemeriksaan per-rektal/USG ovarium secara mendalam.`; res.adviceColor = "text-rose-800 bg-rose-50 border border-rose-200 font-bold shadow-sm"; }
       else if (daysSinceLastIB < 60) {
         const sisaHariPkb = 60 - daysSinceLastIB;
@@ -128,8 +139,17 @@ export function analyzeCattle(item) {
          else if (pregDays <= 189) nutrisi = "Nutrisi Trimester 2: Tambahkan konsentrat berenergi tinggi. Suplementasi Kalsium (Ca) dan Fosfor (P) penting untuk pertumbuhan tulang janin.";
          else nutrisi = "Nutrisi Trimester 3: Fase krusial pertumbuhan janin. Berikan pakan penguat dan lakukan kering kandang bila sapi masih diperah.";
 
-         if (pregDays >= 285) { res.color = "rose"; res.statusLabel = "ANCAMAN DISTOKIA"; res.isUrgent = true; res.advice = `Usia kebuntingan sudah lanjut (hari ke-${pregDays}), mendekati waktu kelahiran. Siapkan kontak tenaga medis untuk antisipasi kesulitan melahirkan (distokia). ${nutrisi}`; res.adviceColor = "text-rose-900 bg-rose-50 border border-rose-200 font-bold shadow-sm"; }
-         else if (l <= 60 && l > 21) { res.color = "amber"; res.statusLabel = "KERING KANDANG"; res.isUrgent = true; res.advice = `${txtHPL} Hentikan pemerahan susu segera (kering kandang) agar kelenjar susu pulih sebelum melahirkan. ${nutrisi}`; res.adviceColor = "text-amber-900 bg-amber-50 border border-amber-200 font-semibold shadow-sm"; }
+         // Sebelumnya "ANCAMAN DISTOKIA" baru muncul di hari ke-285 — itu
+         // persis di sekitar HPL (285 ≈ 9bln10hr), jadi peternak baru
+         // diperingatkan pas/lewat perkiraan lahir, bukan DISIAPKAN
+         // sebelumnya. Sekarang dipecah dua: "PERSIAPAN KELAHIRAN" muncul
+         // proaktif dalam 3 minggu menjelang HPL (l<=21, termasuk yang
+         // sudah sedikit lewat HPL tapi belum lama), dan "ANCAMAN DISTOKIA"
+         // digeser ke kebuntingan yang benar-benar lewat rentang normal
+         // (>295 hari) — indikasi kuat perlu bantuan medis segera.
+         if (pregDays >= 295) { res.color = "rose"; res.statusLabel = "ANCAMAN DISTOKIA"; res.isUrgent = true; res.needsVet = true; res.advice = `Usia kebuntingan hari ke-${pregDays}, sudah melewati rentang normal kebuntingan sapi (~279-292 hari). Segera hubungi petugas/dokter hewan — kebuntingan yang terlalu lama dari perkiraan berisiko kesulitan melahirkan (distokia) atau kelainan lain yang perlu diperiksa. ${nutrisi}`; res.adviceColor = "text-rose-900 bg-rose-50 border border-rose-200 font-bold shadow-sm"; }
+         else if (l <= 21) { res.color = "orange"; res.statusLabel = "PERSIAPAN KELAHIRAN"; res.isUrgent = true; res.advice = `${txtHPL} Sudah masuk masa siap melahirkan. Siapkan kandang bersalin yang bersih dan kering, pantau tanda-tanda melahirkan (gelisah, ambing membesar, keluar lendir/air ketuban) minimal 2x sehari, dan pastikan kontak petugas/dokter hewan siap dihubungi sewaktu-waktu. ${nutrisi}`; res.adviceColor = "text-orange-900 bg-orange-50 border border-orange-200 font-bold shadow-sm"; }
+         else if (l <= 60) { res.color = "amber"; res.statusLabel = "KERING KANDANG"; res.isUrgent = true; res.advice = `${txtHPL} Hentikan pemerahan susu segera (kering kandang) agar kelenjar susu pulih sebelum melahirkan. ${nutrisi}`; res.adviceColor = "text-amber-900 bg-amber-50 border border-amber-200 font-semibold shadow-sm"; }
          else { res.color = "emerald"; res.statusLabel = "BUNTING AKTIF"; res.advice = `${txtHPL} ${nutrisi}`; }
       }
     }
