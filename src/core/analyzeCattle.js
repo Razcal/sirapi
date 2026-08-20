@@ -132,7 +132,12 @@ export function analyzeCattle(item) {
          if (isNaN(hpl.getTime())) throw new Error("Invalid date");
          hpl.setMonth(hpl.getMonth() + 9); hpl.setDate(hpl.getDate() + 10);
          const l = Math.ceil((hpl - today) / 86400000); const pregDays = daysDiff(item.conceptionDate);
-         let txtHPL = `Perkiraan tanggal lahir: ${fmtDate(hpl.toISOString().split("T")[0])} (±${l} hari).`;
+         // "l" itu hari TERSISA menuju HPL, bukan margin ketidakpastian —
+         // sebelumnya ditulis "(±113 hari)" yang menyesatkan (seolah
+         // perkiraan tanggalnya bisa meleset 113 hari). Diperjelas jadi
+         // hitung mundur biasa, dan tetap masuk akal kalau sudah lewat HPL.
+         const infoHari = l >= 0 ? `${l} hari lagi` : `sudah lewat ${Math.abs(l)} hari dari perkiraan`;
+         let txtHPL = `Perkiraan tanggal lahir: ${fmtDate(hpl.toISOString().split("T")[0])} (${infoHari}).`;
 
          let nutrisi = "";
          if (pregDays <= 94) nutrisi = "Nutrisi Trimester 1: Fokus pemberian hijauan berkualitas tinggi dan mineral mix. Jaga kondisi tubuh ideal, hindari pakan berjamur.";

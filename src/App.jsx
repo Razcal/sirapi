@@ -3306,7 +3306,7 @@ function AppContent() {
                         </span>
                         <span className="row-main">
                           <span className="row-title">Notifikasi harian</span>
-                          <span className="row-sub">Sapaan dan info penting tiap hari, meski aplikasi tertutup</span>
+                          <span className="row-sub" style={{ whiteSpace: "normal", overflow: "visible", textOverflow: "clip" }}>Sapaan dan info penting tiap hari, meski aplikasi tertutup</span>
                         </span>
                         <button
                           onClick={handleTogglePush}
