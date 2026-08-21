@@ -19,6 +19,12 @@ function getFirebaseApp() {
   if (!raw) { firebaseInitError = 'FIREBASE_SERVICE_ACCOUNT tidak ada / kosong (length: ' + (raw ? raw.length : 0) + ')'; return null; }
   try {
     const serviceAccount = JSON.parse(raw);
+    // Karakter newline di private_key sering "rata" jadi \n literal (bukan
+    // baris baru sungguhan) saat JSON di-copy-paste lewat form web (mis.
+    // dashboard Vercel) — normalisasi lagi di sini biar aman dari itu.
+    if (typeof serviceAccount.private_key === 'string') {
+      serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, '\n');
+    }
     firebaseApp = admin.apps.length ? admin.app() : admin.initializeApp({
       credential: admin.credential.cert(serviceAccount),
     });
