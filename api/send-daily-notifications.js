@@ -12,10 +12,11 @@ import { analyzeCattle } from '../src/core/analyzeCattle.js';
 // baris mana dikirim lewat jalur mana.
 
 let firebaseApp = null;
+let firebaseInitError = null; // TODO(sementara): hapus setelah debug FCM selesai
 function getFirebaseApp() {
   if (firebaseApp) return firebaseApp;
   const raw = process.env.FIREBASE_SERVICE_ACCOUNT;
-  if (!raw) return null; // Belum dikonfigurasi — kirim FCM di-skip, web push tetap jalan.
+  if (!raw) { firebaseInitError = 'FIREBASE_SERVICE_ACCOUNT tidak ada / kosong (length: ' + (raw ? raw.length : 0) + ')'; return null; }
   try {
     const serviceAccount = JSON.parse(raw);
     firebaseApp = admin.apps.length ? admin.app() : admin.initializeApp({
@@ -23,6 +24,7 @@ function getFirebaseApp() {
     });
     return firebaseApp;
   } catch (e) {
+    firebaseInitError = 'JSON.parse/initializeApp gagal: ' + e.message + ' (length raw: ' + raw.length + ')';
     console.error('FIREBASE_SERVICE_ACCOUNT tidak valid (harus JSON service account Firebase):', e.message);
     return null;
   }
@@ -133,7 +135,7 @@ export default async function handler(req, res) {
       }
     }
 
-    return res.status(200).json({ sent, failed, skippedNative, totalSubscribers: subscriptions.length, debugErrors });
+    return res.status(200).json({ sent, failed, skippedNative, totalSubscribers: subscriptions.length, debugErrors, firebaseInitError });
   } catch (error) {
     console.error('Error sending notifications:', error);
     return res.status(500).json({ error: error.message });
