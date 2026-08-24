@@ -77,6 +77,10 @@ export const authService = {
         rt: profileData.rt,
         rw: profileData.rw,
         photo: profileData.photo || null,
+        // Pendaftaran mandiri (bukan dibuatkan admin) selalu peternak, dan
+        // wajib disetujui admin dulu sebelum bisa pakai aplikasi.
+        role: 'peternak',
+        status: 'pending',
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       };
@@ -99,23 +103,21 @@ export const authService = {
       }
 
       // 3. Simpan user profile (JANGAN simpan password!)
-      saveUserToStorage({
+      const safeUser = {
         id: userId,
         email: trimmedEmail,
         phone: trimmedPhone,
-        ...profileData
-      });
+        ...profileData,
+        role: 'peternak',
+        status: 'pending',
+      };
+      saveUserToStorage(safeUser);
 
       if (sessionToken) saveTokenToStorage(sessionToken);
 
       return {
         success: true,
-        user: {
-          id: userId,
-          email: trimmedEmail,
-          phone: trimmedPhone,
-          ...profileData
-        },
+        user: safeUser,
         token: sessionToken
       };
     } catch (error) {
@@ -263,6 +265,8 @@ export const authService = {
         rt: profileData.rt,
         rw: profileData.rw,
         photo: profileData.photo || googleUser.photo || null,
+        role: 'peternak',
+        status: 'pending',
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       };

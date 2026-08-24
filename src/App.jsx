@@ -1892,6 +1892,37 @@ function AcademyView({ open, onClose }) {
   );
 }
 
+// Ditampilkan menggantikan dashboard kalau akun peternak masih berstatus
+// 'pending' — pendaftaran mandiri sekarang wajib disetujui admin dinas
+// dulu (lihat SUPABASE_ROLES_MIGRATION.sql). Belum ada panel admin untuk
+// menyetujui secara resmi (menyusul); untuk sekarang persetujuan
+// dilakukan manual lewat Supabase Table Editor.
+function PendingApprovalScreen({ profile, onLogout }) {
+  return (
+    <div className="app-shell fade-in" style={{ position: "fixed", inset: 0, zIndex: 100, display: "flex",
+                 flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 24,
+                 background: "var(--bg)" }}>
+      <div className="card card-pad" style={{ maxWidth: 360, textAlign: "center" }}>
+        <div className="empty-icon" style={{ margin: "0 auto 16px", background: "var(--warn-bg)", color: "var(--warn)" }}>
+          <Icon.clock size={26} />
+        </div>
+        <h2 className="t-h2 c-1" style={{ margin: "0 0 8px" }}>Menunggu persetujuan</h2>
+        <p className="t-sm c-2" style={{ margin: "0 0 4px" }}>
+          Halo {profile?.name || "Peternak"}, akun kamu sudah terdaftar dan sedang menunggu persetujuan admin Dinas Ketahanan Pangan, Pertanian dan Perikanan Tuban.
+        </p>
+        <p className="t-xs c-3" style={{ margin: "12px 0 20px" }}>
+          Biasanya diproses dalam 1x24 jam kerja. Kalau sudah lebih dari itu, silakan hubungi petugas.
+        </p>
+        <a className="btn btn-secondary btn-block" style={{ marginBottom: 10 }}
+           href={waPetugas(`Halo Petugas, saya ${profile?.name || "Peternak"}. Akun saya di SIRAPI belum disetujui, mohon bantuannya.`)}>
+          <Icon.phone size={17} stroke={2} /> Hubungi petugas
+        </a>
+        <button onClick={onLogout} className="btn btn-ghost btn-block">Keluar akun</button>
+      </div>
+    </div>
+  );
+}
+
 // Muncul saat pengguna yang masuk lewat Google (belum punya baris di tabel
 // `users`) menekan "Tambah sapi" pertama kali. Google cuma kirim nama/email/
 // foto — phone/kecamatan/desa (wajib di skema) diminta di sini, sekali saja.
@@ -3155,7 +3186,11 @@ function AppContent() {
         <AuthScreen setProfile={(userData) => { setProfile(userData); setAppToast({message: "Berhasil Login!", type: "success"}) }} />
       )}
 
-      {hideSplashDOM && hasStarted && profile && (
+      {hideSplashDOM && hasStarted && profile && profile.status === 'pending' && (
+        <PendingApprovalScreen profile={profile} onLogout={() => { setProfile(null); localStorage.removeItem("srtt_user_profile"); }} />
+      )}
+
+      {hideSplashDOM && hasStarted && profile && profile.status !== 'pending' && (
         <>
           <header className="topbar">
             <div className="topbar-brand">
