@@ -1892,23 +1892,22 @@ function AcademyView({ open, onClose }) {
   );
 }
 
-// Ditampilkan menggantikan dashboard kalau akun peternak masih berstatus
-// 'pending' — pendaftaran mandiri sekarang wajib disetujui admin dinas
-// dulu (lihat SUPABASE_ROLES_MIGRATION.sql). Belum ada panel admin untuk
-// menyetujui secara resmi (menyusul); untuk sekarang persetujuan
-// dilakukan manual lewat Supabase Table Editor.
-function PendingApprovalScreen({ profile, onLogout }) {
+// Muncul saat akun berstatus 'pending' mencoba menambah sapi — peternak
+// tetap bebas menjelajah dashboard/menu lain sejak awal daftar, verifikasi
+// admin baru diminta tepat di titik yang butuh data valid (nambah ternak).
+// Belum ada panel admin untuk menyetujui secara resmi (menyusul); untuk
+// sekarang persetujuan dilakukan manual lewat Supabase Table Editor.
+function PendingApprovalModal({ open, profile, onClose }) {
+  if (!open) return null;
   return (
-    <div className="app-shell fade-in" style={{ position: "fixed", inset: 0, zIndex: 100, display: "flex",
-                 flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 24,
-                 background: "var(--bg)" }}>
-      <div className="card card-pad" style={{ maxWidth: 360, textAlign: "center" }}>
+    <div className="sheet-overlay" style={{ alignItems: "center", padding: 16, zIndex: 110 }}>
+      <div className="card pop-in card-pad" style={{ width: "100%", maxWidth: 360, textAlign: "center", boxShadow: "var(--sh-xl)" }}>
         <div className="empty-icon" style={{ margin: "0 auto 16px", background: "var(--warn-bg)", color: "var(--warn)" }}>
           <Icon.clock size={26} />
         </div>
-        <h2 className="t-h2 c-1" style={{ margin: "0 0 8px" }}>Menunggu persetujuan</h2>
+        <h3 className="t-h2 c-1" style={{ margin: "0 0 8px" }}>Menunggu persetujuan</h3>
         <p className="t-sm c-2" style={{ margin: "0 0 4px" }}>
-          Halo {profile?.name || "Peternak"}, akun kamu sudah terdaftar dan sedang menunggu persetujuan admin Dinas Ketahanan Pangan, Pertanian dan Perikanan Tuban.
+          Halo {profile?.name || "Peternak"}, akun kamu masih menunggu persetujuan admin Dinas Ketahanan Pangan, Pertanian dan Perikanan Tuban sebelum bisa menambah data sapi.
         </p>
         <p className="t-xs c-3" style={{ margin: "12px 0 20px" }}>
           Biasanya diproses dalam 1x24 jam kerja. Kalau sudah lebih dari itu, silakan hubungi petugas.
@@ -1917,7 +1916,7 @@ function PendingApprovalScreen({ profile, onLogout }) {
            href={waPetugas(`Halo Petugas, saya ${profile?.name || "Peternak"}. Akun saya di SIRAPI belum disetujui, mohon bantuannya.`)}>
           <Icon.phone size={17} stroke={2} /> Hubungi petugas
         </a>
-        <button onClick={onLogout} className="btn btn-ghost btn-block">Keluar akun</button>
+        <button onClick={onClose} className="btn btn-ghost btn-block">Tutup</button>
       </div>
     </div>
   );
@@ -2775,6 +2774,10 @@ function AppContent() {
   // ditahan dulu sampai mereka benar-benar mau menambah sapi pertama,
   // lihat openAddCattle() di bawah.
   const [completeProfileOpen, setCompleteProfileOpen] = useState(false);
+  // Akun peternak baru (status 'pending') bebas menjelajah sejak awal —
+  // verifikasi admin baru ditahan tepat saat mau menambah sapi, sama
+  // seperti completeProfileOpen di atas.
+  const [pendingApprovalOpen, setPendingApprovalOpen] = useState(false);
   const [actionItem, setActionItem] = useState(null); 
   const [hideSplashDOM, setHideSplashDOM] = useState(false);
   const [detailItem, setDetailItem] = useState(null);
@@ -2883,8 +2886,13 @@ function AppContent() {
   // Satu pintu masuk untuk "tambah sapi baru" dari mana pun tombolnya
   // dipencet. Kalau profil belum lengkap (bekas login Google pertama kali),
   // minta lengkapi dulu — begitu tersimpan, langsung lanjut ke form sapi
-  // tanpa perlu tekan tombol tambah lagi.
+  // tanpa perlu tekan tombol tambah lagi. Kalau akun masih 'pending'
+  // (baru daftar, belum disetujui admin), tahan di sini juga.
   const openAddCattle = () => {
+    if (profile?.status === 'pending') {
+      setPendingApprovalOpen(true);
+      return;
+    }
     if (profile?.profileIncomplete) {
       setCompleteProfileOpen(true);
       return;
@@ -3186,11 +3194,7 @@ function AppContent() {
         <AuthScreen setProfile={(userData) => { setProfile(userData); setAppToast({message: "Berhasil Login!", type: "success"}) }} />
       )}
 
-      {hideSplashDOM && hasStarted && profile && profile.status === 'pending' && (
-        <PendingApprovalScreen profile={profile} onLogout={() => { setProfile(null); localStorage.removeItem("srtt_user_profile"); }} />
-      )}
-
-      {hideSplashDOM && hasStarted && profile && profile.status !== 'pending' && (
+      {hideSplashDOM && hasStarted && profile && (
         <>
           <header className="topbar">
             <div className="topbar-brand">
@@ -3505,6 +3509,7 @@ function AppContent() {
             }}
             setAppToast={setAppToast}
           />
+          <PendingApprovalModal open={pendingApprovalOpen} profile={profile} onClose={() => setPendingApprovalOpen(false)} />
           <ActionModal open={!!actionItem} item={actionItem} onClose={() => setActionItem(null)} onSaveRepro={handleSaveRepro} onSaveHealth={handleSaveHealth} setAppToast={setAppToast} />
           <DetailModal item={detailItem} onClose={() => setDetailItem(null)} onDeleteLog={handleDeleteLog} setAppToast={setAppToast} setAppConfirm={setAppConfirm} />
           <EditProfileModal open={editProfileOpen} onClose={() => setEditProfileOpen(false)} onSave={setProfile} currentProfile={profile} setAppToast={setAppToast} />
