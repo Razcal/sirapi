@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">SIRAPI Petugas</string>
+    <string name="title_activity_main">SIRAPI Petugas</string>
+    <string name="package_name">com.sirapi.petugas</string>
+    <string name="custom_url_scheme">com.sirapi.petugas</string>
+</resources>
