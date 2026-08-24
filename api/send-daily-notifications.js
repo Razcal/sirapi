@@ -19,11 +19,10 @@ import { analyzeCattle } from '../src/core/analyzeCattle.js';
 // baris mana dikirim lewat jalur mana.
 
 let firebaseApp = null;
-let firebaseInitError = null; // TODO(sementara): hapus setelah debug FCM selesai
 function getFirebaseApp() {
   if (firebaseApp) return firebaseApp;
   const raw = process.env.FIREBASE_SERVICE_ACCOUNT;
-  if (!raw) { firebaseInitError = 'FIREBASE_SERVICE_ACCOUNT tidak ada / kosong (length: ' + (raw ? raw.length : 0) + ')'; return null; }
+  if (!raw) return null; // Belum dikonfigurasi — kirim FCM di-skip, web push tetap jalan.
   try {
     const serviceAccount = JSON.parse(raw);
     // Karakter newline di private_key sering "rata" jadi \n literal (bukan
@@ -37,7 +36,6 @@ function getFirebaseApp() {
     });
     return firebaseApp;
   } catch (e) {
-    firebaseInitError = 'JSON.parse/initializeApp gagal: ' + e.message + ' (length raw: ' + raw.length + ')';
     console.error('FIREBASE_SERVICE_ACCOUNT tidak valid (harus JSON service account Firebase):', e.message);
     return null;
   }
@@ -95,7 +93,6 @@ export default async function handler(req, res) {
     let sent = 0;
     let failed = 0;
     let skippedNative = 0;
-    const debugErrors = []; // TODO(sementara): hapus setelah debug FCM selesai
 
     for (const sub of subscriptions) {
       const name = nameByUserId[sub.user_id] || 'Peternak';
@@ -123,7 +120,6 @@ export default async function handler(req, res) {
           sent++;
         } catch (err) {
           failed++;
-          debugErrors.push({ code: err.code, message: err.message });
           if (err.code === 'messaging/registration-token-not-registered' || err.code === 'messaging/invalid-registration-token') {
             await supabase.from('push_subscriptions').delete().eq('endpoint', sub.endpoint);
           }
@@ -148,7 +144,7 @@ export default async function handler(req, res) {
       }
     }
 
-    return res.status(200).json({ sent, failed, skippedNative, totalSubscribers: subscriptions.length, debugErrors, firebaseInitError });
+    return res.status(200).json({ sent, failed, skippedNative, totalSubscribers: subscriptions.length });
   } catch (error) {
     console.error('Error sending notifications:', error);
     return res.status(500).json({ error: error.message });
