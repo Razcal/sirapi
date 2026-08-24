@@ -1,5 +1,12 @@
 import webpush from 'web-push';
-import admin from 'firebase-admin';
+// Pakai API modular (bukan `import admin from 'firebase-admin'`) — default
+// export firebase-admin di lingkungan ESM/Vercel serverless kadang tidak
+// membawa properti .apps dengan benar (interop CJS/ESM), bikin
+// `admin.apps.length` melempar "Cannot read properties of undefined
+// (reading 'length')". API modular ini yang direkomendasikan resmi untuk
+// ESM dan tidak punya masalah itu.
+import { initializeApp, cert, getApps, getApp } from 'firebase-admin/app';
+import { getMessaging } from 'firebase-admin/messaging';
 import { createClient } from '@supabase/supabase-js';
 import { analyzeCattle } from '../src/core/analyzeCattle.js';
 
@@ -25,8 +32,8 @@ function getFirebaseApp() {
     if (typeof serviceAccount.private_key === 'string') {
       serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, '\n');
     }
-    firebaseApp = admin.apps.length ? admin.app() : admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount),
+    firebaseApp = getApps().length ? getApp() : initializeApp({
+      credential: cert(serviceAccount),
     });
     return firebaseApp;
   } catch (e) {
@@ -108,7 +115,7 @@ export default async function handler(req, res) {
       if (isNative) {
         if (!fbApp) { skippedNative++; continue; } // Firebase belum dikonfigurasi di server ini.
         try {
-          await admin.messaging().send({
+          await getMessaging(fbApp).send({
             token: sub.fcm_token,
             notification: { title: 'SIRAPI', body },
             data: { url: '/' },
