@@ -5,7 +5,7 @@ import { DialogSystem } from "./core/components/SharedUI";
 import { TUBAN_DATA } from "./core/constants";
 import { supabase } from "./core/supabaseClient";
 import { authService } from "./core/authService";
-import { daysDiff, fmtDate, analyzeCattle, ibSinceCalving } from "./core/analyzeCattle";
+import { daysDiff, fmtDate, analyzeCattle, ibSinceCalving, applyReproAction, applyHealthAction } from "./core/analyzeCattle";
 import { Icon } from "./core/components/Icons";
 import Donut from "./core/components/Donut";
 import { HeroScene } from "./core/components/Hero";
@@ -2976,57 +2976,7 @@ function AppContent() {
   const handleSaveRepro = async (res, pregMonth, d) => {
     const idx = dbCattle.findIndex(b => b.id === actionItem.id);
     if (idx === -1) return;
-    let current = { ...dbCattle[idx] };
-
-    if (res === "NEGATIVE") {
-      current.phase = "OPEN"; current.status_reproduksi = "OPEN";
-      current.pkbLog = [...(current.pkbLog || []), { date: d, result: "NEGATIVE" }];
-    }
-    else if (res === "IB") {
-      current.phase = "BRED"; current.status_reproduksi = "BRED";
-      current.ibLog = [...(current.ibLog || []), { date: d, isSuspect: false }];
-    } 
-    else if (res === "POSITIVE") {
-      let calculatedConception = todayStr();
-
-      // ibSinceCalving, bukan current.ibLog mentah — kalau tidak disaring,
-      // sapi yang belum pernah di-IB di siklus SEKARANG tapi punya riwayat
-      // IB lama (dari kehamilan sebelumnya yang sudah lama selesai) bisa
-      // ketiban conceptionDate dari IB bertahun-tahun lalu itu.
-      const sortedIB = ibSinceCalving(current);
-      const hasIB = sortedIB.length > 0;
-
-      if (hasIB) {
-        const lastIBEntry = sortedIB[sortedIB.length - 1];
-        calculatedConception = typeof lastIBEntry === 'object' ? lastIBEntry.date : lastIBEntry;
-      } else if (pregMonth) { 
-        const dt = new Date(d); 
-        dt.setMonth(dt.getMonth() - Number(pregMonth)); 
-        calculatedConception = dt.toISOString().split("T")[0]; 
-      } 
-
-      current.phase = "PREGNANT"; 
-      current.status_reproduksi = "PREGNANT"; 
-      current.conceptionDate = calculatedConception; 
-      current.pkbLog = [...(current.pkbLog || []), { date: d, result: "POSITIVE" }]; 
-    }
-    else if (res === "CALVED") { 
-      current.phase = "POSTPARTUM"; current.status_reproduksi = "POSTPARTUM"; 
-      current.calvingDate = d; current.calvingLog = [...(current.calvingLog || []), d]; 
-      current.conceptionDate = null; 
-    }
-    else if (res === "ABORTUS") {
-      current.phase = "ABORTUS_PENDING";
-      current.status_reproduksi = "ABORTUS_PENDING";
-      current.abortusDate = d;
-      current.abortusLog = [...(current.abortusLog || []), d]; 
-      current.conceptionDate = null; 
-    }
-    else if (res === "TERAPI") {
-      current.phase = "OPEN"; 
-      current.status_reproduksi = "OPEN"; 
-      current.therapyLog = [...(current.therapyLog || []), d]; 
-    }
+    const current = applyReproAction(dbCattle[idx], res, pregMonth, d);
 
     const up = [...dbCattle]; up[idx] = current; setDbCattle(up);
 
@@ -3048,22 +2998,7 @@ function AppContent() {
     const idx = dbCattle.findIndex(b => b.id === actionItem.id);
     if (idx === -1) return;
 
-    let current = { ...dbCattle[idx] };
-
-    if (type === 'LAPOR') {
-      current.healthLog = [...(current.healthLog || []), {
-        date,
-        gejala,
-        status: "MENUNGGU_DOKTER"
-      }];
-    } else if (type === 'SEMBUH') {
-      const activeIdx = (current.healthLog || []).findIndex(h => h.status !== "SEMBUH");
-      if (activeIdx !== -1) {
-        const updatedLog = [...(current.healthLog || [])];
-        updatedLog[activeIdx] = { ...updatedLog[activeIdx], status: "SEMBUH", tanggalSembuh: date };
-        current.healthLog = updatedLog;
-      }
-    }
+    const current = applyHealthAction(dbCattle[idx], { type, date, gejala });
 
     const up = [...dbCattle];
     up[idx] = current;

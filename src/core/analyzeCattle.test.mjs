@@ -5,7 +5,7 @@
 // ditemukan lewat audit manual — supaya perbaikannya terverifikasi dan
 // tidak regresi diam-diam di kemudian hari.
 
-import { analyzeCattle } from './analyzeCattle.js';
+import { analyzeCattle, applyReproAction, applyHealthAction } from './analyzeCattle.js';
 
 let pass = 0, fail = 0;
 const eq = (label, got, want) => {
@@ -92,6 +92,36 @@ const iso = (offsetDays) => {
     healthLog: [{ status: 'MENUNGGU_DOKTER', gejala: 'demam tinggi' }],
   }).statusLabel, 'MENUNGGU DOKTER');
   eq('Data tidak valid ditangani rapi', analyzeCattle(null).statusLabel, 'DATA TIDAK VALID');
+}
+
+// --- applyReproAction/applyHealthAction: diekstrak dari App.jsx supaya
+//     App.jsx dan PetugasApp.jsx (petugas mencatat langsung ke sapi
+//     peternak lain) pakai persis logika yang sama. Test ini mengunci
+//     perilakunya biar refactor besok tidak diam-diam mengubah hasil. ---
+{
+  const sapiKosong = { id: 'x1', jenis_kelamin: 'BETINA', status_reproduksi: 'OPEN', ibLog: [] };
+
+  const setelahIB = applyReproAction(sapiKosong, 'IB', null, iso(0));
+  eq('applyReproAction IB → fase BRED', setelahIB.status_reproduksi, 'BRED');
+  eq('applyReproAction IB → tercatat di ibLog', setelahIB.ibLog.length, 1);
+  eq('sapiKosong asli tidak ikut berubah (bukan mutasi)', sapiKosong.status_reproduksi, 'OPEN');
+
+  const sapiBRED = { id: 'x2', jenis_kelamin: 'BETINA', status_reproduksi: 'BRED', ibLog: [{ date: iso(-65) }] };
+  const setelahPositif = applyReproAction(sapiBRED, 'POSITIVE', null, iso(0));
+  eq('applyReproAction POSITIVE → fase PREGNANT', setelahPositif.status_reproduksi, 'PREGNANT');
+  eq('applyReproAction POSITIVE → conceptionDate dari IB terakhir', setelahPositif.conceptionDate, iso(-65));
+
+  const sapiPregnant = { id: 'x3', jenis_kelamin: 'BETINA', status_reproduksi: 'PREGNANT', conceptionDate: iso(-280) };
+  const setelahLahir = applyReproAction(sapiPregnant, 'CALVED', null, iso(0));
+  eq('applyReproAction CALVED → fase POSTPARTUM', setelahLahir.status_reproduksi, 'POSTPARTUM');
+  eq('applyReproAction CALVED → conceptionDate direset', setelahLahir.conceptionDate, null);
+
+  const sapiSehat = { id: 'x4', jenis_kelamin: 'BETINA', status_reproduksi: 'OPEN', healthLog: [] };
+  const setelahLapor = applyHealthAction(sapiSehat, { type: 'LAPOR', date: iso(0), gejala: 'nafsu makan turun' });
+  eq('applyHealthAction LAPOR → status MENUNGGU_DOKTER', setelahLapor.healthLog[0].status, 'MENUNGGU_DOKTER');
+
+  const setelahSembuh = applyHealthAction(setelahLapor, { type: 'SEMBUH', date: iso(1) });
+  eq('applyHealthAction SEMBUH → status jadi SEMBUH', setelahSembuh.healthLog[0].status, 'SEMBUH');
 }
 
 console.log(`\n${pass} lolos, ${fail} gagal`);

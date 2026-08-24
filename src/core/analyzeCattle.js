@@ -10,6 +10,15 @@ export const fmtDate = (d) => {
   catch { return "-"; }
 };
 
+// Tanggal hari ini menurut zona waktu LOKAL (sama seperti todayStr() di
+// App.jsx) — bukan new Date().toISOString() yang UTC, supaya keduanya
+// selalu identik walau dipanggil dekat pergantian hari WIB.
+const todayStrLocal = () => {
+  const d = new Date();
+  const p = (n) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+};
+
 // ibLog tidak pernah dikosongkan saat sapi melahirkan (lihat handleSaveRepro
 // di App.jsx, res==="CALVED" cuma reset conceptionDate, bukan ibLog) — jadi
 // ini riwayat IB SEUMUR HIDUP sapi, bisa mencakup beberapa periode laktasi
@@ -30,6 +39,84 @@ export const ibSinceCalving = (item) => {
       return new Date(da) - new Date(db);
     });
 };
+
+// Mengubah data sapi sesuai hasil pencatatan reproduksi (Inseminasi Buatan,
+// hasil pemeriksaan kebuntingan, melahirkan, keguguran, terapi). Diekstrak
+// dari App.jsx (dulu inline di handleSaveRepro) supaya App.jsx dan
+// PetugasApp.jsx (petugas mencatat langsung untuk sapi peternak lain) pakai
+// persis logika yang sama — tidak ada yang bisa drift/beda perilaku.
+// Return objek sapi baru (tidak memutasi `item`); pemanggil yang tanggung
+// jawab menyimpan ke server lewat cattleService.updateCattle().
+export function applyReproAction(item, res, pregMonth, d) {
+  let current = { ...item };
+
+  if (res === "NEGATIVE") {
+    current.phase = "OPEN"; current.status_reproduksi = "OPEN";
+    current.pkbLog = [...(current.pkbLog || []), { date: d, result: "NEGATIVE" }];
+  }
+  else if (res === "IB") {
+    current.phase = "BRED"; current.status_reproduksi = "BRED";
+    current.ibLog = [...(current.ibLog || []), { date: d, isSuspect: false }];
+  }
+  else if (res === "POSITIVE") {
+    let calculatedConception = todayStrLocal();
+
+    const sortedIB = ibSinceCalving(current);
+    const hasIB = sortedIB.length > 0;
+
+    if (hasIB) {
+      const lastIBEntry = sortedIB[sortedIB.length - 1];
+      calculatedConception = typeof lastIBEntry === 'object' ? lastIBEntry.date : lastIBEntry;
+    } else if (pregMonth) {
+      const dt = new Date(d);
+      dt.setMonth(dt.getMonth() - Number(pregMonth));
+      calculatedConception = dt.toISOString().split("T")[0];
+    }
+
+    current.phase = "PREGNANT";
+    current.status_reproduksi = "PREGNANT";
+    current.conceptionDate = calculatedConception;
+    current.pkbLog = [...(current.pkbLog || []), { date: d, result: "POSITIVE" }];
+  }
+  else if (res === "CALVED") {
+    current.phase = "POSTPARTUM"; current.status_reproduksi = "POSTPARTUM";
+    current.calvingDate = d; current.calvingLog = [...(current.calvingLog || []), d];
+    current.conceptionDate = null;
+  }
+  else if (res === "ABORTUS") {
+    current.phase = "ABORTUS_PENDING";
+    current.status_reproduksi = "ABORTUS_PENDING";
+    current.abortusDate = d;
+    current.abortusLog = [...(current.abortusLog || []), d];
+    current.conceptionDate = null;
+  }
+  else if (res === "TERAPI") {
+    current.phase = "OPEN";
+    current.status_reproduksi = "OPEN";
+    current.therapyLog = [...(current.therapyLog || []), d];
+  }
+
+  return current;
+}
+
+// Sama seperti applyReproAction tapi untuk catatan kesehatan (lapor gejala /
+// dinyatakan sembuh). Diekstrak dari handleSaveHealth di App.jsx.
+export function applyHealthAction(item, { type, date, gejala }) {
+  let current = { ...item };
+
+  if (type === 'LAPOR') {
+    current.healthLog = [...(current.healthLog || []), { date, gejala, status: "MENUNGGU_DOKTER" }];
+  } else if (type === 'SEMBUH') {
+    const activeIdx = (current.healthLog || []).findIndex(h => h.status !== "SEMBUH");
+    if (activeIdx !== -1) {
+      const updatedLog = [...(current.healthLog || [])];
+      updatedLog[activeIdx] = { ...updatedLog[activeIdx], status: "SEMBUH", tanggalSembuh: date };
+      current.healthLog = updatedLog;
+    }
+  }
+
+  return current;
+}
 
 export function analyzeCattle(item) {
   if (!item) return { color: "slate", statusLabel: "DATA TIDAK VALID", advice: "Data tidak valid", isUrgent: false, adviceColor: "text-slate-600 bg-slate-50" };
