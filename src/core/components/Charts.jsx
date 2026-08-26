@@ -112,8 +112,10 @@ export function BarChart({ data = [], height = 132, labelSetiap = 1, onPilih, te
 /* --------------------------------------------------------------- AREA ----- */
 
 /** Garis + area untuk satu seri (misal populasi ternak dari bulan ke bulan).
-    Area diisi wash 10%, garis 2px, hanya titik akhir yang diberi penanda. */
-export function AreaChart({ data = [], height = 110, satuan = "" }) {
+    Area diisi wash 10%, garis 2px. Untuk seri pendek (mis. 6 bulan) set
+    `allPoints` supaya tiap titik dapat label + penanda + tooltip — untuk
+    seri panjang biarkan default (hanya titik akhir) supaya tidak sesak. */
+export function AreaChart({ data = [], height = 110, satuan = "", allPoints = false }) {
   if (data.length < 2) return null;
   const W = 300, H = height, pad = 10;
   const maks = Math.max(...data.map((d) => d.nilai));
@@ -128,24 +130,60 @@ export function AreaChart({ data = [], height = 110, satuan = "" }) {
   const garis = data.map((d, i) => `${i ? "L" : "M"}${x(i).toFixed(1)} ${y(d.nilai).toFixed(1)}`).join(" ");
   const isi = `${garis} L${x(data.length - 1).toFixed(1)} ${H} L${x(0).toFixed(1)} ${H} Z`;
   const akhir = data[data.length - 1];
+  // Gridline rujukan (bukan cuma garis dasar) — supaya posisi titik di
+  // tengah kurva juga bisa dibaca kira-kira nilainya, bukan cuma bentuknya.
+  const gridFracs = [0.25, 0.5, 0.75];
 
   return (
     <figure style={{ margin: 0 }}>
       <svg viewBox={`0 0 ${W} ${H}`} width="100%" height={H} style={{ display: "block", overflow: "visible" }}>
+        {gridFracs.map((f) => (
+          <line key={f} x1="0" x2={W} y1={pad + f * (H - pad * 2)} y2={pad + f * (H - pad * 2)}
+                stroke={GRID} strokeWidth="1" strokeDasharray="2 3" />
+        ))}
         <line x1="0" x2={W} y1={H - pad} y2={H - pad} stroke={GRID} strokeWidth="1" />
         <path d={isi} fill={HUE} opacity=".10" />
         <path d={garis} fill="none" stroke={HUE} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
-        {/* penanda akhir: r=4 (8px) dengan cincin permukaan 2px */}
-        <circle cx={x(data.length - 1)} cy={y(akhir.nilai)} r="4" fill={HUE} stroke="#fff" strokeWidth="2" />
+        {(allPoints ? data : [akhir]).map((d, i) => {
+          const idx = allPoints ? i : data.length - 1;
+          const isLast = idx === data.length - 1;
+          return (
+            <g key={idx}>
+              {/* target sentuh lebih besar dari titik yang terlihat, supaya tooltip mudah dipicu */}
+              <circle cx={x(idx)} cy={y(d.nilai)} r="9" fill="transparent" />
+              <circle cx={x(idx)} cy={y(d.nilai)} r={isLast ? 4 : 3}
+                      fill={isLast ? HUE : "#fff"} stroke={HUE} strokeWidth="2" />
+              <title>{`${d.label}: ${nf.format(d.nilai)}${satuan ? ` ${satuan}` : ""}`}</title>
+            </g>
+          );
+        })}
       </svg>
-      <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6 }}>
-        <span style={{ fontSize: 11, fontWeight: 600, color: INK_3 }}>
-          {datar ? "Tidak berubah sepanjang periode" : data[0].label}
-        </span>
-        <span style={{ fontSize: 11.5, fontWeight: 700, color: "var(--text)", fontVariantNumeric: "tabular-nums" }}>
-          {nf.format(akhir.nilai)}{satuan ? ` ${satuan}` : ""}
-        </span>
-      </div>
+      {allPoints ? (
+        <>
+          <div style={{ display: "flex", marginTop: 6 }}>
+            {data.map((d, i) => (
+              <span key={i} style={{
+                flex: 1, fontSize: 10.5, fontWeight: 600, color: INK_3,
+                textAlign: i === 0 ? "left" : i === data.length - 1 ? "right" : "center",
+              }}>{d.label}</span>
+            ))}
+          </div>
+          <div style={{ textAlign: "right", marginTop: 4 }}>
+            <span style={{ fontSize: 11.5, fontWeight: 700, color: "var(--text)", fontVariantNumeric: "tabular-nums" }}>
+              Bulan ini: {nf.format(akhir.nilai)}{satuan ? ` ${satuan}` : ""}
+            </span>
+          </div>
+        </>
+      ) : (
+        <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6 }}>
+          <span style={{ fontSize: 11, fontWeight: 600, color: INK_3 }}>
+            {datar ? "Tidak berubah sepanjang periode" : data[0].label}
+          </span>
+          <span style={{ fontSize: 11.5, fontWeight: 700, color: "var(--text)", fontVariantNumeric: "tabular-nums" }}>
+            {nf.format(akhir.nilai)}{satuan ? ` ${satuan}` : ""}
+          </span>
+        </div>
+      )}
     </figure>
   );
 }
@@ -228,35 +266,57 @@ const TONE = {
 /** Rincian jenis kejadian sebagai batang horizontal. Semua batang berwarna
     sama: panjangnya sudah menyatakan besaran, jadi warna tidak perlu ikut
     mengulanginya — dan slot warna tetap bebas untuk menyatakan kegentingan
-    (lewat `tone`, bukan warna beda-beda per batang). */
-export function BarList({ items = [], tone = 'brand' }) {
+    (lewat `tone`, bukan warna beda-beda per batang). Tiap baris punya
+    keterangan persentase dari total, tooltip hover dengan rincian, dan
+    (opsional) lencana peringkat — supaya bukan cuma panjang batang yang
+    bicara. */
+export function BarList({ items = [], tone = 'brand', showRank = false }) {
   const { hue, soft } = TONE[tone] || TONE.brand;
   const maks = Math.max(1, ...items.map((i) => i.nilai));
   const total = items.reduce((a, b) => a + b.nilai, 0);
   if (total === 0) {
     return <p className="t-sm c-3" style={{ margin: 0, padding: "10px 0" }}>Belum ada kejadian pada periode ini.</p>;
   }
+  const terisi = items.filter((i) => i.nilai > 0);
   return (
     <div>
-      {items.filter((i) => i.nilai > 0).map((it) => (
-        <div key={it.label} style={{ padding: "7px 0" }}>
-          <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 5 }}>
-            <span style={{ flex: 1, minWidth: 0, fontSize: 13.5, fontWeight: 600, color: "var(--text-2)" }}>
-              {it.label}
-            </span>
-            <span style={{ fontSize: 13.5, fontWeight: 700, color: "var(--text)", fontVariantNumeric: "tabular-nums" }}>
-              {nf.format(it.nilai)}
-            </span>
+      {terisi.map((it, idx) => {
+        const pct = Math.round((it.nilai / total) * 100);
+        return (
+          <div
+            key={it.label} style={{ padding: "8px 0" }}
+            title={`${it.label}: ${nf.format(it.nilai)} dari ${nf.format(total)} (${pct}%)`}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+              {showRank && (
+                <span style={{
+                  width: 18, height: 18, borderRadius: "50%", flexShrink: 0,
+                  background: idx === 0 ? soft : "var(--surface-3)",
+                  color: idx === 0 ? hue : "var(--text-3)",
+                  fontSize: 10, fontWeight: 800, fontVariantNumeric: "tabular-nums",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                }}>{idx + 1}</span>
+              )}
+              <span style={{ flex: 1, minWidth: 0, fontSize: 13.5, fontWeight: 600, color: "var(--text-2)" }}>
+                {it.label}
+              </span>
+              <span style={{ fontSize: 11.5, fontWeight: 600, color: "var(--text-3)", fontVariantNumeric: "tabular-nums" }}>
+                {pct}%
+              </span>
+              <span style={{ fontSize: 13.5, fontWeight: 700, color: "var(--text)", fontVariantNumeric: "tabular-nums", minWidth: 20, textAlign: "right" }}>
+                {nf.format(it.nilai)}
+              </span>
+            </div>
+            <div style={{ height: 9, borderRadius: 999, background: soft, overflow: "hidden" }}>
+              <div style={{
+                width: `${(it.nilai / maks) * 100}%`, height: "100%",
+                background: hue, borderRadius: 999,
+                transition: "width .5s cubic-bezier(.32,.72,0,1)",
+              }} />
+            </div>
           </div>
-          <div style={{ height: 7, borderRadius: 999, background: soft, overflow: "hidden" }}>
-            <div style={{
-              width: `${(it.nilai / maks) * 100}%`, height: "100%",
-              background: hue, borderRadius: 999,
-              transition: "width .4s cubic-bezier(.32,.72,0,1)",
-            }} />
-          </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }

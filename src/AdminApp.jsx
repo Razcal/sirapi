@@ -170,7 +170,7 @@ function RingkasanTab({ data, loading, onJumpToPeternak, onJumpToPemantauan }) {
           {perKecamatan.length === 0 ? (
             <p className="t-sm c-3">Belum ada data.</p>
           ) : (
-            <BarList items={perKecamatan.map(([kec, count]) => ({ label: kec, nilai: count }))} />
+            <BarList items={perKecamatan.map(([kec, count]) => ({ label: kec, nilai: count }))} showRank />
           )}
         </div>
 
@@ -285,12 +285,12 @@ function LaporanTab({ data }) {
         <div className="card card-pad">
           <p className="t-over" style={{ marginBottom: 4 }}>Gangguan reproduksi per kecamatan</p>
           <p className="t-xs c-3" style={{ margin: "0 0 14px" }}>Jumlah kasus gangguan reproduksi yang tercatat di tiap kecamatan.</p>
-          <BarList items={gangguanPerKecamatan} tone="crit" />
+          <BarList items={gangguanPerKecamatan} tone="crit" showRank />
         </div>
         <div className="card card-pad">
           <p className="t-over" style={{ marginBottom: 4 }}>Jenis gangguan yang paling sering</p>
           <p className="t-xs c-3" style={{ margin: "0 0 14px" }}>Sebaran jenis gangguan reproduksi berdasarkan jumlah kejadian.</p>
-          <BarList items={jenisGangguan} tone="crit" />
+          <BarList items={jenisGangguan} tone="crit" showRank />
         </div>
       </div>
 
@@ -301,13 +301,13 @@ function LaporanTab({ data }) {
           {tanpaSapi === null ? <p className="t-sm c-3">Memuat...</p> : tanpaSapi.total === 0 ? (
             <p className="t-sm c-3">Semua peternak aktif sudah input minimal 1 sapi.</p>
           ) : (
-            <BarList items={tanpaSapi.perKecamatan.map(([label, nilai]) => ({ label, nilai }))} tone="warn" />
+            <BarList items={tanpaSapi.perKecamatan.map(([label, nilai]) => ({ label, nilai }))} tone="warn" showRank />
           )}
         </div>
         <div className="card card-pad">
           <p className="t-over" style={{ marginBottom: 4 }}>Tren laporan masalah reproduksi</p>
           <p className="t-xs c-3" style={{ margin: "0 0 14px" }}>Jumlah laporan hasil PKB negatif dan kejadian keguguran per bulan, enam bulan terakhir.</p>
-          {trend === null ? <p className="t-sm c-3">Memuat...</p> : <AreaChart data={trend} satuan="laporan" />}
+          {trend === null ? <p className="t-sm c-3">Memuat...</p> : <AreaChart data={trend} satuan="laporan" allPoints />}
         </div>
       </div>
     </div>
