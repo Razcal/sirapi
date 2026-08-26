@@ -214,10 +214,23 @@ export function HeatmapLegend() {
 
 /* ---------------------------------------------------------- BAR LIST ----- */
 
+/* Slot warna dipakai kalau yang dibandingkan memang soal kegentingan
+   (mis. jumlah gangguan reproduksi per kecamatan) — bukan sekadar
+   besaran netral (mis. jumlah peternak per kecamatan, yang tetap pakai
+   hue merek). Dua warna ini SAMA dengan token severity di seluruh
+   aplikasi (--crit-dot/--warn-dot), bukan warna baru. */
+const TONE = {
+  brand: { hue: HUE, soft: HUE_SOFT },
+  crit:  { hue: "#D92D20", soft: "#FEE4E2" },
+  warn:  { hue: "#F79009", soft: "#FEF0C7" },
+};
+
 /** Rincian jenis kejadian sebagai batang horizontal. Semua batang berwarna
     sama: panjangnya sudah menyatakan besaran, jadi warna tidak perlu ikut
-    mengulanginya — dan slot warna tetap bebas untuk menyatakan kegentingan. */
-export function BarList({ items = [] }) {
+    mengulanginya — dan slot warna tetap bebas untuk menyatakan kegentingan
+    (lewat `tone`, bukan warna beda-beda per batang). */
+export function BarList({ items = [], tone = 'brand' }) {
+  const { hue, soft } = TONE[tone] || TONE.brand;
   const maks = Math.max(1, ...items.map((i) => i.nilai));
   const total = items.reduce((a, b) => a + b.nilai, 0);
   if (total === 0) {
@@ -235,10 +248,10 @@ export function BarList({ items = [] }) {
               {nf.format(it.nilai)}
             </span>
           </div>
-          <div style={{ height: 7, borderRadius: 999, background: HUE_SOFT, overflow: "hidden" }}>
+          <div style={{ height: 7, borderRadius: 999, background: soft, overflow: "hidden" }}>
             <div style={{
               width: `${(it.nilai / maks) * 100}%`, height: "100%",
-              background: HUE, borderRadius: 999,
+              background: hue, borderRadius: 999,
               transition: "width .4s cubic-bezier(.32,.72,0,1)",
             }} />
           </div>

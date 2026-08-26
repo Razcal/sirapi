@@ -3,7 +3,7 @@ import { authService } from "./core/authService";
 import { adminService } from "./core/adminService";
 import { TUBAN_DATA } from "./core/constants";
 import { Icon } from "./core/components/Icons";
-import { BarList } from "./core/components/Charts";
+import { BarList, AreaChart } from "./core/components/Charts";
 import { supabase } from "./core/supabaseClient";
 import { petugasService } from "./core/petugasService";
 import { analyzeCattle } from "./core/analyzeCattle";
@@ -250,6 +250,66 @@ function PemantauanTab({ data, loading, jumpTo }) {
           {list.map(row => <ReproRow key={row.cattle.id} row={row} />)}
         </div>
       )}
+    </div>
+  );
+}
+
+/* --------------------------------------------------------- LAPORAN ----- */
+
+// Bukan potret "hari ini" seperti Ringkasan/Pemantauan — ini empat sudut
+// pandang untuk memutuskan PROGRAM: kecamatan mana yang paling butuh
+// perhatian, jenis gangguan apa yang paling sering (menentukan jenis
+// program), di mana sosialisasi aplikasi paling dibutuhkan, dan apakah
+// tren membaik atau memburuk dari waktu ke waktu.
+function LaporanTab({ data }) {
+  const { gangguan } = data;
+  const [tanpaSapi, setTanpaSapi] = useState(null);
+  const [trend, setTrend] = useState(null);
+
+  useEffect(() => {
+    adminService.getPeternakTanpaSapi().then(res => { if (res.success) setTanpaSapi(res); });
+    adminService.getGangguanTrend().then(res => { if (res.success) setTrend(res.months); });
+  }, []);
+
+  const perKecamatan = {};
+  gangguan.forEach(row => { perKecamatan[row.peternak.kecamatan] = (perKecamatan[row.peternak.kecamatan] || 0) + 1; });
+  const gangguanPerKecamatan = Object.entries(perKecamatan).sort((a, b) => b[1] - a[1]).map(([label, nilai]) => ({ label, nilai }));
+
+  const perJenis = {};
+  gangguan.forEach(row => { perJenis[row.analysis.statusLabel] = (perJenis[row.analysis.statusLabel] || 0) + 1; });
+  const jenisGangguan = Object.entries(perJenis).sort((a, b) => b[1] - a[1]).map(([label, nilai]) => ({ label, nilai }));
+
+  return (
+    <div>
+      <div className="admin-grid-2" style={{ marginBottom: 16 }}>
+        <div className="card card-pad">
+          <p className="t-over" style={{ marginBottom: 4 }}>Gangguan reproduksi per kecamatan</p>
+          <p className="t-xs c-3" style={{ margin: "0 0 14px" }}>Kecamatan dengan kasus terbanyak — pertimbangkan kirim petugas/dokter hewan ke sana lebih dulu.</p>
+          <BarList items={gangguanPerKecamatan} tone="crit" />
+        </div>
+        <div className="card card-pad">
+          <p className="t-over" style={{ marginBottom: 4 }}>Jenis gangguan yang paling sering</p>
+          <p className="t-xs c-3" style={{ margin: "0 0 14px" }}>Menentukan jenis programnya — pelatihan teknik IB, penyuluhan nutrisi, atau kirim dokter hewan.</p>
+          <BarList items={jenisGangguan} tone="crit" />
+        </div>
+      </div>
+
+      <div className="admin-grid-2">
+        <div className="card card-pad">
+          <p className="t-over" style={{ marginBottom: 4 }}>Peternak belum input sapi{tanpaSapi ? ` (${tanpaSapi.total})` : ''}</p>
+          <p className="t-xs c-3" style={{ margin: "0 0 14px" }}>Peternak sudah disetujui tapi belum pernah catat sapi — sosialisasi/pendampingan aplikasi paling dibutuhkan di sini.</p>
+          {tanpaSapi === null ? <p className="t-sm c-3">Memuat...</p> : tanpaSapi.total === 0 ? (
+            <p className="t-sm c-3">Semua peternak aktif sudah input minimal 1 sapi.</p>
+          ) : (
+            <BarList items={tanpaSapi.perKecamatan.map(([label, nilai]) => ({ label, nilai }))} tone="warn" />
+          )}
+        </div>
+        <div className="card card-pad">
+          <p className="t-over" style={{ marginBottom: 4 }}>Tren laporan masalah reproduksi</p>
+          <p className="t-xs c-3" style={{ margin: "0 0 14px" }}>Hasil PKB negatif per bulan, 6 bulan terakhir — naik berarti perlu dievaluasi, turun berarti program yang jalan berhasil.</p>
+          {trend === null ? <p className="t-sm c-3">Memuat...</p> : <AreaChart data={trend} satuan="laporan" />}
+        </div>
+      </div>
     </div>
   );
 }
@@ -709,12 +769,14 @@ export default function AdminApp() {
   const TABS = [
     { key: 'ringkasan', label: 'Ringkasan', icon: Icon.home },
     { key: 'pemantauan', label: 'Pemantauan Sapi', icon: Icon.activity, badge: gangguanCount || null },
+    { key: 'laporan', label: 'Laporan', icon: Icon.trendUp },
     { key: 'peternak', label: 'Peternak', icon: Icon.user, badge: pendingCount || null },
     { key: 'petugas', label: 'Petugas', icon: Icon.stethoscope },
   ];
   const PAGE_META = {
     ringkasan: { title: `Selamat datang, ${admin.name.split(' ')[0]}`, sub: "Ini kondisi SIRAPI hari ini di Kabupaten Tuban." },
     pemantauan: { title: "Pemantauan sapi", sub: "Sapi yang birahi/siap kawin, dan yang diduga ada gangguan reproduksi." },
+    laporan: { title: "Laporan", sub: "Sudut pandang untuk memutuskan program — bukan potret hari ini." },
     peternak: { title: "Peternak", sub: "Tinjau pendaftaran baru, atau cari & kelola semua peternak terdaftar." },
     petugas: { title: "Petugas lapangan", sub: "Kelola akun petugas yang bertugas memantau ternak." },
   };
@@ -772,6 +834,9 @@ export default function AdminApp() {
         )}
         {tab === 'pemantauan' && (
           <PemantauanTab data={overview} loading={overviewLoading} jumpTo={pemantauanJump} />
+        )}
+        {tab === 'laporan' && (
+          overviewLoading ? <p className="t-sm c-3">Memuat...</p> : <LaporanTab data={overview} />
         )}
         {tab === 'peternak' && (
           <PeternakTab setToast={setToast} onListChange={(list) => setOverview(o => ({ ...o, pending: list }))} />

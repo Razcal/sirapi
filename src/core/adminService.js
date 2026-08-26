@@ -1,5 +1,6 @@
 import { supabase } from './supabaseClient';
 import { analyzeCattle } from './analyzeCattle';
+import { BULAN } from './analytics';
 import bcrypt from 'bcryptjs';
 
 // Label status yang berarti "sapi ini birahi / waktunya kawin sekarang" —
@@ -189,6 +190,95 @@ export const adminService = {
         .eq('id', userId);
       if (error) throw error;
       return { success: true };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  },
+
+  // Peternak yang sudah disetujui tapi belum input sapi sama sekali —
+  // menunjukkan di kecamatan mana sosialisasi/pendampingan pemakaian
+  // aplikasi paling dibutuhkan, bukan cuma "kurang peternak aktif".
+  getPeternakTanpaSapi: async () => {
+    try {
+      const { data: peternak, error: peternakError } = await supabase
+        .from('users')
+        .select('id, kecamatan')
+        .eq('role', 'peternak')
+        .eq('status', 'approved');
+      if (peternakError) throw peternakError;
+
+      const { data: cattleOwners, error: cattleError } = await supabase
+        .from('cattle')
+        .select('user_id');
+      if (cattleError) throw cattleError;
+
+      const ownerSet = new Set((cattleOwners || []).map(c => c.user_id));
+      const tanpaSapi = (peternak || []).filter(u => !ownerSet.has(u.id));
+      const perKecamatan = {};
+      tanpaSapi.forEach(u => { perKecamatan[u.kecamatan] = (perKecamatan[u.kecamatan] || 0) + 1; });
+
+      return {
+        success: true,
+        total: tanpaSapi.length,
+        perKecamatan: Object.entries(perKecamatan).sort((a, b) => b[1] - a[1]),
+      };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  },
+
+  // Tren laporan masalah reproduksi 6 bulan terakhir — dihitung dari
+  // KEJADIAN yang tercatat dengan tanggal (PKB hasil negatif, keguguran),
+  // BUKAN dari menjalankan ulang analyzeCattle mundur ke masa lalu (fungsi
+  // itu memang dirancang menilai kondisi HARI INI, bukan kondisi historis
+  // di tanggal tertentu — memutar mundur "hari ke berapa sejak IB" untuk
+  // bulan-bulan lama tidak berarti apa-apa). Jadi ini hitungan laporan
+  // masuk per bulan, dipakai untuk lihat arah tren (membaik/memburuk),
+  // bukan potret kondisi sapi saat ini (itu tugas getReproMonitoring).
+  getGangguanTrend: async () => {
+    try {
+      const { data: peternak, error: peternakError } = await supabase
+        .from('users')
+        .select('id')
+        .eq('role', 'peternak')
+        .eq('status', 'approved');
+      if (peternakError) throw peternakError;
+      const ids = (peternak || []).map(u => u.id);
+      if (ids.length === 0) return { success: true, months: [] };
+
+      // Catatan: idealnya keguguran (abortusLog) ikut dihitung di sini juga —
+      // tapi kolom itu ternyata belum ada di tabel `cattle` yang sesungguhnya
+      // (baru ada di kode reproduksi, belum pernah dimigrasikan ke database).
+      // Jadi untuk sekarang trennya cuma dari hasil PKB negatif, bukan berarti
+      // keguguran sengaja diabaikan.
+      const { data: cattleList, error: cattleError } = await supabase
+        .from('cattle')
+        .select('pkbLog')
+        .in('user_id', ids);
+      if (cattleError) throw cattleError;
+
+      const now = new Date();
+      const buckets = [];
+      for (let i = 5; i >= 0; i--) {
+        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        buckets.push({ key: `${d.getFullYear()}-${d.getMonth()}`, label: BULAN[d.getMonth()], nilai: 0 });
+      }
+      const byKey = {};
+      buckets.forEach(b => { byKey[b.key] = b; });
+
+      const tally = (dateStr) => {
+        if (!dateStr) return;
+        const d = new Date(dateStr);
+        if (Number.isNaN(d.getTime())) return;
+        const key = `${d.getFullYear()}-${d.getMonth()}`;
+        if (byKey[key]) byKey[key].nilai += 1;
+      };
+
+      (cattleList || []).forEach(item => {
+        (item.pkbLog || []).forEach(e => { if (e?.result === 'NEGATIVE') tally(e.date); });
+      });
+
+      return { success: true, months: buckets };
     } catch (error) {
       return { success: false, error: error.message };
     }
