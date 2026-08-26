@@ -1,4 +1,16 @@
 import { supabase } from './supabaseClient';
+import { analyzeCattle } from './analyzeCattle';
+
+// Label status yang berarti "sapi ini birahi / waktunya kawin sekarang" —
+// dicocokkan ke statusLabel literal dari analyzeCattle.js. Dijaga sebagai
+// daftar tetap (bukan tebak-tebak dari warna) karena cuma authoring di
+// analyzeCattle.js yang tahu persis kapan sebuah label itu soal birahi.
+const LABEL_BIRAHI = new Set([
+  "SIAP IB",
+  "DARA SIAP KAWIN",
+  "Siap Dikawinkan Kembali",
+  "WASPADA: BIRAHI TERTUNDA",
+]);
 
 // Semua fungsi di sini mengandalkan RLS di tabel `users` (belum dikunci
 // ketat per Agustus 2026 — lihat catatan di App.jsx/README terkait). Untuk
@@ -74,6 +86,49 @@ export const adminService = {
         .select('*', { count: 'exact', head: true });
       if (error) throw error;
       return { success: true, count: count || 0 };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  },
+
+  // Menjawab pertanyaan inti SIRAPI di level kabupaten: sapi mana yang
+  // birahi/siap kawin sekarang, dan sapi mana yang diduga ada gangguan
+  // reproduksi — bukan cuma jumlah peternak/sapi. Memakai analyzeCattle
+  // yang SAMA dengan App.jsx (peternak) dan petugasService.js, supaya
+  // penilaian di ketiga tempat selalu konsisten.
+  getReproMonitoring: async () => {
+    try {
+      const { data: peternakList, error: peternakError } = await supabase
+        .from('users')
+        .select('id, name, phone, kecamatan, desa, dusun')
+        .eq('role', 'peternak')
+        .eq('status', 'approved');
+      if (peternakError) throw peternakError;
+      if (!peternakList || peternakList.length === 0) return { success: true, birahi: [], gangguan: [] };
+
+      const peternakById = {};
+      peternakList.forEach(u => { peternakById[u.id] = u; });
+
+      const { data: cattleList, error: cattleError } = await supabase
+        .from('cattle')
+        .select('*')
+        .in('user_id', peternakList.map(u => u.id));
+      if (cattleError) throw cattleError;
+
+      const birahi = [];
+      const gangguan = [];
+      (cattleList || []).forEach(item => {
+        const peternak = peternakById[item.user_id];
+        if (!peternak) return; // sapi milik peternak yang belum/tidak approved — lewati
+        let analysis = null;
+        try { analysis = analyzeCattle(item); } catch { return; }
+        if (!analysis) return;
+        const row = { cattle: item, analysis, peternak };
+        if (analysis.needsVet) gangguan.push(row);
+        else if (LABEL_BIRAHI.has(analysis.statusLabel)) birahi.push(row);
+      });
+
+      return { success: true, birahi, gangguan };
     } catch (error) {
       return { success: false, error: error.message };
     }

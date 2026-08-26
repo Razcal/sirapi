@@ -16,6 +16,7 @@ import logoTuban from "./Tubankab.png";
 const nf = new Intl.NumberFormat("id-ID");
 const initials = (name = "") => name.trim().split(/\s+/).slice(0, 2).map(w => w[0]).join("").toUpperCase() || "?";
 const fmtDate = (iso) => new Date(iso).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+const waLink = (phone, pesan) => `https://wa.me/${String(phone).replace(/^0/, '62').replace(/\D/g, '')}?text=${encodeURIComponent(pesan)}`;
 
 function AdminLogin({ onLoggedIn }) {
   const [emailOrPhone, setEmailOrPhone] = useState("");
@@ -91,13 +92,40 @@ function AdminLogin({ onLoggedIn }) {
 
 /* ------------------------------------------------------- RINGKASAN ----- */
 
-function RingkasanTab({ data, loading, onJumpToPeternak }) {
+function RingkasanTab({ data, loading, onJumpToPeternak, onJumpToPemantauan }) {
   if (loading) return <p className="t-sm c-3">Memuat...</p>;
 
-  const { totalPeternak, totalSapi, totalPetugas, pending, perKecamatan } = data;
+  const { totalPeternak, totalSapi, totalPetugas, pending, perKecamatan, birahi, gangguan } = data;
 
   return (
     <div>
+      {/* Inti tujuan SIRAPI — bukan hitung peternak/sapi, tapi sapi mana yang
+          birahi (siap kawin sekarang) dan mana yang diduga ada gangguan
+          reproduksi. Sengaja ditaruh paling atas, lebih besar dari stat
+          tile administratif di bawahnya. */}
+      <div className="mission-grid">
+        <button className="mission-card is-warn" onClick={() => onJumpToPemantauan('birahi')}>
+          <div className="mission-card-head">
+            <span className="mission-icon"><Icon.heart size={18} stroke={2.2} /></span>
+            <span className="mission-count">{nf.format(birahi.length)}</span>
+          </div>
+          <div>
+            <p className="mission-label">Sapi birahi / siap kawin</p>
+            <p className="mission-desc">Waktunya IB sekarang — jangan sampai terlewat siklusnya.</p>
+          </div>
+        </button>
+        <button className="mission-card is-crit" onClick={() => onJumpToPemantauan('gangguan')}>
+          <div className="mission-card-head">
+            <span className="mission-icon"><Icon.alertCircle size={18} stroke={2.2} /></span>
+            <span className="mission-count">{nf.format(gangguan.length)}</span>
+          </div>
+          <div>
+            <p className="mission-label">Gangguan reproduksi</p>
+            <p className="mission-desc">Diduga ada masalah — perlu petugas/dokter hewan segera.</p>
+          </div>
+        </button>
+      </div>
+
       <div className="stat-grid-4" style={{ marginBottom: 22 }}>
         <div className="stat">
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
@@ -168,6 +196,58 @@ function RingkasanTab({ data, loading, onJumpToPeternak }) {
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------ PEMANTAUAN ----- */
+
+function ReproRow({ row }) {
+  const { cattle, analysis, peternak } = row;
+  return (
+    <div className="row" style={{ cursor: "default", alignItems: "flex-start", flexWrap: "wrap", gap: 12 }}>
+      <div className="row-main">
+        <span className="row-title">{cattle.code || cattle.id} <span className="c-3" style={{ fontWeight: 500 }}>· {peternak.name}</span></span>
+        <span className="row-sub">{analysis.statusLabel}</span>
+        <span className="t-xs c-3">{peternak.desa}, {peternak.kecamatan}</span>
+      </div>
+      <a href={waLink(peternak.phone, `Halo Pak/Bu ${peternak.name}, dari Dinas mau menindaklanjuti sapi ${cattle.code || cattle.id} — ${analysis.statusLabel}.`)}
+         className="btn btn-sm btn-secondary">
+        <Icon.phone size={14} stroke={2.2} /> Hubungi
+      </a>
+    </div>
+  );
+}
+
+function PemantauanTab({ data, loading, jumpTo }) {
+  const [section, setSection] = useState(jumpTo || 'birahi');
+  useEffect(() => { if (jumpTo) setSection(jumpTo); }, [jumpTo]);
+
+  if (loading) return <p className="t-sm c-3">Memuat...</p>;
+  const { birahi, gangguan } = data;
+  const list = section === 'birahi' ? birahi : gangguan;
+
+  return (
+    <div>
+      <div className="segmented" style={{ maxWidth: 420, marginBottom: 18 }}>
+        <button onClick={() => setSection('birahi')} className={section === 'birahi' ? 'active' : ''}>
+          <Icon.heart size={15} stroke={2.2} /> Birahi ({birahi.length})
+        </button>
+        <button onClick={() => setSection('gangguan')} className={section === 'gangguan' ? 'active' : ''}>
+          <Icon.alertCircle size={15} stroke={2.2} /> Gangguan ({gangguan.length})
+        </button>
+      </div>
+
+      {list.length === 0 ? (
+        <div className="empty">
+          <p className="empty-title">{section === 'birahi' ? "Tidak ada yang birahi saat ini" : "Tidak ada gangguan reproduksi terdeteksi"}</p>
+          <p className="empty-text">{section === 'birahi' ? "Belum ada sapi yang perlu di-IB sekarang." : "Semua sapi dalam kondisi terpantau baik."}</p>
+        </div>
+      ) : (
+        <div className="rowlist">
+          {list.map(row => <ReproRow key={row.cattle.id} row={row} />)}
+        </div>
+      )}
     </div>
   );
 }
@@ -347,16 +427,18 @@ export default function AdminApp() {
   // Data agregat dipakai di Ringkasan; sub-tab lain melaporkan lewat
   // onListChange supaya angka di kartu ringkasan & lencana sidebar tetap
   // sinkron begitu admin menyetujui/menolak/menambah, tanpa refetch ganda.
-  const [overview, setOverview] = useState({ totalPeternak: 0, totalSapi: null, totalPetugas: 0, pending: [], perKecamatan: [] });
+  const [overview, setOverview] = useState({ totalPeternak: 0, totalSapi: null, totalPetugas: 0, pending: [], perKecamatan: [], birahi: [], gangguan: [] });
   const [overviewLoading, setOverviewLoading] = useState(true);
+  const [pemantauanJump, setPemantauanJump] = useState(null);
 
   const loadOverview = async () => {
     setOverviewLoading(true);
-    const [pendingRes, approvedRes, cattleRes, petugasRes] = await Promise.all([
+    const [pendingRes, approvedRes, cattleRes, petugasRes, reproRes] = await Promise.all([
       adminService.getPendingPeternak(),
       adminService.getApprovedPeternak(),
       adminService.getCattleCount(),
       adminService.getPetugasList(),
+      adminService.getReproMonitoring(),
     ]);
     const perKecamatan = {};
     if (approvedRes.success) approvedRes.users.forEach(u => { perKecamatan[u.kecamatan] = (perKecamatan[u.kecamatan] || 0) + 1; });
@@ -366,6 +448,8 @@ export default function AdminApp() {
       totalPetugas: petugasRes.success ? petugasRes.users.length : 0,
       pending: pendingRes.success ? pendingRes.users : [],
       perKecamatan: Object.entries(perKecamatan).sort((a, b) => b[1] - a[1]),
+      birahi: reproRes.success ? reproRes.birahi : [],
+      gangguan: reproRes.success ? reproRes.gangguan : [],
     });
     setOverviewLoading(false);
   };
@@ -405,13 +489,16 @@ export default function AdminApp() {
   }
 
   const pendingCount = overview.pending.length;
+  const gangguanCount = overview.gangguan.length;
   const TABS = [
     { key: 'ringkasan', label: 'Ringkasan', icon: Icon.home },
+    { key: 'pemantauan', label: 'Pemantauan Sapi', icon: Icon.activity, badge: gangguanCount || null },
     { key: 'peternak', label: 'Peternak Baru', icon: Icon.user, badge: pendingCount || null },
     { key: 'petugas', label: 'Petugas', icon: Icon.stethoscope },
   ];
   const PAGE_META = {
     ringkasan: { title: `Selamat datang, ${admin.name.split(' ')[0]}`, sub: "Ini kondisi SIRAPI hari ini di Kabupaten Tuban." },
+    pemantauan: { title: "Pemantauan sapi", sub: "Sapi yang birahi/siap kawin, dan yang diduga ada gangguan reproduksi." },
     peternak: { title: "Peternak baru", sub: "Tinjau pendaftaran yang menunggu persetujuan." },
     petugas: { title: "Petugas lapangan", sub: "Kelola akun petugas yang bertugas memantau ternak." },
   };
@@ -460,7 +547,15 @@ export default function AdminApp() {
         </div>
 
         {tab === 'ringkasan' && (
-          <RingkasanTab data={overview} loading={overviewLoading} onJumpToPeternak={() => setTab('peternak')} />
+          <RingkasanTab
+            data={overview}
+            loading={overviewLoading}
+            onJumpToPeternak={() => setTab('peternak')}
+            onJumpToPemantauan={(section) => { setPemantauanJump(section); setTab('pemantauan'); }}
+          />
+        )}
+        {tab === 'pemantauan' && (
+          <PemantauanTab data={overview} loading={overviewLoading} jumpTo={pemantauanJump} />
         )}
         {tab === 'peternak' && (
           <PeternakBaruTab setToast={setToast} onListChange={(list) => setOverview(o => ({ ...o, pending: list }))} />
