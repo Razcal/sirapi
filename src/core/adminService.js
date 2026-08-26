@@ -1,5 +1,6 @@
 import { supabase } from './supabaseClient';
 import { analyzeCattle } from './analyzeCattle';
+import bcrypt from 'bcryptjs';
 
 // Label status yang berarti "sapi ini birahi / waktunya kawin sekarang" —
 // dicocokkan ke statusLabel literal dari analyzeCattle.js. Dijaga sebagai
@@ -129,6 +130,65 @@ export const adminService = {
       });
 
       return { success: true, birahi, gangguan };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  },
+
+  // Semua peternak apapun statusnya (approved/pending/rejected) — dipakai
+  // sub-tab "Semua Peternak", beda dari getPendingPeternak yang cuma yang
+  // menunggu. Pencarian dilakukan di sisi klien (jumlah masih ratusan,
+  // belum perlu query server per ketikan).
+  getAllPeternak: async () => {
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('role', 'peternak')
+        .order('name', { ascending: true });
+      if (error) throw error;
+      return { success: true, users: (data || []).map((u) => { const { password_hash: _password_hash, ...safe } = u; return safe; }) };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  },
+
+  // Ubah data profil (nama, HP, wilayah) — dipakai admin untuk peternak
+  // maupun petugas, dari panel detail akun.
+  updateUserProfile: async (userId, patch) => {
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .update({ ...patch, updated_at: new Date().toISOString() })
+        .eq('id', userId)
+        .select()
+        .single();
+      if (error) throw error;
+      const { password_hash: _password_hash, ...safeUser } = data;
+      return { success: true, user: safeUser };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  },
+
+  // Reset kata sandi langsung dari panel admin (peternak lupa kata sandi
+  // adalah keluhan yang sering, sebelumnya tidak ada jalan lain selain
+  // minta bantuan lewat kode). Semua akun saat ini (Agustus 2026) memakai
+  // jalur bcrypt fallback — lihat catatan di authService.js — jadi tulis
+  // langsung ke password_hash selalu berlaku, bukan cuma untuk sebagian
+  // akun. Kalau nanti ada akun Supabase Auth murni (tanpa password_hash),
+  // fungsi ini masih menuliskan password_hash sebagai fallback baru untuk
+  // akun itu — login tetap jalan karena authService.login mengecek
+  // password_hash lebih dulu sebelum coba Supabase Auth.
+  resetUserPassword: async (userId, newPassword) => {
+    try {
+      const hash = await bcrypt.hash(newPassword.trim(), 10);
+      const { error } = await supabase
+        .from('users')
+        .update({ password_hash: hash, updated_at: new Date().toISOString() })
+        .eq('id', userId);
+      if (error) throw error;
+      return { success: true };
     } catch (error) {
       return { success: false, error: error.message };
     }

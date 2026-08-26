@@ -5,6 +5,8 @@ import { TUBAN_DATA } from "./core/constants";
 import { Icon } from "./core/components/Icons";
 import { BarList } from "./core/components/Charts";
 import { supabase } from "./core/supabaseClient";
+import { petugasService } from "./core/petugasService";
+import { analyzeCattle } from "./core/analyzeCattle";
 import logoTuban from "./Tubankab.png";
 
 // Panel admin — web murni, tidak dibundel ke APK peternak (lihat main.jsx).
@@ -307,6 +309,212 @@ function PeternakBaruTab({ setToast, onListChange }) {
   );
 }
 
+// Direktori lengkap semua peternak (bukan cuma yang menunggu) — "lihat
+// semua data" yang diminta: cari, klik satu orang, lihat & edit profilnya
+// plus semua sapi miliknya lewat UserDetailModal.
+function SemuaPeternakTab({ setToast }) {
+  const [loading, setLoading] = useState(true);
+  const [list, setList] = useState([]);
+  const [query, setQuery] = useState("");
+  const [selected, setSelected] = useState(null);
+
+  const load = async () => {
+    setLoading(true);
+    const result = await adminService.getAllPeternak();
+    if (result.success) setList(result.users);
+    else setToast({ message: result.error, type: "error" });
+    setLoading(false);
+  };
+
+  useEffect(() => { load(); }, []);
+
+  const q = query.trim().toLowerCase();
+  const filtered = !q ? list : list.filter(u =>
+    u.name?.toLowerCase().includes(q) || u.phone?.includes(q) || u.desa?.toLowerCase().includes(q) || u.kecamatan?.toLowerCase().includes(q)
+  );
+
+  const STATUS_BADGE = { approved: 'badge-ok', pending: 'badge-warn', rejected: 'badge-crit' };
+  const STATUS_LABEL = { approved: 'Aktif', pending: 'Menunggu', rejected: 'Ditolak' };
+
+  return (
+    <div>
+      <div className="input-icon" style={{ marginBottom: 16, maxWidth: 420 }}>
+        <Icon.search size={18} />
+        <input className="input" placeholder="Cari nama, HP, desa, atau kecamatan..." value={query} onChange={e => setQuery(e.target.value)} />
+      </div>
+
+      {loading ? <p className="t-sm c-3">Memuat...</p> : filtered.length === 0 ? (
+        <p className="t-sm c-3">{q ? "Tidak ditemukan." : "Belum ada peternak terdaftar."}</p>
+      ) : (
+        <div className="rowlist">
+          {filtered.map(u => (
+            <button key={u.id} onClick={() => setSelected(u)} className="row">
+              <span className="admin-avatar" style={{ background: "var(--brand-soft)", color: "var(--brand)" }}>{initials(u.name)}</span>
+              <div className="row-main">
+                <span className="row-title">{u.name}</span>
+                <span className="row-sub">{u.phone} · {u.desa}, {u.kecamatan}</span>
+              </div>
+              <span className={`badge ${STATUS_BADGE[u.status] || 'badge-neut'}`}>{STATUS_LABEL[u.status] || u.status}</span>
+              <Icon.chevronRight size={17} className="row-chev" />
+            </button>
+          ))}
+        </div>
+      )}
+
+      <UserDetailModal
+        user={selected} kind="peternak" open={!!selected} setToast={setToast}
+        onClose={() => setSelected(null)}
+        onSaved={(updated) => { setList(prev => prev.map(u => u.id === updated.id ? { ...u, ...updated } : u)); setSelected(updated); }}
+      />
+    </div>
+  );
+}
+
+// Pembungkus tab Peternak: "Menunggu" (persetujuan, alur lama tak
+// berubah) dan "Semua" (direktori lengkap, baru).
+function PeternakTab({ setToast, onListChange }) {
+  const [section, setSection] = useState('menunggu');
+  return (
+    <div>
+      <div className="segmented" style={{ maxWidth: 320, marginBottom: 18 }}>
+        <button onClick={() => setSection('menunggu')} className={section === 'menunggu' ? 'active' : ''}>Menunggu</button>
+        <button onClick={() => setSection('semua')} className={section === 'semua' ? 'active' : ''}>Semua Peternak</button>
+      </div>
+      {section === 'menunggu'
+        ? <PeternakBaruTab setToast={setToast} onListChange={onListChange} />
+        : <SemuaPeternakTab setToast={setToast} />}
+    </div>
+  );
+}
+
+/* -------------------------------------------------------- DETAIL AKUN ----- */
+
+// Panel "spek dewa": lihat & edit profil, reset kata sandi, dan (khusus
+// peternak) lihat semua sapi miliknya — dipakai dari tab Peternak (Semua)
+// maupun Petugas. Satu komponen untuk dua konteks supaya tidak ada dua
+// form edit yang bisa saling melenceng.
+function UserDetailModal({ user, kind, open, onClose, setToast, onSaved }) {
+  const [form, setForm] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const [cattle, setCattle] = useState(null); // null = belum dimuat
+  const [newPassword, setNewPassword] = useState("");
+  const [resetting, setResetting] = useState(false);
+
+  useEffect(() => {
+    if (!user) return;
+    setForm({ name: user.name, phone: user.phone, kecamatan: user.kecamatan, desa: user.desa });
+    setNewPassword("");
+    setCattle(null);
+    if (kind === 'peternak') {
+      petugasService.getCattleByFarmer(user.id).then(res => { if (res.success) setCattle(res.cattle); });
+    }
+  }, [user, kind]);
+
+  if (!open || !user || !form) return null;
+
+  const handleKecamatanChange = (kec) => setForm(f => ({ ...f, kecamatan: kec, desa: TUBAN_DATA[kec]?.[0] || "" }));
+
+  const saveProfile = async () => {
+    setSaving(true);
+    const res = await adminService.updateUserProfile(user.id, form);
+    setSaving(false);
+    if (res.success) { setToast({ message: "Profil diperbarui.", type: "success" }); onSaved?.(res.user); }
+    else setToast({ message: res.error, type: "error" });
+  };
+
+  const doResetPassword = async () => {
+    if (newPassword.trim().length < 6) return setToast({ message: "Kata sandi minimal 6 karakter.", type: "error" });
+    setResetting(true);
+    const res = await adminService.resetUserPassword(user.id, newPassword);
+    setResetting(false);
+    if (res.success) { setToast({ message: `Kata sandi ${user.name} berhasil direset.`, type: "success" }); setNewPassword(""); }
+    else setToast({ message: res.error, type: "error" });
+  };
+
+  return (
+    <div className="sheet-overlay" onClick={onClose}>
+      <div className="sheet" style={{ maxWidth: 560 }} onClick={e => e.stopPropagation()}>
+        <div className="sheet-head">
+          <div style={{ minWidth: 0 }}>
+            <p className="t-h3 c-1" style={{ margin: 0 }}>{user.name}</p>
+            <p className="t-xs c-3" style={{ margin: "2px 0 0" }}>{kind === 'peternak' ? 'Peternak' : 'Petugas'} · {user.email}</p>
+          </div>
+          <button onClick={onClose} className="icon-btn"><Icon.close size={17} /></button>
+        </div>
+
+        <div className="sheet-body">
+          <p className="t-over" style={{ marginBottom: 10 }}>Profil</p>
+          <div className="field"><label className="field-label">Nama lengkap</label>
+            <input className="input" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} />
+          </div>
+          <div className="field"><label className="field-label">Nomor HP</label>
+            <input className="input" value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} />
+          </div>
+          <div style={{ display: "flex", gap: 10 }}>
+            <div className="field" style={{ flex: 1 }}><label className="field-label">Kecamatan</label>
+              <select className="select" value={form.kecamatan} onChange={e => handleKecamatanChange(e.target.value)}>
+                {Object.keys(TUBAN_DATA).map(k => <option key={k} value={k}>{k}</option>)}
+              </select>
+            </div>
+            <div className="field" style={{ flex: 1 }}><label className="field-label">Desa</label>
+              <select className="select" value={form.desa} onChange={e => setForm({ ...form, desa: e.target.value })}>
+                {(TUBAN_DATA[form.kecamatan] || []).map(d => <option key={d} value={d}>{d}</option>)}
+              </select>
+            </div>
+          </div>
+          <button onClick={saveProfile} disabled={saving} className="btn btn-primary btn-sm">
+            {saving ? "Menyimpan..." : "Simpan profil"}
+          </button>
+
+          <hr className="divider" style={{ margin: "22px 0" }} />
+
+          <p className="t-over" style={{ marginBottom: 6 }}>Reset kata sandi</p>
+          <p className="t-xs c-3" style={{ margin: "0 0 10px" }}>
+            Sampaikan kata sandi baru ke pemiliknya secara langsung (WhatsApp/lisan) — tidak ditampilkan lagi setelah ini.
+          </p>
+          <div style={{ display: "flex", gap: 8 }}>
+            <input
+              type="text" className="input" style={{ flex: 1 }}
+              placeholder="Kata sandi baru (min. 6 karakter)"
+              value={newPassword} onChange={e => setNewPassword(e.target.value)}
+            />
+            <button onClick={doResetPassword} disabled={resetting} className="btn btn-secondary btn-sm">
+              {resetting ? "..." : "Reset"}
+            </button>
+          </div>
+
+          {kind === 'peternak' && (
+            <>
+              <hr className="divider" style={{ margin: "22px 0" }} />
+              <p className="t-over" style={{ marginBottom: 10 }}>Sapi milik peternak ini{cattle ? ` (${cattle.length})` : ''}</p>
+              {cattle === null ? (
+                <p className="t-sm c-3">Memuat...</p>
+              ) : cattle.length === 0 ? (
+                <p className="t-sm c-3">Belum ada sapi terdaftar.</p>
+              ) : (
+                <div className="rowlist">
+                  {cattle.map(item => {
+                    let a = null;
+                    try { a = analyzeCattle(item); } catch { /* data sapi ini tak lengkap, tampilkan apa adanya */ }
+                    return (
+                      <div key={item.id} className="row" style={{ cursor: "default" }}>
+                        <div className="row-main">
+                          <span className="row-title">{item.code || item.id}</span>
+                          <span className="row-sub">{a?.statusLabel || 'Data belum lengkap'}</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* -------------------------------------------------------------- PETUGAS ----- */
 
 function PetugasTab({ session, setToast, onListChange }) {
@@ -316,6 +524,7 @@ function PetugasTab({ session, setToast, onListChange }) {
   const [form, setForm] = useState({ name: "", email: "", phone: "", kecamatan: "Tuban", desa: "Baturetno", password: "" });
   const [saving, setSaving] = useState(false);
   const [createdCreds, setCreatedCreds] = useState(null);
+  const [selected, setSelected] = useState(null);
 
   const load = async () => {
     setLoading(true);
@@ -400,17 +609,24 @@ function PetugasTab({ session, setToast, onListChange }) {
       ) : (
         <div className="rowlist">
           {list.map(u => (
-            <div key={u.id} className="row" style={{ cursor: "default" }}>
+            <button key={u.id} onClick={() => setSelected(u)} className="row">
               <span className="admin-avatar" style={{ background: "var(--info-bg)", color: "var(--info)" }}>{initials(u.name)}</span>
               <div className="row-main">
                 <span className="row-title">{u.name}</span>
                 <span className="row-sub">{u.phone} · {u.email}</span>
                 <span className="row-sub">Wilayah: {u.kecamatan}</span>
               </div>
-            </div>
+              <Icon.chevronRight size={17} className="row-chev" />
+            </button>
           ))}
         </div>
       )}
+
+      <UserDetailModal
+        user={selected} kind="petugas" open={!!selected} setToast={setToast}
+        onClose={() => setSelected(null)}
+        onSaved={(updated) => { setList(prev => prev.map(u => u.id === updated.id ? { ...u, ...updated } : u)); setSelected(updated); }}
+      />
     </div>
   );
 }
@@ -493,13 +709,13 @@ export default function AdminApp() {
   const TABS = [
     { key: 'ringkasan', label: 'Ringkasan', icon: Icon.home },
     { key: 'pemantauan', label: 'Pemantauan Sapi', icon: Icon.activity, badge: gangguanCount || null },
-    { key: 'peternak', label: 'Peternak Baru', icon: Icon.user, badge: pendingCount || null },
+    { key: 'peternak', label: 'Peternak', icon: Icon.user, badge: pendingCount || null },
     { key: 'petugas', label: 'Petugas', icon: Icon.stethoscope },
   ];
   const PAGE_META = {
     ringkasan: { title: `Selamat datang, ${admin.name.split(' ')[0]}`, sub: "Ini kondisi SIRAPI hari ini di Kabupaten Tuban." },
     pemantauan: { title: "Pemantauan sapi", sub: "Sapi yang birahi/siap kawin, dan yang diduga ada gangguan reproduksi." },
-    peternak: { title: "Peternak baru", sub: "Tinjau pendaftaran yang menunggu persetujuan." },
+    peternak: { title: "Peternak", sub: "Tinjau pendaftaran baru, atau cari & kelola semua peternak terdaftar." },
     petugas: { title: "Petugas lapangan", sub: "Kelola akun petugas yang bertugas memantau ternak." },
   };
 
@@ -558,7 +774,7 @@ export default function AdminApp() {
           <PemantauanTab data={overview} loading={overviewLoading} jumpTo={pemantauanJump} />
         )}
         {tab === 'peternak' && (
-          <PeternakBaruTab setToast={setToast} onListChange={(list) => setOverview(o => ({ ...o, pending: list }))} />
+          <PeternakTab setToast={setToast} onListChange={(list) => setOverview(o => ({ ...o, pending: list }))} />
         )}
         {tab === 'petugas' && (
           <PetugasTab session={session} setToast={setToast} onListChange={(list) => setOverview(o => ({ ...o, totalPetugas: list.length }))} />
