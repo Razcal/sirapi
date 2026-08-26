@@ -58,10 +58,10 @@ function AdminLogin({ onLoggedIn }) {
         </div>
         <div style={{ position: "relative", zIndex: 2 }}>
           <p style={{ fontSize: 26, fontWeight: 800, color: "#fff", letterSpacing: "-.02em", lineHeight: 1.25, margin: "0 0 12px", maxWidth: 360 }}>
-            Pusat kendali reproduksi ternak Kabupaten Tuban.
+            Sistem Informasi Reproduksi Sapi Kabupaten Tuban.
           </p>
           <p style={{ fontSize: 13.5, fontWeight: 500, color: "rgba(255,255,255,.62)", lineHeight: 1.6, margin: 0, maxWidth: 340 }}>
-            Validasi pendaftaran peternak, kelola akun petugas lapangan, dan pantau sebaran ternak per kecamatan dari satu tempat.
+            Modul administrasi untuk pengelolaan data pendaftaran peternak, akun petugas lapangan, dan rekapitulasi data ternak per kecamatan.
           </p>
         </div>
       </div>
@@ -113,7 +113,7 @@ function RingkasanTab({ data, loading, onJumpToPeternak, onJumpToPemantauan }) {
           </div>
           <div>
             <p className="mission-label">Sapi birahi / siap kawin</p>
-            <p className="mission-desc">Waktunya IB sekarang — jangan sampai terlewat siklusnya.</p>
+            <p className="mission-desc">Jumlah sapi pada fase birahi atau siap dikawinkan.</p>
           </div>
         </button>
         <button className="mission-card is-crit" onClick={() => onJumpToPemantauan('gangguan')}>
@@ -123,7 +123,7 @@ function RingkasanTab({ data, loading, onJumpToPeternak, onJumpToPemantauan }) {
           </div>
           <div>
             <p className="mission-label">Gangguan reproduksi</p>
-            <p className="mission-desc">Diduga ada masalah — perlu petugas/dokter hewan segera.</p>
+            <p className="mission-desc">Jumlah sapi yang teridentifikasi mengalami gangguan reproduksi.</p>
           </div>
         </button>
       </div>
@@ -242,8 +242,8 @@ function PemantauanTab({ data, loading, jumpTo }) {
 
       {list.length === 0 ? (
         <div className="empty">
-          <p className="empty-title">{section === 'birahi' ? "Tidak ada yang birahi saat ini" : "Tidak ada gangguan reproduksi terdeteksi"}</p>
-          <p className="empty-text">{section === 'birahi' ? "Belum ada sapi yang perlu di-IB sekarang." : "Semua sapi dalam kondisi terpantau baik."}</p>
+          <p className="empty-title">{section === 'birahi' ? "Tidak ada sapi pada fase birahi" : "Tidak ada gangguan reproduksi terdeteksi"}</p>
+          <p className="empty-text">{section === 'birahi' ? "Tidak ada sapi yang tercatat pada fase birahi saat ini." : "Tidak ada sapi yang teridentifikasi mengalami gangguan reproduksi."}</p>
         </div>
       ) : (
         <div className="rowlist">
@@ -256,11 +256,11 @@ function PemantauanTab({ data, loading, jumpTo }) {
 
 /* --------------------------------------------------------- LAPORAN ----- */
 
-// Bukan potret "hari ini" seperti Ringkasan/Pemantauan — ini empat sudut
-// pandang untuk memutuskan PROGRAM: kecamatan mana yang paling butuh
-// perhatian, jenis gangguan apa yang paling sering (menentukan jenis
-// program), di mana sosialisasi aplikasi paling dibutuhkan, dan apakah
-// tren membaik atau memburuk dari waktu ke waktu.
+// Rekapitulasi data, bukan potret "hari ini" seperti Ringkasan/Pemantauan:
+// sebaran gangguan reproduksi per kecamatan dan per jenis, status
+// pencatatan sapi per kecamatan, dan tren laporan enam bulan terakhir.
+// Halaman ini menyajikan data apa adanya — keputusan program tetap ada
+// di tangan Dinas.
 function LaporanTab({ data }) {
   const { gangguan } = data;
   const [tanpaSapi, setTanpaSapi] = useState(null);
@@ -284,12 +284,12 @@ function LaporanTab({ data }) {
       <div className="admin-grid-2" style={{ marginBottom: 16 }}>
         <div className="card card-pad">
           <p className="t-over" style={{ marginBottom: 4 }}>Gangguan reproduksi per kecamatan</p>
-          <p className="t-xs c-3" style={{ margin: "0 0 14px" }}>Kecamatan dengan kasus terbanyak — pertimbangkan kirim petugas/dokter hewan ke sana lebih dulu.</p>
+          <p className="t-xs c-3" style={{ margin: "0 0 14px" }}>Jumlah kasus gangguan reproduksi yang tercatat di tiap kecamatan.</p>
           <BarList items={gangguanPerKecamatan} tone="crit" />
         </div>
         <div className="card card-pad">
           <p className="t-over" style={{ marginBottom: 4 }}>Jenis gangguan yang paling sering</p>
-          <p className="t-xs c-3" style={{ margin: "0 0 14px" }}>Menentukan jenis programnya — pelatihan teknik IB, penyuluhan nutrisi, atau kirim dokter hewan.</p>
+          <p className="t-xs c-3" style={{ margin: "0 0 14px" }}>Sebaran jenis gangguan reproduksi berdasarkan jumlah kejadian.</p>
           <BarList items={jenisGangguan} tone="crit" />
         </div>
       </div>
@@ -297,7 +297,7 @@ function LaporanTab({ data }) {
       <div className="admin-grid-2">
         <div className="card card-pad">
           <p className="t-over" style={{ marginBottom: 4 }}>Peternak belum input sapi{tanpaSapi ? ` (${tanpaSapi.total})` : ''}</p>
-          <p className="t-xs c-3" style={{ margin: "0 0 14px" }}>Peternak sudah disetujui tapi belum pernah catat sapi — sosialisasi/pendampingan aplikasi paling dibutuhkan di sini.</p>
+          <p className="t-xs c-3" style={{ margin: "0 0 14px" }}>Peternak berstatus aktif yang belum memiliki data sapi, berdasarkan kecamatan.</p>
           {tanpaSapi === null ? <p className="t-sm c-3">Memuat...</p> : tanpaSapi.total === 0 ? (
             <p className="t-sm c-3">Semua peternak aktif sudah input minimal 1 sapi.</p>
           ) : (
@@ -306,7 +306,7 @@ function LaporanTab({ data }) {
         </div>
         <div className="card card-pad">
           <p className="t-over" style={{ marginBottom: 4 }}>Tren laporan masalah reproduksi</p>
-          <p className="t-xs c-3" style={{ margin: "0 0 14px" }}>PKB negatif + keguguran per bulan, 6 bulan terakhir — naik berarti perlu dievaluasi, turun berarti program yang jalan berhasil.</p>
+          <p className="t-xs c-3" style={{ margin: "0 0 14px" }}>Jumlah laporan hasil PKB negatif dan kejadian keguguran per bulan, enam bulan terakhir.</p>
           {trend === null ? <p className="t-sm c-3">Memuat...</p> : <AreaChart data={trend} satuan="laporan" />}
         </div>
       </div>
@@ -665,7 +665,7 @@ function PetugasTab({ session, setToast, onListChange }) {
       )}
 
       {loading ? <p className="t-sm c-3">Memuat...</p> : list.length === 0 ? (
-        <div className="empty"><p className="empty-title">Belum ada petugas</p><p className="empty-text">Tambahkan akun petugas lapangan pertama.</p></div>
+        <div className="empty"><p className="empty-title">Belum ada petugas</p><p className="empty-text">Belum ada akun petugas lapangan yang terdaftar.</p></div>
       ) : (
         <div className="rowlist">
           {list.map(u => (
@@ -774,11 +774,11 @@ export default function AdminApp() {
     { key: 'petugas', label: 'Petugas', icon: Icon.stethoscope },
   ];
   const PAGE_META = {
-    ringkasan: { title: `Selamat datang, ${admin.name.split(' ')[0]}`, sub: "Ini kondisi SIRAPI hari ini di Kabupaten Tuban." },
-    pemantauan: { title: "Pemantauan sapi", sub: "Sapi yang birahi/siap kawin, dan yang diduga ada gangguan reproduksi." },
-    laporan: { title: "Laporan", sub: "Sudut pandang untuk memutuskan program — bukan potret hari ini." },
-    peternak: { title: "Peternak", sub: "Tinjau pendaftaran baru, atau cari & kelola semua peternak terdaftar." },
-    petugas: { title: "Petugas lapangan", sub: "Kelola akun petugas yang bertugas memantau ternak." },
+    ringkasan: { title: `Selamat datang, ${admin.name.split(' ')[0]}`, sub: "Kondisi data SIRAPI Kabupaten Tuban per hari ini." },
+    pemantauan: { title: "Pemantauan sapi", sub: "Data sapi pada fase birahi/siap dikawinkan, dan sapi yang teridentifikasi mengalami gangguan reproduksi." },
+    laporan: { title: "Laporan", sub: "Rekapitulasi data gangguan reproduksi dan status pencatatan sapi." },
+    peternak: { title: "Peternak", sub: "Data pendaftaran dan daftar peternak terdaftar." },
+    petugas: { title: "Petugas lapangan", sub: "Daftar akun petugas lapangan." },
   };
 
   return (
