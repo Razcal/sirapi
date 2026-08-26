@@ -373,12 +373,12 @@ function SemuaPeternakTab({ setToast }) {
 // Pembungkus tab Peternak: "Menunggu" (persetujuan, alur lama tak
 // berubah) dan "Semua" (direktori lengkap, baru).
 function PeternakTab({ setToast, onListChange }) {
-  const [section, setSection] = useState('menunggu');
+  const [section, setSection] = useState('semua');
   return (
     <div>
       <div className="segmented" style={{ maxWidth: 320, marginBottom: 18 }}>
-        <button onClick={() => setSection('menunggu')} className={section === 'menunggu' ? 'active' : ''}>Menunggu</button>
         <button onClick={() => setSection('semua')} className={section === 'semua' ? 'active' : ''}>Semua Peternak</button>
+        <button onClick={() => setSection('menunggu')} className={section === 'menunggu' ? 'active' : ''}>Menunggu</button>
       </div>
       {section === 'menunggu'
         ? <PeternakBaruTab setToast={setToast} onListChange={onListChange} />
