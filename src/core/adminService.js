@@ -246,14 +246,13 @@ export const adminService = {
       const ids = (peternak || []).map(u => u.id);
       if (ids.length === 0) return { success: true, months: [] };
 
-      // Catatan: idealnya keguguran (abortusLog) ikut dihitung di sini juga —
-      // tapi kolom itu ternyata belum ada di tabel `cattle` yang sesungguhnya
-      // (baru ada di kode reproduksi, belum pernah dimigrasikan ke database).
-      // Jadi untuk sekarang trennya cuma dari hasil PKB negatif, bukan berarti
-      // keguguran sengaja diabaikan.
+      // Hasil PKB negatif + kejadian keguguran — dua sinyal masalah
+      // reproduksi yang tercatat dengan tanggal (lihat
+      // SUPABASE_ABORTUS_COLUMNS_MIGRATION.sql untuk riwayat kenapa
+      // abortusLog sempat tidak bisa dipakai di sini).
       const { data: cattleList, error: cattleError } = await supabase
         .from('cattle')
-        .select('pkbLog')
+        .select('pkbLog, abortusLog')
         .in('user_id', ids);
       if (cattleError) throw cattleError;
 
@@ -276,6 +275,7 @@ export const adminService = {
 
       (cattleList || []).forEach(item => {
         (item.pkbLog || []).forEach(e => { if (e?.result === 'NEGATIVE') tally(e.date); });
+        (item.abortusLog || []).forEach(dateStr => tally(dateStr));
       });
 
       return { success: true, months: buckets };

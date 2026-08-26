@@ -306,7 +306,7 @@ function LaporanTab({ data }) {
         </div>
         <div className="card card-pad">
           <p className="t-over" style={{ marginBottom: 4 }}>Tren laporan masalah reproduksi</p>
-          <p className="t-xs c-3" style={{ margin: "0 0 14px" }}>Hasil PKB negatif per bulan, 6 bulan terakhir — naik berarti perlu dievaluasi, turun berarti program yang jalan berhasil.</p>
+          <p className="t-xs c-3" style={{ margin: "0 0 14px" }}>PKB negatif + keguguran per bulan, 6 bulan terakhir — naik berarti perlu dievaluasi, turun berarti program yang jalan berhasil.</p>
           {trend === null ? <p className="t-sm c-3">Memuat...</p> : <AreaChart data={trend} satuan="laporan" />}
         </div>
       </div>
