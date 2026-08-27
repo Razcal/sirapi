@@ -165,14 +165,27 @@ export function analyzeCattle(item) {
 
     let cycles = 1;
     let suspectSistaGap = 0;
+    // Jarak antar IB yang jauh melebihi siklus birahi normal (>=35 hari —
+    // aman di atas 24 hari maksimum siklus + jeda pengamatan), TANPA ada
+    // PKB tercatat di antara keduanya. Beda dari Repeat Breeder biasa: pada
+    // Repeat Breeder jaraknya justru RUTIN di kisaran normal (sapi memang
+    // gagal bunting tiap siklus). Jarak yang jauh & tak terpantau begini
+    // lebih mengarah ke sapi yang sempat dianggap bunting (tidak birahi
+    // sekian lama) lalu mengalami kematian embrio/keguguran dini yang
+    // tidak disadari peternak — bukan cuma "telat kawin lagi".
+    let suspectLossGap = 0;
+    const pkbDates = (item.pkbLog || []).map(e => (typeof e === 'object' ? e.date : e)).filter(Boolean);
 
     if (logIBDates.length > 1) {
       let tempLast = new Date(logIBDates[0]);
       for (let i = 1; i < logIBDates.length; i++) {
-        const diff = Math.floor((new Date(logIBDates[i]) - tempLast) / 86400000);
+        const iniIB = new Date(logIBDates[i]);
+        const diff = Math.floor((iniIB - tempLast) / 86400000);
         if (diff > 0 && diff < 18 && suspectSistaGap === 0) suspectSistaGap = diff;
         if (diff >= 18) cycles++;
-        tempLast = new Date(logIBDates[i]);
+        const pernahDiperiksa = pkbDates.some(pd => new Date(pd) > tempLast && new Date(pd) <= iniIB);
+        if (diff >= 35 && !pernahDiperiksa && suspectLossGap === 0) suspectLossGap = diff;
+        tempLast = iniIB;
       }
     }
 
@@ -204,6 +217,7 @@ export function analyzeCattle(item) {
     else if (phase === "BRED") {
       if (cycles >= 4) { res.color = "rose"; res.statusLabel = "Gangguan Reproduksi: Gagal Bunting Berulang"; res.isUrgent = true; res.needsVet = true; res.advice = `Sapi telah menjalani ${cycles - 1} kali IB (jarak antar IB minimal 18 hari, bukan birahi susulan di siklus yang sama) namun gagal bunting, dan kini memasuki IB ke-${cycles}. Status sementara: Repeat Breeder. Kemungkinan penyebab (belum pasti): gangguan ovarium, endometritis subklinis, ketidaktepatan waktu IB, atau kualitas semen/teknik IB — penyebab sebenarnya hanya bisa dipastikan lewat pemeriksaan. Wajib laporkan ke petugas/dokter hewan untuk pemeriksaan mendalam sebelum IB berikutnya.`; res.adviceColor = "text-rose-800 bg-rose-50 border border-rose-200 font-bold shadow-sm"; }
       else if (suspectSistaGap > 0) { res.color = "rose"; res.statusLabel = "Gangguan Reproduksi: Birahi Tidak Normal"; res.isUrgent = true; res.needsVet = true; res.advice = `Ditemukan jarak antar IB hanya ${suspectSistaGap} hari, padahal siklus birahi normal sapi adalah 18-24 hari. Pola birahi yang terlalu sering dan pendek seperti ini diduga mengarah pada Sista Folikuler (Nymphomania) — namun ini baru indikasi awal, bukan diagnosa pasti. Wajib laporkan ke petugas/dokter hewan untuk pemeriksaan per-rektal/USG ovarium secara mendalam.`; res.adviceColor = "text-rose-800 bg-rose-50 border border-rose-200 font-bold shadow-sm"; }
+      else if (suspectLossGap > 0) { res.color = "rose"; res.statusLabel = "Gangguan Reproduksi: Diduga Keguguran Dini Tak Terpantau"; res.isUrgent = true; res.needsVet = true; res.advice = `Jarak ke IB sebelumnya ${suspectLossGap} hari — jauh melebihi siklus birahi normal (18-24 hari) — dan tidak ada pemeriksaan kebuntingan (PKB) yang tercatat di antara keduanya. Ini baru indikasi awal (suspect), diduga sapi sempat bunting lalu mengalami kematian embrio dini/keguguran dini yang tidak menimbulkan gejala terlihat, sehingga birahi baru muncul kembali belakangan tanpa sempat dipastikan lewat PKB — bukan diagnosa pasti. Wajib laporkan ke petugas/dokter hewan untuk pemeriksaan lebih lanjut. Agar kejadian serupa terpantau lebih awal, usahakan PKB tetap dilakukan pada hari ke-60 pasca IB berikutnya.`; res.adviceColor = "text-rose-800 bg-rose-50 border border-rose-200 font-bold shadow-sm"; }
       else if (daysSinceLastIB < 60) {
         const sisaHariPkb = 60 - daysSinceLastIB;
         res.color = "slate"; res.statusLabel = "Diduga Bunting";

@@ -54,6 +54,47 @@ const iso = (offsetDays) => {
   truthy('Repeat Breeder ditandai isUrgent', hasil2.isUrgent);
 }
 
+// --- Fitur baru: jarak antar IB yang jauh melebihi siklus birahi normal
+//     TANPA PKB di antaranya → diduga keguguran dini tak terpantau (beda
+//     dari Repeat Breeder, yang jaraknya justru rutin di kisaran normal).
+//     Studi kasus: IB 1 Januari, tidak sempat PKB bulan ke-3 (kendala
+//     biaya), ternyata birahi lagi di bulan ke-4. ---
+{
+  const sapiKeguguranDini = {
+    jenis_kelamin: 'BETINA',
+    status_reproduksi: 'BRED',
+    ibLog: [{ date: iso(-120) }, { date: iso(-10) }], // jarak 110 hari, tak ada PKB
+    pkbLog: [],
+  };
+  const hasil = analyzeCattle(sapiKeguguranDini);
+  eq('IB jauh tanpa PKB di antaranya → diduga keguguran dini tak terpantau', hasil.statusLabel, 'Gangguan Reproduksi: Diduga Keguguran Dini Tak Terpantau');
+  truthy('Diduga keguguran dini ditandai isUrgent', hasil.isUrgent);
+  truthy('Diduga keguguran dini ditandai needsVet', hasil.needsVet);
+
+  // Kontrol: jarak antar IB sama-sama jauh, TAPI ada PKB (negatif) di
+  // antara keduanya — berarti sapi memang sempat dipastikan tidak bunting,
+  // bukan kejadian tak terpantau. Tidak boleh kena label baru ini.
+  const sapiSudahDiperiksa = {
+    jenis_kelamin: 'BETINA',
+    status_reproduksi: 'BRED',
+    ibLog: [{ date: iso(-120) }, { date: iso(-10) }],
+    pkbLog: [{ date: iso(-60), result: 'NEGATIVE' }],
+  };
+  const hasilKontrol = analyzeCattle(sapiSudahDiperiksa);
+  eq('Jarak jauh TAPI ada PKB di antaranya → bukan keguguran dini tak terpantau', hasilKontrol.statusLabel, 'Diduga Bunting');
+
+  // Kontrol: Repeat Breeder biasa (jarak normal ~20 hari tiap siklus) tidak
+  // boleh ikut kena label baru ini — cuma jarak besar yang harus memicu.
+  const sapiRepeatNormal = {
+    jenis_kelamin: 'BETINA',
+    status_reproduksi: 'BRED',
+    ibLog: [-80, -60, -40, -20].map(o => ({ date: iso(o) })), // 3x jarak 20 hari → cycles=4
+    pkbLog: [],
+  };
+  const hasilRepeat = analyzeCattle(sapiRepeatNormal);
+  eq('Repeat Breeder jarak normal tetap dapat labelnya sendiri, bukan keguguran dini', hasilRepeat.statusLabel, 'Gangguan Reproduksi: Gagal Bunting Berulang');
+}
+
 // --- Fitur baru: peringatan proaktif menjelang HPL, bukan cuma setelah lewat ---
 {
   // conceptionDate ~274 hari lalu → HPL (274+9bln10hr≈284) sekitar 10 hari lagi
