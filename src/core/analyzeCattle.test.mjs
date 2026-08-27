@@ -5,7 +5,7 @@
 // ditemukan lewat audit manual — supaya perbaikannya terverifikasi dan
 // tidak regresi diam-diam di kemudian hari.
 
-import { analyzeCattle, applyReproAction, applyHealthAction, getOpsiReproduksi } from './analyzeCattle.js';
+import { analyzeCattle, applyReproAction, applyHealthAction, applyLaporanPetugas, getOpsiReproduksi } from './analyzeCattle.js';
 
 let pass = 0, fail = 0;
 const eq = (label, got, want) => {
@@ -203,6 +203,42 @@ const iso = (offsetDays) => {
 
   const setelahSembuh = applyHealthAction(setelahLapor, { type: 'SEMBUH', date: iso(1) });
   eq('applyHealthAction SEMBUH → status jadi SEMBUH', setelahSembuh.healthLog[0].status, 'SEMBUH');
+}
+
+// --- Fitur baru: "Sudah menghubungi petugas" — begitu peternak melapor
+//     SETELAH kejadian yang memicu gangguan, warnanya turun dari merah ke
+//     kuning (tetap waspada, statusLabel & advice-nya TIDAK berubah, cuma
+//     warnanya). Kalau belum ada laporan, tetap merah. ---
+{
+  const sapiGangguan = { jenis_kelamin: 'BETINA', status_reproduksi: 'BRED', ibLog: [{ date: iso(-10) }, { date: iso(-3) }], pkbLog: [] };
+  const sebelumLapor = analyzeCattle(sapiGangguan);
+  eq('Belum ada laporan → status Birahi Tidak Normal, merah', sebelumLapor.statusLabel, 'Gangguan Reproduksi: Birahi Tidak Normal');
+  eq('Belum ada laporan → warna rose', sebelumLapor.color, 'rose');
+  eq('Belum ada laporan → sudahLapor belum ada', !!sebelumLapor.sudahLapor, false);
+
+  const sapiSudahLapor = applyLaporanPetugas(sapiGangguan, { date: iso(0), catatan: 'Sudah dijadwalkan kunjungan petugas.' });
+  eq('applyLaporanPetugas → tercatat di laporanPetugasLog', sapiSudahLapor.laporanPetugasLog.length, 1);
+  const setelahLaporGangguan = analyzeCattle(sapiSudahLapor);
+  eq('Sudah dilaporkan SETELAH kejadian → statusLabel tetap sama (belum tentu beres)', setelahLaporGangguan.statusLabel, 'Gangguan Reproduksi: Birahi Tidak Normal');
+  eq('Sudah dilaporkan SETELAH kejadian → warna turun jadi kuning (amber)', setelahLaporGangguan.color, 'amber');
+  truthy('Sudah dilaporkan → sudahLapor true', setelahLaporGangguan.sudahLapor);
+
+  // Kontrol: laporan yang tanggalnya SEBELUM kejadian (mis. laporan lama
+  // dari masalah sebelumnya) tidak boleh ikut menurunkan warna gangguan
+  // yang baru terjadi belakangan.
+  const sapiLaporanLama = { ...sapiGangguan, laporanPetugasLog: [{ date: iso(-9), catatan: 'Laporan lama, sebelum IB ke-2.' }] };
+  const hasilLaporanLama = analyzeCattle(sapiLaporanLama);
+  eq('Laporan lama (sebelum kejadian terbaru) → tidak ikut menurunkan warna', hasilLaporanLama.color, 'rose');
+
+  // Pemulihan otomatis: IB berikutnya dengan jarak normal (18-24 hari)
+  // dari IB terakhir → status kembali normal dengan sendirinya, TANPA
+  // perlu laporan apapun — bukan terkunci gangguan selamanya.
+  const sapiUntukPulih = { jenis_kelamin: 'BETINA', status_reproduksi: 'BRED', ibLog: [{ date: iso(-30) }, { date: iso(-23) }], pkbLog: [] };
+  const sebelumPulih = analyzeCattle(sapiUntukPulih);
+  eq('Sebelum pulih → masih Birahi Tidak Normal', sebelumPulih.statusLabel, 'Gangguan Reproduksi: Birahi Tidak Normal');
+  const setelahIBNormal = applyReproAction(sapiUntukPulih, 'IB', null, iso(0)); // gap dari -23 ke 0 = 23 hari, normal
+  const hasilPulih = analyzeCattle(setelahIBNormal);
+  eq('IB berikutnya berjarak normal (23 hari) → otomatis pulih, bukan lagi Birahi Tidak Normal', hasilPulih.statusLabel, 'Diduga Bunting');
 }
 
 console.log(`\n${pass} lolos, ${fail} gagal`);

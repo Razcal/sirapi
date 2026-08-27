@@ -172,6 +172,16 @@ export function applyHealthAction(item, { type, date, gejala }) {
   return current;
 }
 
+// Peternak mencatat "sudah menghubungi petugas" beserta keterangan hasil
+// dari petugas (kalau ada) — dipakai analyzeCattle() untuk menurunkan
+// warna gangguan dari merah ke kuning (lihat turunkanKeWaspada di sana).
+// Tidak mengubah phase/statusLabel apapun sendiri — cuma menambah catatan.
+export function applyLaporanPetugas(item, { date, catatan }) {
+  let current = { ...item };
+  current.laporanPetugasLog = [...(current.laporanPetugasLog || []), { date, catatan: catatan || "" }];
+  return current;
+}
+
 export function analyzeCattle(item) {
   if (!item) return { color: "slate", statusLabel: "DATA TIDAK VALID", advice: "Data tidak valid", isUrgent: false, adviceColor: "text-slate-600 bg-slate-50" };
 
@@ -187,6 +197,32 @@ export function analyzeCattle(item) {
     const isJantan = gender === "JANTAN";
 
     const activeIllness = (item.healthLog || []).find(h => h.status !== "SEMBUH");
+
+    // Sudah pernah dilaporkan ke petugas SETELAH kejadian paling akhir yang
+    // tercatat pada sapi ini? Kalau ya, gangguan yang terdeteksi di bawah
+    // tetap ditampilkan (belum tentu SUDAH beres — cuma sudah ditindak-
+    // lanjuti) tapi warnanya diturunkan dari merah ke kuning. Dihitung di
+    // sini (sebelum tahu fase/gangguannya apa) supaya berlaku seragam di
+    // SEMUA cabang di bawah — reproduksi maupun kesehatan.
+    const semuaTanggalAktivitas = [
+      ...(item.ibLog || []).map(e => (typeof e === 'object' ? e.date : e)),
+      ...(item.pkbLog || []).map(e => (typeof e === 'object' ? e.date : e)),
+      ...(item.calvingLog || []),
+      ...(item.abortusLog || []),
+      ...(item.therapyLog || []),
+      ...(item.healthLog || []).map(h => h.date),
+      item.calvingDate, item.abortusDate, item.conceptionDate,
+    ].filter(Boolean);
+    const aktivitasTerakhir = semuaTanggalAktivitas.length > 0
+      ? semuaTanggalAktivitas.reduce((maks, d) => (new Date(d) > new Date(maks) ? d : maks))
+      : null;
+    const laporanTerbaru = [...(item.laporanPetugasLog || [])].sort((a, b) => new Date(b.date) - new Date(a.date))[0] || null;
+    const sudahDilaporkan = !!laporanTerbaru && (!aktivitasTerakhir || new Date(laporanTerbaru.date) >= new Date(aktivitasTerakhir));
+    const turunkanKeWaspada = (r) => {
+      if (r.needsVet && sudahDilaporkan) { r.color = "amber"; r.sudahLapor = true; }
+      return r;
+    };
+
     if (activeIllness) {
        res.isUrgent = true;
        if (activeIllness.status === "MENUNGGU_DOKTER") {
@@ -199,7 +235,7 @@ export function analyzeCattle(item) {
            res.advice = `Diagnosa dokter: ${activeIllness.diagnosa}. Tindakan yang diberikan: ${activeIllness.tindakan}.`;
            res.adviceColor = "text-rose-900 bg-rose-50 border border-rose-200 font-bold shadow-sm";
        }
-       return res;
+       return turunkanKeWaspada(res);
     }
 
     if (isJantan) {
@@ -217,30 +253,46 @@ export function analyzeCattle(item) {
     const daysSinceLastIB = lastIB ? daysDiff(lastIB) : 0;
     const hasIbAfterCalving = logIBDates.length > 0;
 
+    // cycles TETAP kumulatif (menghitung SEMUA jarak >=18 hari di seluruh
+    // riwayat siklus berjalan) — itu memang maksud Repeat Breeder: total
+    // percobaan gagal, bukan kejadian sesaat.
     let cycles = 1;
-    let suspectSistaGap = 0;
-    // Jarak antar IB yang jauh melebihi siklus birahi normal (>=35 hari —
-    // aman di atas 24 hari maksimum siklus + jeda pengamatan), TANPA ada
-    // PKB tercatat di antara keduanya. Beda dari Repeat Breeder biasa: pada
-    // Repeat Breeder jaraknya justru RUTIN di kisaran normal (sapi memang
-    // gagal bunting tiap siklus). Jarak yang jauh & tak terpantau begini
-    // lebih mengarah ke sapi yang sempat dianggap bunting (tidak birahi
-    // sekian lama) lalu mengalami kematian embrio/keguguran dini yang
-    // tidak disadari peternak — bukan cuma "telat kawin lagi".
-    let suspectLossGap = 0;
-    const pkbDates = (item.pkbLog || []).map(e => (typeof e === 'object' ? e.date : e)).filter(Boolean);
-
     if (logIBDates.length > 1) {
       let tempLast = new Date(logIBDates[0]);
       for (let i = 1; i < logIBDates.length; i++) {
         const iniIB = new Date(logIBDates[i]);
         const diff = Math.floor((iniIB - tempLast) / 86400000);
-        if (diff > 0 && diff < 18 && suspectSistaGap === 0) suspectSistaGap = diff;
         if (diff >= 18) cycles++;
-        const pernahDiperiksa = pkbDates.some(pd => new Date(pd) > tempLast && new Date(pd) <= iniIB);
-        if (diff >= 35 && !pernahDiperiksa && suspectLossGap === 0) suspectLossGap = diff;
         tempLast = iniIB;
       }
+    }
+
+    // suspectSistaGap & suspectLossGap SENGAJA cuma melihat jarak PALING
+    // BARU (IB terakhir ke IB sebelumnya) — bukan "pernah terjadi kapan
+    // pun di riwayat". Supaya begitu birahi kembali normal di siklus
+    // BERIKUTNYA, statusnya otomatis pulih (bukan terkunci gangguan
+    // selamanya gara-gara satu insiden lama yang sudah lewat).
+    //
+    // suspectSistaGap: jarak <18 hari — birahi terlalu sering/pendek,
+    // dicurigai Sista Folikuler.
+    // suspectLossGap: jarak >=35 hari (aman di atas 24 hari maksimum
+    // siklus + jeda pengamatan) TANPA PKB tercatat di antara keduanya.
+    // Beda dari Repeat Breeder biasa: pada Repeat Breeder jaraknya justru
+    // RUTIN di kisaran normal (sapi memang gagal bunting tiap siklus).
+    // Jarak yang jauh & tak terpantau begini lebih mengarah ke sapi yang
+    // sempat dianggap bunting (tidak birahi sekian lama) lalu mengalami
+    // kematian embrio/keguguran dini yang tidak disadari peternak.
+    let suspectSistaGap = 0;
+    let suspectLossGap = 0;
+    const pkbDates = (item.pkbLog || []).map(e => (typeof e === 'object' ? e.date : e)).filter(Boolean);
+
+    if (logIBDates.length > 1) {
+      const prevIB = new Date(logIBDates[logIBDates.length - 2]);
+      const lastIBDate = new Date(logIBDates[logIBDates.length - 1]);
+      const lastGap = Math.floor((lastIBDate - prevIB) / 86400000);
+      if (lastGap > 0 && lastGap < 18) suspectSistaGap = lastGap;
+      const pernahDiperiksa = pkbDates.some(pd => new Date(pd) > prevIB && new Date(pd) <= lastIBDate);
+      if (lastGap >= 35 && !pernahDiperiksa) suspectLossGap = lastGap;
     }
 
     if (phase === "ABORTUS_PENDING") {
@@ -326,7 +378,7 @@ export function analyzeCattle(item) {
       else if (d <= 45) { res.statusLabel = "Pemulihan Rahim Pasca Melahirkan"; res.color = "blue"; res.advice = `Hari ke-${d} pasca melahirkan. Rahim sedang dalam proses involusi (pemulihan), berlangsung sekitar 4-6 minggu. IB tidak boleh dilakukan pada periode ini. Amati tanda birahi pertama — sapi normal kembali birahi 3-6 minggu setelah melahirkan.`; }
       else { res.statusLabel = "Siap Dikawinkan Kembali"; res.color = "emerald"; res.advice = `Hari ke-${d} pasca melahirkan. Sapi telah siap menerima IB kembali. Lakukan IB segera saat tanda birahi muncul (3A: Abang, Abuh, Anget). Jangan menunda agar calving interval tetap ideal (12-13 bulan).`; }
     }
-    return res;
+    return turunkanKeWaspada(res);
   } catch {
     return { color: "rose", statusLabel: "DATA TIDAK VALID", advice: "Format tanggal atau riwayat sapi ini tidak valid.", isUrgent: true, adviceColor: "text-rose-900 bg-rose-50" };
   }

@@ -5,7 +5,7 @@ import { DialogSystem } from "./core/components/SharedUI";
 import { TUBAN_DATA } from "./core/constants";
 import { supabase } from "./core/supabaseClient";
 import { authService } from "./core/authService";
-import { daysDiff, fmtDate, analyzeCattle, ibSinceCalving, applyReproAction, applyHealthAction, getOpsiReproduksi } from "./core/analyzeCattle";
+import { daysDiff, fmtDate, analyzeCattle, ibSinceCalving, applyReproAction, applyHealthAction, applyLaporanPetugas, getOpsiReproduksi } from "./core/analyzeCattle";
 import { Icon } from "./core/components/Icons";
 import Donut from "./core/components/Donut";
 import { HeroScene } from "./core/components/Hero";
@@ -315,9 +315,22 @@ function buildHistory(item) {
 
 // Nomor petugas dikumpulkan di satu tempat. Sebelumnya ditulis ulang di tiga
 // lokasi berbeda, sehingga pergantian petugas berarti edit tiga file lalu deploy.
-export const PETUGAS_WA = "6281555863186";
+//
+// Sekarang bisa beda per kecamatan — beberapa kecamatan sudah punya petugas
+// penanggung jawab sendiri (didaftarkan di KONTAK_PETUGAS di bawah, kunci
+// nama kecamatan HURUF BESAR persis seperti di TUBAN_DATA). Kecamatan yang
+// belum terdaftar di sini tetap memakai kontak umum (KONTAK_DEFAULT).
+const KONTAK_DEFAULT = { nama: "Petugas Dinas", wa: "6281555863186" };
+const KONTAK_PETUGAS = {
+  JENU: { nama: "Lukman Hakim, A.Md. Vet", wa: "6285733541087" },
+};
 
-const waPetugas = (pesan) => `https://wa.me/${PETUGAS_WA}?text=${encodeURIComponent(pesan)}`;
+const kontakPetugas = (kecamatan) => KONTAK_PETUGAS[String(kecamatan || "").trim().toUpperCase()] || KONTAK_DEFAULT;
+
+// Nomor tujuan WA ditentukan dari kecamatan peternak yang bersangkutan —
+// bukan lagi satu nomor tetap untuk semua. `kecamatan` boleh dikosongkan
+// (mis. profil belum lengkap), jatuh ke kontak umum secara otomatis.
+const waPetugas = (pesan, kecamatan) => `https://wa.me/${kontakPetugas(kecamatan).wa}?text=${encodeURIComponent(pesan)}`;
 
 const SEV_ICON = {
   crit: Icon.alertCircle,
@@ -357,7 +370,7 @@ const SEV_LABEL = {
   neut: "Normal",
 };
 
-function AdviceCard({ item, analysis, onClick, ownerName }) {
+function AdviceCard({ item, analysis, onClick, ownerName, kecamatan, onOpenLaporanPetugas }) {
   if (!item || !analysis) return null;
 
   const history = buildHistory(item);
@@ -372,7 +385,8 @@ function AdviceCard({ item, analysis, onClick, ownerName }) {
 
   const link = waPetugas(
     `Halo Petugas, saya ${ownerName || "Peternak"}. Mohon bantuan untuk sapi kode ${item.code || item.id}. ` +
-    `Kondisi terdeteksi: ${analysis.statusLabel}.`
+    `Kondisi terdeteksi: ${analysis.statusLabel}.`,
+    kecamatan
   );
 
   return (
@@ -402,7 +416,13 @@ function AdviceCard({ item, analysis, onClick, ownerName }) {
 
         <p className="t-sm c-2 truncate-2" style={{ margin: 0 }}>{mainText}</p>
 
-        <div className="flex items-center gap-8" style={{ marginTop: 12 }}>
+        {analysis.sudahLapor && (
+          <p className="t-xs" style={{ margin: "8px 0 0", fontWeight: 700, color: "var(--warn)" }}>
+            ✓ Sudah dilaporkan — dipantau sampai birahi kembali normal (18-24 hari)
+          </p>
+        )}
+
+        <div className="flex items-center gap-8" style={{ marginTop: 12, flexWrap: "wrap" }}>
           {analysis.needsVet ? (
             <a
               href={link}
@@ -415,10 +435,17 @@ function AdviceCard({ item, analysis, onClick, ownerName }) {
               <Icon.phone size={15} stroke={2} /> Hubungi petugas
             </a>
           ) : null}
+          {analysis.needsVet && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onOpenLaporanPetugas && onOpenLaporanPetugas(item); }}
+              className="btn btn-sm btn-secondary"
+            >
+              <Icon.check size={15} stroke={2} /> Sudah menghubungi
+            </button>
+          )}
           <button
             onClick={(e) => { e.stopPropagation(); onClick(item); }}
             className="btn btn-sm btn-secondary"
-            style={{ marginLeft: analysis.needsVet ? 8 : 0 }}
           >
             Lihat detail <Icon.chevronRight size={15} stroke={2} />
           </button>
@@ -873,7 +900,8 @@ function CalendarView({ dbCattle, profile }) {
             <a
               href={waPetugas(
                 `Halo Petugas, saya ${profile?.name || "Peternak"}. Mohon bantuan untuk sapi kode ` +
-                `${selected.code || selected.id}. Kondisi terdeteksi: ${analysis.statusLabel}.`
+                `${selected.code || selected.id}. Kondisi terdeteksi: ${analysis.statusLabel}.`,
+                profile?.kecamatan
               )}
               target="_blank"
               rel="noopener noreferrer"
@@ -979,7 +1007,7 @@ function DetailModal({ item, onClose, onDeleteLog, setAppToast, setAppConfirm })
 // riwayat. Dengan 50 ekor, peternak harus menggulir 30.000px hanya untuk mencari
 // satu sapi. Sekarang: baris ringkas yang bisa dipindai cepat, detail lengkap
 // tetap tersedia satu ketukan di bawahnya.
-function AssetRecordCard({ item, onEdit, onOpenAction, onOpenDetail, onDelete, highlightedId, setHighlightedId, ownerName }) {
+function AssetRecordCard({ item, onEdit, onOpenAction, onOpenDetail, onDelete, highlightedId, setHighlightedId, ownerName, kecamatan, onOpenLaporanPetugas }) {
   // Semua hook dipanggil lebih dulu, tanpa syarat. React mewajibkan urutan hook
   // sama di setiap render, jadi `if (!item) return null` tidak boleh mendahuluinya.
   const cardRef = React.useRef(null);
@@ -1010,7 +1038,8 @@ function AssetRecordCard({ item, onEdit, onOpenAction, onOpenDetail, onDelete, h
 
   const waLinkPetugas = waPetugas(
     `Halo Petugas, saya ${ownerName || "Peternak"}. Mohon bantuan untuk sapi kode ${item.code || item.id}. ` +
-    `Kondisi terdeteksi: ${analysis.statusLabel}.`
+    `Kondisi terdeteksi: ${analysis.statusLabel}.`,
+    kecamatan
   );
 
   return (
@@ -1085,23 +1114,39 @@ function AssetRecordCard({ item, onEdit, onOpenAction, onOpenDetail, onDelete, h
 
             {/* Sapi berstatus gangguan (needsVet) selalu diberi tombol lapor
                 petugas TEPAT DI SAMPING keterangannya — bukan cuma tersedia
-                jauh di bawah setelah menggulir riwayat. */}
+                jauh di bawah setelah menggulir riwayat. Merah = belum
+                dilaporkan sama sekali; kuning = sudah dilaporkan, masih
+                dipantau sampai birahi kembali normal (analyzeCattle yang
+                menentukan warnanya lewat analysis.sudahLapor). */}
             {analysis.needsVet && (
-              <div className="callout callout-crit" style={{ marginBottom: 14, flexDirection: "column", alignItems: "stretch", gap: 10 }}>
+              <div className={`callout callout-${analysis.sudahLapor ? "warn" : "crit"}`} style={{ marginBottom: 14, flexDirection: "column", alignItems: "stretch", gap: 10 }}>
                 <div style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
                   <Icon.alert size={17} stroke={2} style={{ flexShrink: 0, marginTop: 1 }} />
                   <span>{tidyLabel(analysis.statusLabel)} — {analysis.advice}</span>
                 </div>
-                <a
-                  href={waLinkPetugas}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={(e) => e.stopPropagation()}
-                  className="btn btn-sm"
-                  style={{ background: "#25D366", color: "#fff", alignSelf: "flex-start" }}
-                >
-                  <Icon.phone size={15} stroke={2} /> Hubungi petugas
-                </a>
+                {analysis.sudahLapor && (
+                  <span className="t-xs" style={{ fontWeight: 700 }}>
+                    ✓ Sudah dilaporkan — dipantau sampai birahi kembali normal (18-24 hari)
+                  </span>
+                )}
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                  <a
+                    href={waLinkPetugas}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                    className="btn btn-sm"
+                    style={{ background: "#25D366", color: "#fff" }}
+                  >
+                    <Icon.phone size={15} stroke={2} /> Hubungi petugas
+                  </a>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); onOpenLaporanPetugas && onOpenLaporanPetugas(item); }}
+                    className="btn btn-sm btn-secondary"
+                  >
+                    <Icon.check size={15} stroke={2} /> Sudah menghubungi petugas
+                  </button>
+                </div>
               </div>
             )}
 
@@ -1409,6 +1454,66 @@ function ActionModal({ open, item, onClose, onSaveRepro, onSaveHealth, setAppToa
   );
 }
 
+// Popup "Sudah menghubungi petugas" — dipicu dari kotak gangguan (merah/
+// kuning) di samping tombol Hubungi petugas. Mencatat kapan dihubungi dan
+// (kalau sudah ada) apa kata petugas, supaya kasusnya lebih detail —
+// begitu tersimpan, analyzeCattle() otomatis menurunkan warna gangguan
+// dari merah ke kuning (tetap waspada, bukan langsung dianggap beres).
+function LaporanPetugasModal({ open, item, onClose, onSaved }) {
+  const [tanggal, setTanggal] = useState(todayStr());
+  const [catatan, setCatatan] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (open) { setTanggal(todayStr()); setCatatan(""); }
+  }, [open, item?.id]);
+
+  if (!open || !item) return null;
+
+  const submit = async () => {
+    setSaving(true);
+    await onSaved({ date: tanggal, catatan: catatan.trim() });
+    setSaving(false);
+    onClose();
+  };
+
+  return (
+    <div className="sheet-overlay" onClick={onClose}>
+      <div className="sheet" onClick={(e) => e.stopPropagation()}>
+        <div className="sheet-grip" />
+        <div className="sheet-head">
+          <div style={{ minWidth: 0 }}>
+            <p className="t-h2 c-1" style={{ margin: 0 }}>Sudah menghubungi petugas</p>
+            <p className="t-xs c-3" style={{ margin: "2px 0 0", fontWeight: 600 }}>Sapi {item.code || item.id}</p>
+          </div>
+          <button onClick={onClose} className="icon-btn" aria-label="Tutup"><Icon.close size={18} /></button>
+        </div>
+        <div className="sheet-body">
+          <div className="field">
+            <label className="field-label">Tanggal menghubungi petugas</label>
+            <input type="date" className="input" value={tanggal} max={todayStr()} onChange={(e) => setTanggal(e.target.value)} />
+          </div>
+          <div className="field">
+            <label className="field-label">Apa kata petugas? (boleh dikosongkan kalau belum ada balasan)</label>
+            <textarea
+              className="input" rows={4}
+              placeholder="Contoh: sudah dijadwalkan kunjungan hari Kamis / disarankan amati 3 hari lagi / dst."
+              value={catatan} onChange={(e) => setCatatan(e.target.value)}
+              style={{ resize: "vertical", minHeight: 90 }}
+            />
+          </div>
+          <p className="t-xs c-3" style={{ margin: "0 0 16px" }}>
+            Statusnya tetap ditandai waspada (kuning) sampai sapi menunjukkan birahi normal kembali (18-24 hari) — bukan langsung dianggap beres.
+          </p>
+          <button onClick={submit} disabled={saving} className="btn btn-primary btn-block">
+            {saving ? "Menyimpan..." : "Simpan laporan"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // Menutup lapisan dengan tombol Esc untuk modal yang state-nya tidak hidup di
 // AppContent, sehingga tetap ikut aturan "kembali menutup lapisan teratas".
 function useEscape(open, onClose) {
@@ -1672,7 +1777,7 @@ function Greeting({ name, total, needAction, critCount, onAddNew }) {
   );
 }
 
-function DashboardView({ dbCattle, profile, onAdviceClick, setAppToast, onAddNew }) {
+function DashboardView({ dbCattle, profile, onAdviceClick, setAppToast, onAddNew, onOpenLaporanPetugas }) {
   const safeDb = Array.isArray(dbCattle) ? dbCattle : [];
   const total = safeDb.length;
   const jantan = safeDb.filter((i) => i && (i.jenis_kelamin === "JANTAN" || i.gender === "JANTAN")).length;
@@ -1760,7 +1865,7 @@ function DashboardView({ dbCattle, profile, onAdviceClick, setAppToast, onAddNew
             ) : (
               <div className="stack-8">
                 {needAction.map(({ item, analysis }) => (
-                  <AdviceCard key={item.id} item={item} analysis={analysis} onClick={onAdviceClick} ownerName={profile?.name} />
+                  <AdviceCard key={item.id} item={item} analysis={analysis} onClick={onAdviceClick} ownerName={profile?.name} kecamatan={profile?.kecamatan} onOpenLaporanPetugas={onOpenLaporanPetugas} />
                 ))}
               </div>
             )}
@@ -1800,7 +1905,7 @@ const KELAS_DARING = {
   tautan: "",                   // isi dengan tautan Zoom/Meet asli
 };
 
-function AcademyView({ open, onClose }) {
+function AcademyView({ open, onClose, kecamatan }) {
   const bukaKelas = () => {
     if (!KELAS_DARING.aktif || !KELAS_DARING.tautan) return;
     window.open(KELAS_DARING.tautan, "_blank", "noopener,noreferrer");
@@ -1896,7 +2001,7 @@ function AcademyView({ open, onClose }) {
               </span>
               <Icon.chevronRight size={18} className="row-chev" />
             </button>
-            <a className="row" href={waPetugas("Halo Petugas, saya ingin bertanya seputar reproduksi sapi.")}
+            <a className="row" href={waPetugas("Halo Petugas, saya ingin bertanya seputar reproduksi sapi.", kecamatan)}
                target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none" }}>
               <span className="row-icon" style={{ background: "#E7F9EE", color: "#1DA851" }}>
                 <Icon.phone size={18} />
@@ -1936,7 +2041,7 @@ function PendingApprovalModal({ open, profile, onClose }) {
           Biasanya diproses dalam 1x24 jam kerja. Kalau sudah lebih dari itu, silakan hubungi petugas.
         </p>
         <a className="btn btn-secondary btn-block" style={{ marginBottom: 10 }}
-           href={waPetugas(`Halo Petugas, saya ${profile?.name || "Peternak"}. Akun saya di SIRAPI belum disetujui, mohon bantuannya.`)}>
+           href={waPetugas(`Halo Petugas, saya ${profile?.name || "Peternak"}. Akun saya di SIRAPI belum disetujui, mohon bantuannya.`, profile?.kecamatan)}>
           <Icon.phone size={17} stroke={2} /> Hubungi petugas
         </a>
         <button onClick={onClose} className="btn btn-ghost btn-block">Tutup</button>
@@ -2801,7 +2906,8 @@ function AppContent() {
   // verifikasi admin baru ditahan tepat saat mau menambah sapi, sama
   // seperti completeProfileOpen di atas.
   const [pendingApprovalOpen, setPendingApprovalOpen] = useState(false);
-  const [actionItem, setActionItem] = useState(null); 
+  const [actionItem, setActionItem] = useState(null);
+  const [laporanItem, setLaporanItem] = useState(null);
   const [hideSplashDOM, setHideSplashDOM] = useState(false);
   const [detailItem, setDetailItem] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -3040,6 +3146,30 @@ function AppContent() {
     }
   };
 
+  const handleSaveLaporanPetugas = async ({ date, catatan }) => {
+    if (!laporanItem) return;
+    const idx = dbCattle.findIndex(b => b.id === laporanItem.id);
+    if (idx === -1) return;
+
+    const current = applyLaporanPetugas(dbCattle[idx], { date, catatan });
+
+    const up = [...dbCattle];
+    up[idx] = current;
+    setDbCattle(up);
+
+    try {
+      const { cattleService } = await import('./core/cattleService');
+      const updateResult = await cattleService.updateCattle(current.id, current);
+      if (!updateResult.success) {
+        setAppToast({ message: "Gagal menyimpan ke server: " + updateResult.error, type: "error" });
+        return;
+      }
+      setAppToast({ message: "Laporan tersimpan. Statusnya akan tetap dipantau sampai siklus birahi kembali normal.", type: "success" });
+    } catch {
+      setAppToast({ message: "Gagal terhubung ke server. Periksa koneksi internet.", type: "error" });
+    }
+  };
+
   const safeDb = Array.isArray(dbCattle) ? dbCattle : [];
   const filteredCattle = safeDb.filter(item => {
     if (!item || !item.id) return false;
@@ -3165,7 +3295,7 @@ function AppContent() {
           </header>
 
           <div className="flex-1">
-            {nav === "dashboard" && <DashboardView dbCattle={safeDb} onAdviceClick={handleAdviceClick} profile={profile} setAppToast={setAppToast} onAddNew={openAddCattle} />}
+            {nav === "dashboard" && <DashboardView dbCattle={safeDb} onAdviceClick={handleAdviceClick} profile={profile} setAppToast={setAppToast} onAddNew={openAddCattle} onOpenLaporanPetugas={setLaporanItem} />}
             {nav === "assets" && (
               <div className="fade-in">
                 <div style={{ position: "sticky", top: "calc(56px + env(safe-area-inset-top))", zIndex: 30,
@@ -3246,6 +3376,8 @@ function AppContent() {
                             highlightedId={highlightedId}
                             setHighlightedId={setHighlightedId}
                             ownerName={profile?.name}
+                            kecamatan={profile?.kecamatan}
+                            onOpenLaporanPetugas={setLaporanItem}
                           />
                         ) : null
                       )}
@@ -3352,7 +3484,7 @@ function AppContent() {
                         <Icon.chevronRight size={18} className="row-chev" />
                       </button>
                       <a className="row" style={{ textDecoration: "none" }} target="_blank" rel="noopener noreferrer"
-                         href={waPetugas(`Halo Petugas, saya ${profile?.name || "Peternak"}. Saya butuh bantuan.`)}>
+                         href={waPetugas(`Halo Petugas, saya ${profile?.name || "Peternak"}. Saya butuh bantuan.`, profile?.kecamatan)}>
                         <span className="row-icon" style={{ background: "#E7F9EE", color: "#1DA851" }}>
                           <Icon.phone size={18} />
                         </span>
@@ -3470,12 +3602,13 @@ function AppContent() {
           />
           <PendingApprovalModal open={pendingApprovalOpen} profile={profile} onClose={() => setPendingApprovalOpen(false)} />
           <ActionModal open={!!actionItem} item={actionItem} onClose={() => setActionItem(null)} onSaveRepro={handleSaveRepro} onSaveHealth={handleSaveHealth} setAppToast={setAppToast} />
+          <LaporanPetugasModal open={!!laporanItem} item={laporanItem} onClose={() => setLaporanItem(null)} onSaved={handleSaveLaporanPetugas} />
           <DetailModal item={detailItem} onClose={() => setDetailItem(null)} onDeleteLog={handleDeleteLog} setAppToast={setAppToast} setAppConfirm={setAppConfirm} />
           <EditProfileModal open={editProfileOpen} onClose={() => setEditProfileOpen(false)} onSave={setProfile} currentProfile={profile} setAppToast={setAppToast} />
           <ChangePasswordModal open={changePasswordOpen} onClose={() => setChangePasswordOpen(false)} currentProfile={profile} setAppToast={setAppToast} />
           <OnboardingTutorial open={tutorialOpen} onClose={() => { setTutorialOpen(false); localStorage.setItem("srtt_tutorial_seen", "1"); }} />
           <HelpGuideScreen open={helpGuideOpen} onClose={() => setHelpGuideOpen(false)} />
-          <AcademyView open={akademiOpen} onClose={() => setAkademiOpen(false)} />
+          <AcademyView open={akademiOpen} onClose={() => setAkademiOpen(false)} kecamatan={profile?.kecamatan} />
         </>
       )}
     </div>
