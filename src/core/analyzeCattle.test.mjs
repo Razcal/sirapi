@@ -101,17 +101,21 @@ const iso = (offsetDays) => {
 //     tetap harus bisa dicatat langsung karena birahi mendesak waktu
 //     (~12-18 jam aktif) dan PKB memang belum bisa dilakukan sebelum
 //     hari ke-60 — memblokir di jendela itu cuma bikin peternak
-//     kehilangan momen kawin tanpa ada gunanya. ---
+//     kehilangan momen kawin tanpa ada gunanya. TAPI jendela 25-59 hari
+//     itu tetap diberi catatan waspada (hint level "warn") — hanya
+//     IB-nya yang tidak diblokir, bukan berarti tidak ada keterangan
+//     sama sekali. ---
 {
   const sapiDalamSiklus = { jenis_kelamin: 'BETINA', status_reproduksi: 'BRED', ibLog: [{ date: iso(-10) }], pkbLog: [] };
   const { options: opsiSiklus, hint: hintSiklus } = getOpsiReproduksi(sapiDalamSiklus);
   truthy('Dalam siklus normal (10 hari) → opsi IB tetap ditawarkan', opsiSiklus.some(o => o.v === 'IB'));
-  eq('Dalam siklus normal (10 hari) → tidak ada peringatan PKB', hintSiklus, null);
+  eq('Dalam siklus normal (10 hari) → tidak ada catatan apapun', hintSiklus, null);
 
   const sapiHari50 = { jenis_kelamin: 'BETINA', status_reproduksi: 'BRED', ibLog: [{ date: iso(-50) }], pkbLog: [] };
   const { options: opsiHari50, hint: hintHari50 } = getOpsiReproduksi(sapiHari50);
   truthy('Birahi lagi di hari ke-50 (sebelum jadwal PKB hari ke-60) → IB tetap ditawarkan, tidak diblokir', opsiHari50.some(o => o.v === 'IB'));
-  eq('Hari ke-50 masih di bawah batas 60 hari → belum ada peringatan PKB mutlak', hintHari50, null);
+  truthy('Hari ke-50 di luar siklus normal → tetap ada catatan waspada', !!hintHari50);
+  eq('Hari ke-50 → catatan levelnya waspada (warn), bukan wajib (crit)', hintHari50.level, 'warn');
 
   // End-to-end: setelah IB hari ke-50 itu BENAR dicatat (bukan cuma opsinya
   // tersedia), analyzeCattle langsung menandainya sebagai anomali —
@@ -121,12 +125,14 @@ const iso = (offsetDays) => {
   eq('Setelah IB hari ke-50 dicatat → langsung ditandai Diduga Keguguran Dini', hasilSetelahIB.statusLabel, 'Gangguan Reproduksi: Diduga Keguguran Dini Tak Terpantau');
 
   // Lewat hari ke-60 tanpa PKB sama sekali → di sinilah PKB jadi mutlak
-  // wajib, IB baru tidak ditawarkan lagi sampai hasil PKB dicatat.
+  // wajib, IB baru tidak ditawarkan lagi sampai hasil PKB dicatat, dan
+  // catatannya naik level jadi "crit".
   const sapiLewat60 = { jenis_kelamin: 'BETINA', status_reproduksi: 'BRED', ibLog: [{ date: iso(-65) }], pkbLog: [] };
   const { options: opsiLewat60, hint: hintLewat60 } = getOpsiReproduksi(sapiLewat60);
   eq('Lewat hari ke-60 tanpa PKB → opsi IB TIDAK ditawarkan', opsiLewat60.some(o => o.v === 'IB'), false);
   truthy('Lewat hari ke-60 tanpa PKB → opsi hasil PKB (bunting/tidak) tetap ada', opsiLewat60.some(o => o.v === 'POSITIVE') && opsiLewat60.some(o => o.v === 'NEGATIVE'));
   truthy('Lewat hari ke-60 tanpa PKB → ada peringatan PKB mutlak wajib', !!hintLewat60);
+  eq('Lewat hari ke-60 → catatan levelnya wajib (crit), bukan cuma waspada', hintLewat60.level, 'crit');
 }
 
 // --- Fitur baru: peringatan proaktif menjelang HPL, bukan cuma setelah lewat ---

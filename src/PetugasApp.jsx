@@ -124,8 +124,8 @@ function RecordActionModal({ open, cattle, onClose, onSaved, setToast }) {
               ) : (
                 <>
                   {opsiHint && (
-                    <div className="callout callout-warn" style={{ marginBottom: 16 }}>
-                      <Icon.alert size={17} stroke={2} /><span>{opsiHint}</span>
+                    <div className={`callout callout-${opsiHint.level === "crit" ? "crit" : "warn"}`} style={{ marginBottom: 16 }}>
+                      <Icon.alert size={17} stroke={2} /><span>{opsiHint.text}</span>
                     </div>
                   )}
                   <div className="field">

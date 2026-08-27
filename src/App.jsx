@@ -979,7 +979,7 @@ function DetailModal({ item, onClose, onDeleteLog, setAppToast, setAppConfirm })
 // riwayat. Dengan 50 ekor, peternak harus menggulir 30.000px hanya untuk mencari
 // satu sapi. Sekarang: baris ringkas yang bisa dipindai cepat, detail lengkap
 // tetap tersedia satu ketukan di bawahnya.
-function AssetRecordCard({ item, onEdit, onOpenAction, onOpenDetail, onDelete, highlightedId, setHighlightedId }) {
+function AssetRecordCard({ item, onEdit, onOpenAction, onOpenDetail, onDelete, highlightedId, setHighlightedId, ownerName }) {
   // Semua hook dipanggil lebih dulu, tanpa syarat. React mewajibkan urutan hook
   // sama di setiap render, jadi `if (!item) return null` tidak boleh mendahuluinya.
   const cardRef = React.useRef(null);
@@ -1007,6 +1007,11 @@ function AssetRecordCard({ item, onEdit, onOpenAction, onOpenDetail, onDelete, h
   const _status = String(item.status_reproduksi || item.phase || "").toUpperCase().trim();
   const needsPKBWarning = _status === "PREGNANT" && !item.conceptionDate;
   const isJantan = (item.jenis_kelamin || item.gender) === "JANTAN";
+
+  const waLinkPetugas = waPetugas(
+    `Halo Petugas, saya ${ownerName || "Peternak"}. Mohon bantuan untuk sapi kode ${item.code || item.id}. ` +
+    `Kondisi terdeteksi: ${analysis.statusLabel}.`
+  );
 
   return (
     <div
@@ -1075,6 +1080,28 @@ function AssetRecordCard({ item, onEdit, onOpenAction, onOpenDetail, onDelete, h
                   Diduga bunting ({item.asal_usul_sapi === "PASAR" ? "asal pasar" : "dari kandang sendiri"}),
                   belum dikonfirmasi. Minta petugas melakukan pemeriksaan kebuntingan.
                 </span>
+              </div>
+            )}
+
+            {/* Sapi berstatus gangguan (needsVet) selalu diberi tombol lapor
+                petugas TEPAT DI SAMPING keterangannya — bukan cuma tersedia
+                jauh di bawah setelah menggulir riwayat. */}
+            {analysis.needsVet && (
+              <div className="callout callout-crit" style={{ marginBottom: 14, flexDirection: "column", alignItems: "stretch", gap: 10 }}>
+                <div style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
+                  <Icon.alert size={17} stroke={2} style={{ flexShrink: 0, marginTop: 1 }} />
+                  <span>{tidyLabel(analysis.statusLabel)} — {analysis.advice}</span>
+                </div>
+                <a
+                  href={waLinkPetugas}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={(e) => e.stopPropagation()}
+                  className="btn btn-sm"
+                  style={{ background: "#25D366", color: "#fff", alignSelf: "flex-start" }}
+                >
+                  <Icon.phone size={15} stroke={2} /> Hubungi petugas
+                </a>
               </div>
             )}
 
@@ -1275,8 +1302,8 @@ function ActionModal({ open, item, onClose, onSaveRepro, onSaveHealth, setAppToa
               </div>
 
               {opsiHint && (
-                <div className="callout callout-warn" style={{ marginBottom: 16 }}>
-                  <Icon.alert size={17} stroke={2} /><span>{opsiHint}</span>
+                <div className={`callout callout-${opsiHint.level === "crit" ? "crit" : "warn"}`} style={{ marginBottom: 16 }}>
+                  <Icon.alert size={17} stroke={2} /><span>{opsiHint.text}</span>
                 </div>
               )}
 
@@ -3218,6 +3245,7 @@ function AppContent() {
                             onOpenDetail={setDetailItem}
                             highlightedId={highlightedId}
                             setHighlightedId={setHighlightedId}
+                            ownerName={profile?.name}
                           />
                         ) : null
                       )}

@@ -107,15 +107,18 @@ export function applyReproAction(item, res, pregMonth, d) {
 // IB tidak diblokir menurut siklus birahi normal (18-24 hari) maupun di
 // jendela menunggu PKB (25-59 hari, PKB memang belum bisa dilakukan
 // sebelum hari ke-60) — birahi mendesak waktu (aktif cuma ~12-18 jam),
-// jadi opsi IB harus selalu bisa dicatat SEKARANG selama itu.
+// jadi opsi IB harus selalu bisa dicatat SEKARANG selama itu. Tapi
+// jendela 25-59 hari itu tetap DI LUAR siklus normal, jadi tetap diberi
+// catatan waspada (hint.level "warn") — bukan diam-diam tanpa keterangan
+// apa pun, IB-nya cuma tidak diblokir.
 //
-// TAPI begitu lewat hari ke-60 — batas paling lambat PKB semestinya
-// sudah bisa dilakukan, persis titik yang sama saat statusLabel berubah
-// jadi "Waktunya Pemeriksaan Kebuntingan" — PKB jadi MUTLAK wajib: IB
-// baru tidak ditawarkan lagi sampai hasil PKB (bunting/tidak) dicatat
-// lebih dulu. Di titik ini alasan "jangan sampai kehilangan momen kawin"
-// sudah tidak lagi jadi alasan kuat untuk menunda PKB — dua bulan penuh
-// sudah lewat tanpa pernah diperiksa.
+// Begitu lewat hari ke-60 — batas paling lambat PKB semestinya sudah
+// bisa dilakukan, persis titik yang sama saat statusLabel berubah jadi
+// "Waktunya Pemeriksaan Kebuntingan" — PKB jadi MUTLAK wajib (hint.level
+// "crit"): IB baru tidak ditawarkan lagi sampai hasil PKB (bunting/
+// tidak) dicatat lebih dulu. Di titik ini alasan "jangan sampai
+// kehilangan momen kawin" sudah tidak lagi jadi alasan kuat untuk
+// menunda PKB — dua bulan penuh sudah lewat tanpa pernah diperiksa.
 export function getOpsiReproduksi(item) {
   const phase = String(item?.status_reproduksi || item?.phase || "").toUpperCase();
   const punyaIB = ibSinceCalving(item).length > 0;
@@ -124,6 +127,7 @@ export function getOpsiReproduksi(item) {
   const lastIBEntry = sortedIB.length > 0 ? sortedIB[sortedIB.length - 1] : null;
   const lastIBDate = lastIBEntry ? (typeof lastIBEntry === 'object' ? lastIBEntry.date : lastIBEntry) : null;
   const daysSinceLastIB = lastIBDate ? daysDiff(lastIBDate) : 0;
+  const diLuarSiklusNormal = phase === "BRED" && daysSinceLastIB > 24;
   const pkbMutlakWajib = phase === "BRED" && daysSinceLastIB > 60;
 
   const ALL = [
@@ -139,9 +143,12 @@ export function getOpsiReproduksi(item) {
     ? ALL.filter((o) => o.v === "TERAPI")
     : ALL.filter((o) => o.show.includes(phase) && (!o.perlu || o.perlu()));
 
-  const hint = pkbMutlakWajib
-    ? `Sudah ${daysSinceLastIB} hari sejak IB terakhir — jauh melewati jadwal PKB (hari ke-60) tanpa pernah diperiksa. Catat dulu hasil PKB (bunting atau tidak bunting) sebelum bisa mencatat IB baru.`
-    : null;
+  let hint = null;
+  if (pkbMutlakWajib) {
+    hint = { level: "crit", text: `Sudah ${daysSinceLastIB} hari sejak IB terakhir — jauh melewati jadwal PKB (hari ke-60) tanpa pernah diperiksa. Catat dulu hasil PKB (bunting atau tidak bunting) sebelum bisa mencatat IB baru.` };
+  } else if (diLuarSiklusNormal) {
+    hint = { level: "warn", text: `Sudah ${daysSinceLastIB} hari sejak IB terakhir — di luar siklus birahi normal (18-24 hari). Kalau sapi memang menunjukkan tanda birahi aktif sekarang, IB tetap boleh langsung dicatat — tapi akan otomatis ditandai untuk dipantau petugas. Jadwal PKB tetap di hari ke-60.` };
+  }
 
   return { options, hint };
 }
