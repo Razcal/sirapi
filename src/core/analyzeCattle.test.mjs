@@ -95,21 +95,26 @@ const iso = (offsetDays) => {
   eq('Repeat Breeder jarak normal tetap dapat labelnya sendiri, bukan keguguran dini', hasilRepeat.statusLabel, 'Gangguan Reproduksi: Gagal Bunting Berulang');
 }
 
-// --- Fitur baru: PKB wajib — begitu lewat 24 hari sejak IB terakhir tanpa
-//     PKB, opsi "IB" tidak lagi ditawarkan (peternak/petugas harus catat
-//     hasil PKB dulu). Di dalam 24 hari, IB tetap boleh langsung (birahi
-//     kembali di siklus normal, PKB memang belum bisa dilakukan). ---
+// --- Keputusan sadar: IB TIDAK PERNAH diblokir menurut jarak hari sejak
+//     IB terakhir — sempat dicoba (mewajibkan PKB dulu lewat 24 hari),
+//     lalu dibatalkan karena birahi mendesak waktu (~12-18 jam aktif),
+//     memblokir opsi IB berisiko peternak kehilangan momen kawin.
+//     Studi kasus: lolos evaluasi hari ke-42, PKB dijadwalkan hari ke-60,
+//     tapi hari ke-50 sapi birahi lagi — IB tetap harus bisa dicatat
+//     SEKARANG, lalu otomatis ditandai lewat suspectLossGap. ---
 {
-  const sapiBaruSajaIB = { jenis_kelamin: 'BETINA', status_reproduksi: 'BRED', ibLog: [{ date: iso(-10) }], pkbLog: [] };
-  const { options: opsi1, hint: hint1 } = getOpsiReproduksi(sapiBaruSajaIB);
-  truthy('Dalam 24 hari sejak IB → opsi IB masih ditawarkan', opsi1.some(o => o.v === 'IB'));
-  eq('Dalam 24 hari sejak IB → tidak ada peringatan PKB wajib', hint1, null);
+  const sapiDalamSiklus = { jenis_kelamin: 'BETINA', status_reproduksi: 'BRED', ibLog: [{ date: iso(-10) }], pkbLog: [] };
+  truthy('Dalam siklus normal (10 hari) → opsi IB tetap ditawarkan', getOpsiReproduksi(sapiDalamSiklus).some(o => o.v === 'IB'));
 
-  const sapiLewatMasaTunggu = { jenis_kelamin: 'BETINA', status_reproduksi: 'BRED', ibLog: [{ date: iso(-30) }], pkbLog: [] };
-  const { options: opsi2, hint: hint2 } = getOpsiReproduksi(sapiLewatMasaTunggu);
-  eq('Lewat 24 hari tanpa PKB → opsi IB TIDAK ditawarkan', opsi2.some(o => o.v === 'IB'), false);
-  truthy('Lewat 24 hari tanpa PKB → opsi hasil PKB (bunting/tidak) tetap ada', opsi2.some(o => o.v === 'POSITIVE') && opsi2.some(o => o.v === 'NEGATIVE'));
-  truthy('Lewat 24 hari tanpa PKB → ada peringatan PKB wajib', !!hint2);
+  const sapiHari50 = { jenis_kelamin: 'BETINA', status_reproduksi: 'BRED', ibLog: [{ date: iso(-50) }], pkbLog: [] };
+  truthy('Birahi lagi di hari ke-50 (sebelum jadwal PKB hari ke-60) → IB tetap ditawarkan, tidak diblokir', getOpsiReproduksi(sapiHari50).some(o => o.v === 'IB'));
+
+  // End-to-end: setelah IB hari ke-50 itu BENAR dicatat (bukan cuma opsinya
+  // tersedia), analyzeCattle langsung menandainya sebagai anomali —
+  // inilah "tindak lanjut otomatis" pengganti blokir tadi.
+  const setelahIBHari50 = applyReproAction(sapiHari50, 'IB', null, iso(0));
+  const hasilSetelahIB = analyzeCattle(setelahIBHari50);
+  eq('Setelah IB hari ke-50 dicatat → langsung ditandai Diduga Keguguran Dini', hasilSetelahIB.statusLabel, 'Gangguan Reproduksi: Diduga Keguguran Dini Tak Terpantau');
 }
 
 // --- Fitur baru: peringatan proaktif menjelang HPL, bukan cuma setelah lewat ---

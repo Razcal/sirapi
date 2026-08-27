@@ -104,28 +104,24 @@ export function applyReproAction(item, res, pregMonth, d) {
 // aturan boleh/tidak-boleh-nya selalu identik di kedua tempat, tidak ada
 // yang lupa disinkronkan saat salah satu diubah.
 //
-// PKB wajib, bukan opsional: begitu sapi lewat 24 hari sejak IB terakhir
-// tanpa pemeriksaan kebuntingan (fase masih BRED), IB baru TIDAK
-// ditawarkan lagi — peternak/petugas wajib mencatat hasil PKB (bunting
-// atau tidak) lebih dulu sebelum bisa IB lagi. Ini yang mencegah pola
-// "diduga keguguran dini tak terpantau" terulang: tanpa aturan ini,
-// sapi bisa terus di-IB ulang tanpa PKB kapan pun, seperti kasus yang
-// memicu perubahan ini. Di DALAM 24 hari itu sendiri (birahi kembali di
-// siklus normal), IB tetap boleh langsung dicatat seperti biasa — PKB
-// memang belum bisa dilakukan sebelum hari ke-60, jadi tidak masuk akal
-// mewajibkannya di jendela ini.
+// IB SENGAJA TIDAK PERNAH diblokir menurut jarak hari — sempat dicoba
+// (mewajibkan PKB dulu begitu lewat 24 hari sejak IB terakhir), tapi
+// dibatalkan: birahi itu mendesak waktu (aktif cuma ~12-18 jam), jadi
+// memblokir opsi IB demi menunggu PKB berisiko peternak kehilangan
+// momen kawin itu sama sekali — kerugian nyata (tunggu ~21 hari lagi,
+// biaya semen beku terbuang) yang lebih besar dari manfaat blokirnya.
+// Sebagai gantinya, pola "IB lagi tanpa PKB di antaranya" tetap boleh
+// dicatat, lalu otomatis ditandai lewat statusLabel "Gangguan
+// Reproduksi: Diduga Keguguran Dini Tak Terpantau" (lihat suspectLossGap
+// di analyzeCattle()) begitu tersimpan — supaya kelihatan di Pemantauan
+// Sapi & Laporan admin untuk ditindaklanjuti petugas, tanpa menghalangi
+// tindakan yang justru mendesak dilakukan saat itu juga.
 export function getOpsiReproduksi(item) {
   const phase = String(item?.status_reproduksi || item?.phase || "").toUpperCase();
   const punyaIB = ibSinceCalving(item).length > 0;
 
-  const sortedIB = ibSinceCalving(item);
-  const lastIBEntry = sortedIB.length > 0 ? sortedIB[sortedIB.length - 1] : null;
-  const lastIBDate = lastIBEntry ? (typeof lastIBEntry === 'object' ? lastIBEntry.date : lastIBEntry) : null;
-  const daysSinceLastIB = lastIBDate ? daysDiff(lastIBDate) : 0;
-  const pkbWajibDulu = phase === "BRED" && daysSinceLastIB > 24;
-
   const ALL = [
-    { v: "IB",       t: "Inseminasi buatan (IB)",             show: pkbWajibDulu ? ["CALF", "OPEN", "POSTPARTUM"] : ["CALF", "OPEN", "BRED", "POSTPARTUM"] },
+    { v: "IB",       t: "Inseminasi buatan (IB)",             show: ["CALF", "OPEN", "BRED", "POSTPARTUM"] },
     { v: "POSITIVE", t: "Hasil periksa: bunting (+)",         show: ["BRED", "OPEN", "PREGNANT"], perlu: () => punyaIB || phase === "PREGNANT" },
     { v: "NEGATIVE", t: "Hasil periksa: tidak bunting (−)",   show: ["BRED", "PREGNANT"] },
     { v: "CALVED",   t: "Melahirkan",                          show: ["PREGNANT"] },
@@ -133,15 +129,9 @@ export function getOpsiReproduksi(item) {
     { v: "TERAPI",   t: "Sudah mendapat terapi medis",         show: ["OPEN", "BRED", "POSTPARTUM", "ABORTUS_PENDING"] },
   ];
 
-  const options = phase === "ABORTUS_PENDING"
+  return phase === "ABORTUS_PENDING"
     ? ALL.filter((o) => o.v === "TERAPI")
     : ALL.filter((o) => o.show.includes(phase) && (!o.perlu || o.perlu()));
-
-  const hint = pkbWajibDulu
-    ? `Sudah ${daysSinceLastIB} hari sejak IB terakhir tanpa pemeriksaan kebuntingan (PKB). Catat dulu hasil PKB (bunting atau tidak bunting) sebelum bisa mencatat IB baru.`
-    : null;
-
-  return { options, hint };
 }
 
 // Sama seperti applyReproAction tapi untuk catatan kesehatan (lapor gejala /
