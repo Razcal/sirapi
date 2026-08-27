@@ -1229,7 +1229,7 @@ function ActionModal({ open, item, onClose, onSaveRepro, onSaveHealth, setAppToa
   // "Kelahiran Normal" atau "Pemeriksaan Kebuntingan: Positif" — mustahil
   // secara biologis, dan salah pilih akan mengacaukan seluruh perhitungan
   // kalender sapi itu.
-  const opsiTampil = getOpsiReproduksi(item);
+  const { options: opsiTampil, hint: opsiHint } = getOpsiReproduksi(item);
 
   return (
     <div className="sheet-overlay" onClick={onClose}>
@@ -1273,6 +1273,12 @@ function ActionModal({ open, item, onClose, onSaveRepro, onSaveHealth, setAppToa
                   Pilihan menyesuaikan status sapi saat ini ({tidyLabel(analyzeCattle(item).statusLabel) || "-"}).
                 </p>
               </div>
+
+              {opsiHint && (
+                <div className="callout callout-warn" style={{ marginBottom: 16 }}>
+                  <Icon.alert size={17} stroke={2} /><span>{opsiHint}</span>
+                </div>
+              )}
 
               {resRepro !== "POSITIVE" && resRepro !== "NEGATIVE" && (
                 <div className="field pop-in">
