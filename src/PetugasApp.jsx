@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { authService } from "./core/authService";
 import { petugasService } from "./core/petugasService";
-import { analyzeCattle, ibSinceCalving } from "./core/analyzeCattle";
+import { analyzeCattle, ibSinceCalving, getOpsiReproduksi } from "./core/analyzeCattle";
 import { Icon } from "./core/components/Icons";
 import { supabase } from "./core/supabaseClient";
 import logoTuban from "./Tubankab.png";
@@ -63,25 +63,6 @@ function PetugasLogin({ onLoggedIn }) {
   );
 }
 
-// Opsi yang ditampilkan disaring menurut fase sapi — versi ringkas dari
-// logika yang sama di ActionModal (App.jsx), disalin bukan diimpor supaya
-// PetugasApp berdiri sendiri (tidak menarik App.jsx yang jauh lebih besar
-// ke dalam bundle petugas).
-const reproOptions = (item) => {
-  const phase = String(item?.status_reproduksi || item?.phase || "").toUpperCase();
-  const punyaIB = ibSinceCalving(item).length > 0;
-  const ALL = [
-    { v: "IB", t: "Inseminasi buatan (IB)", show: ["CALF", "OPEN", "BRED", "POSTPARTUM"] },
-    { v: "POSITIVE", t: "Hasil periksa: bunting (+)", show: ["BRED", "OPEN", "PREGNANT"], perlu: () => punyaIB || phase === "PREGNANT" },
-    { v: "NEGATIVE", t: "Hasil periksa: tidak bunting (−)", show: ["BRED", "PREGNANT"] },
-    { v: "CALVED", t: "Melahirkan", show: ["PREGNANT"] },
-    { v: "ABORTUS", t: "Keguguran", show: ["BRED", "PREGNANT"] },
-    { v: "TERAPI", t: "Sudah diberi terapi medis", show: ["OPEN", "BRED", "POSTPARTUM", "ABORTUS_PENDING"] },
-  ];
-  if (phase === "ABORTUS_PENDING") return ALL.filter(o => o.v === "TERAPI");
-  return ALL.filter(o => o.show.includes(phase) && (!o.perlu || o.perlu()));
-};
-
 function RecordActionModal({ open, cattle, onClose, onSaved, setToast }) {
   const [tab, setTab] = useState("REPRO");
   const [res, setRes] = useState("NONE");
@@ -99,7 +80,7 @@ function RecordActionModal({ open, cattle, onClose, onSaved, setToast }) {
   }, [open, cattle?.id]);
 
   if (!open || !cattle) return null;
-  const opsi = reproOptions(cattle);
+  const { options: opsi, hint: opsiHint } = getOpsiReproduksi(cattle);
   const punyaIB = ibSinceCalving(cattle).length > 0;
 
   const submitRepro = async () => {
@@ -142,6 +123,11 @@ function RecordActionModal({ open, cattle, onClose, onSaved, setToast }) {
                 <p className="t-sm c-3">Tidak ada tindakan reproduksi yang relevan untuk fase sapi ini saat ini.</p>
               ) : (
                 <>
+                  {opsiHint && (
+                    <div className="callout callout-warn" style={{ marginBottom: 16 }}>
+                      <Icon.alert size={17} stroke={2} /><span>{opsiHint}</span>
+                    </div>
+                  )}
                   <div className="field">
                     <label className="field-label">Jenis tindakan</label>
                     <select className="select" value={res} onChange={e => setRes(e.target.value)}>

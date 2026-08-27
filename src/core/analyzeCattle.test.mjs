@@ -5,7 +5,7 @@
 // ditemukan lewat audit manual — supaya perbaikannya terverifikasi dan
 // tidak regresi diam-diam di kemudian hari.
 
-import { analyzeCattle, applyReproAction, applyHealthAction } from './analyzeCattle.js';
+import { analyzeCattle, applyReproAction, applyHealthAction, getOpsiReproduksi } from './analyzeCattle.js';
 
 let pass = 0, fail = 0;
 const eq = (label, got, want) => {
@@ -93,6 +93,23 @@ const iso = (offsetDays) => {
   };
   const hasilRepeat = analyzeCattle(sapiRepeatNormal);
   eq('Repeat Breeder jarak normal tetap dapat labelnya sendiri, bukan keguguran dini', hasilRepeat.statusLabel, 'Gangguan Reproduksi: Gagal Bunting Berulang');
+}
+
+// --- Fitur baru: PKB wajib — begitu lewat 24 hari sejak IB terakhir tanpa
+//     PKB, opsi "IB" tidak lagi ditawarkan (peternak/petugas harus catat
+//     hasil PKB dulu). Di dalam 24 hari, IB tetap boleh langsung (birahi
+//     kembali di siklus normal, PKB memang belum bisa dilakukan). ---
+{
+  const sapiBaruSajaIB = { jenis_kelamin: 'BETINA', status_reproduksi: 'BRED', ibLog: [{ date: iso(-10) }], pkbLog: [] };
+  const { options: opsi1, hint: hint1 } = getOpsiReproduksi(sapiBaruSajaIB);
+  truthy('Dalam 24 hari sejak IB → opsi IB masih ditawarkan', opsi1.some(o => o.v === 'IB'));
+  eq('Dalam 24 hari sejak IB → tidak ada peringatan PKB wajib', hint1, null);
+
+  const sapiLewatMasaTunggu = { jenis_kelamin: 'BETINA', status_reproduksi: 'BRED', ibLog: [{ date: iso(-30) }], pkbLog: [] };
+  const { options: opsi2, hint: hint2 } = getOpsiReproduksi(sapiLewatMasaTunggu);
+  eq('Lewat 24 hari tanpa PKB → opsi IB TIDAK ditawarkan', opsi2.some(o => o.v === 'IB'), false);
+  truthy('Lewat 24 hari tanpa PKB → opsi hasil PKB (bunting/tidak) tetap ada', opsi2.some(o => o.v === 'POSITIVE') && opsi2.some(o => o.v === 'NEGATIVE'));
+  truthy('Lewat 24 hari tanpa PKB → ada peringatan PKB wajib', !!hint2);
 }
 
 // --- Fitur baru: peringatan proaktif menjelang HPL, bukan cuma setelah lewat ---

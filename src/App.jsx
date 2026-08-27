@@ -5,7 +5,7 @@ import { DialogSystem } from "./core/components/SharedUI";
 import { TUBAN_DATA } from "./core/constants";
 import { supabase } from "./core/supabaseClient";
 import { authService } from "./core/authService";
-import { daysDiff, fmtDate, analyzeCattle, ibSinceCalving, applyReproAction, applyHealthAction } from "./core/analyzeCattle";
+import { daysDiff, fmtDate, analyzeCattle, ibSinceCalving, applyReproAction, applyHealthAction, getOpsiReproduksi } from "./core/analyzeCattle";
 import { Icon } from "./core/components/Icons";
 import Donut from "./core/components/Donut";
 import { HeroScene } from "./core/components/Hero";
@@ -1222,24 +1222,14 @@ function ActionModal({ open, item, onClose, onSaveRepro, onSaveHealth, setAppToa
     onClose();
   };
 
-  // Pilihan kondisi disaring menurut fase sapi. Sebelumnya seekor dara yang belum
-  // pernah di-IB tetap bisa memilih "Kelahiran Normal" atau "Pemeriksaan
-  // Kebuntingan: Positif" — mustahil secara biologis, dan salah pilih akan
-  // mengacaukan seluruh perhitungan kalender sapi itu.
-  const phase = String(item?.status_reproduksi || item?.phase || "").toUpperCase();
-  const punyaIB = ibSinceCalving(item).length > 0;
-
-  const OPSI = [
-    { v: "IB",       t: "Inseminasi buatan (IB)",             show: ["CALF", "OPEN", "BRED", "POSTPARTUM"] },
-    { v: "POSITIVE", t: "Hasil periksa: bunting (+)",         show: ["BRED", "OPEN", "PREGNANT"], perlu: () => punyaIB || phase === "PREGNANT" },
-    { v: "NEGATIVE", t: "Hasil periksa: tidak bunting (−)",   show: ["BRED", "PREGNANT"] },
-    { v: "CALVED",   t: "Melahirkan",                          show: ["PREGNANT"] },
-    { v: "ABORTUS",  t: "Keguguran",                           show: ["BRED", "PREGNANT"] },
-    { v: "TERAPI",   t: "Sudah mendapat terapi medis",         show: ["OPEN", "BRED", "POSTPARTUM", "ABORTUS_PENDING"] },
-  ];
-  const opsiTampil = phase === "ABORTUS_PENDING"
-    ? OPSI.filter((o) => o.v === "TERAPI")
-    : OPSI.filter((o) => o.show.includes(phase) && (!o.perlu || o.perlu()));
+  // Pilihan kondisi disaring menurut fase sapi lewat getOpsiReproduksi
+  // (analyzeCattle.js) — dipakai sama persis oleh PetugasApp.jsx, supaya
+  // aturan boleh/tidak-boleh selalu identik di aplikasi peternak & petugas.
+  // Sebelumnya seekor dara yang belum pernah di-IB tetap bisa memilih
+  // "Kelahiran Normal" atau "Pemeriksaan Kebuntingan: Positif" — mustahil
+  // secara biologis, dan salah pilih akan mengacaukan seluruh perhitungan
+  // kalender sapi itu.
+  const { options: opsiTampil, hint: opsiHint } = getOpsiReproduksi(item);
 
   return (
     <div className="sheet-overlay" onClick={onClose}>
@@ -1283,6 +1273,12 @@ function ActionModal({ open, item, onClose, onSaveRepro, onSaveHealth, setAppToa
                   Pilihan menyesuaikan status sapi saat ini ({tidyLabel(analyzeCattle(item).statusLabel) || "-"}).
                 </p>
               </div>
+
+              {opsiHint && (
+                <div className="callout callout-warn" style={{ marginBottom: 16 }}>
+                  <Icon.alert size={17} stroke={2} /><span>{opsiHint}</span>
+                </div>
+              )}
 
               {resRepro !== "POSITIVE" && resRepro !== "NEGATIVE" && (
                 <div className="field pop-in">
