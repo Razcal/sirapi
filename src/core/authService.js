@@ -77,10 +77,12 @@ export const authService = {
         rt: profileData.rt,
         rw: profileData.rw,
         photo: profileData.photo || null,
-        // Pendaftaran mandiri (bukan dibuatkan admin) selalu peternak, dan
-        // wajib disetujui admin dulu sebelum bisa pakai aplikasi.
+        // Pendaftaran mandiri (bukan dibuatkan admin) selalu peternak.
+        // Sebelumnya wajib menunggu persetujuan admin dulu (status
+        // 'pending') — dihapus atas permintaan pengguna, sekarang
+        // langsung aktif begitu daftar.
         role: 'peternak',
-        status: 'pending',
+        status: 'approved',
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       };
@@ -109,7 +111,7 @@ export const authService = {
         phone: trimmedPhone,
         ...profileData,
         role: 'peternak',
-        status: 'pending',
+        status: 'approved',
       };
       saveUserToStorage(safeUser);
 
@@ -266,7 +268,7 @@ export const authService = {
         rw: profileData.rw,
         photo: profileData.photo || googleUser.photo || null,
         role: 'peternak',
-        status: 'pending',
+        status: 'approved',
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       };

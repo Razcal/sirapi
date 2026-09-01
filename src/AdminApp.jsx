@@ -94,10 +94,10 @@ function AdminLogin({ onLoggedIn }) {
 
 /* ------------------------------------------------------- RINGKASAN ----- */
 
-function RingkasanTab({ data, loading, onJumpToPeternak, onJumpToPemantauan }) {
+function RingkasanTab({ data, loading, onJumpToPeternak, onJumpToPemantauan, onJumpToLaporan }) {
   if (loading) return <p className="t-sm c-3">Memuat...</p>;
 
-  const { totalPeternak, totalSapi, totalPetugas, pending, perKecamatan, birahi, gangguan } = data;
+  const { totalPeternak, totalSapi, totalPetugas, tanpaSapi, terbaru, perKecamatan, birahi, gangguan } = data;
 
   return (
     <div>
@@ -144,16 +144,16 @@ function RingkasanTab({ data, loading, onJumpToPeternak, onJumpToPemantauan }) {
           <span className="stat-value">{totalSapi ?? '—'}</span>
         </div>
         <div
-          className={`stat ${pending.length > 0 ? 'is-warn stat-clickable' : ''}`}
-          onClick={pending.length > 0 ? onJumpToPeternak : undefined}
-          role={pending.length > 0 ? "button" : undefined}
+          className={`stat ${tanpaSapi > 0 ? 'is-warn stat-clickable' : ''}`}
+          onClick={tanpaSapi > 0 ? onJumpToLaporan : undefined}
+          role={tanpaSapi > 0 ? "button" : undefined}
         >
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-            <span className="stat-label">Menunggu persetujuan</span>
-            <span className="stat-icon"><Icon.clock size={15} stroke={2.2} /></span>
+            <span className="stat-label">Peternak belum input sapi</span>
+            <span className="stat-icon"><Icon.alert size={15} stroke={2.2} /></span>
           </div>
-          <span className="stat-value">{nf.format(pending.length)}</span>
-          {pending.length > 0 && <span className="stat-meta" style={{ color: "var(--warn)" }}>Lihat &rarr;</span>}
+          <span className="stat-value">{nf.format(tanpaSapi)}</span>
+          {tanpaSapi > 0 && <span className="stat-meta" style={{ color: "var(--warn)" }}>Rincian di Laporan &rarr;</span>}
         </div>
         <div className="stat">
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
@@ -176,16 +176,16 @@ function RingkasanTab({ data, loading, onJumpToPeternak, onJumpToPemantauan }) {
 
         <div className="card card-pad">
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
-            <p className="t-over" style={{ margin: 0 }}>Pendaftaran terbaru</p>
-            {pending.length > 0 && (
+            <p className="t-over" style={{ margin: 0 }}>Peternak terbaru</p>
+            {terbaru.length > 0 && (
               <button onClick={onJumpToPeternak} className="btn btn-sm btn-ghost" style={{ padding: "4px 8px" }}>Lihat semua</button>
             )}
           </div>
-          {pending.length === 0 ? (
-            <p className="t-sm c-3">Tidak ada yang menunggu persetujuan.</p>
+          {terbaru.length === 0 ? (
+            <p className="t-sm c-3">Belum ada peternak terdaftar.</p>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-              {pending.slice(0, 5).map(u => (
+              {terbaru.slice(0, 5).map(u => (
                 <div key={u.id} style={{ display: "flex", alignItems: "center", gap: 10 }}>
                   <span className="admin-avatar" style={{ background: "var(--brand-soft)", color: "var(--brand)" }}>{initials(u.name)}</span>
                   <div style={{ minWidth: 0, flex: 1 }}>
@@ -314,65 +314,15 @@ function LaporanTab({ data }) {
   );
 }
 
-/* ---------------------------------------------------- PETERNAK BARU ----- */
+/* -------------------------------------------------------- PETERNAK ----- */
 
-function PeternakBaruTab({ setToast, onListChange }) {
-  const [loading, setLoading] = useState(true);
-  const [list, setList] = useState([]);
-  const [busyId, setBusyId] = useState(null);
-
-  const load = async () => {
-    setLoading(true);
-    const result = await adminService.getPendingPeternak();
-    if (result.success) { setList(result.users); onListChange?.(result.users); }
-    else setToast({ message: result.error, type: "error" });
-    setLoading(false);
-  };
-
-  useEffect(() => { load(); }, []);
-
-  const decide = async (id, status) => {
-    setBusyId(id);
-    const result = await adminService.setUserStatus(id, status);
-    setBusyId(null);
-    if (result.success) {
-      const next = list.filter(u => u.id !== id);
-      setList(next);
-      onListChange?.(next);
-      setToast({ message: status === 'approved' ? "Peternak disetujui." : "Peternak ditolak.", type: "success" });
-    } else {
-      setToast({ message: result.error, type: "error" });
-    }
-  };
-
-  if (loading) return <p className="t-sm c-3">Memuat...</p>;
-  if (list.length === 0) return <div className="empty"><p className="empty-title">Tidak ada yang menunggu</p><p className="empty-text">Semua pendaftaran peternak sudah diputuskan.</p></div>;
-
-  return (
-    <div className="rowlist">
-      {list.map(u => (
-        <div key={u.id} className="row" style={{ cursor: "default", alignItems: "flex-start", flexWrap: "wrap", gap: 12 }}>
-          <span className="admin-avatar" style={{ background: "var(--brand-soft)", color: "var(--brand)", marginTop: 2 }}>{initials(u.name)}</span>
-          <div className="row-main">
-            <span className="row-title">{u.name}</span>
-            <span className="row-sub">{u.phone} · {u.email}</span>
-            <span className="row-sub">{u.desa}, {u.kecamatan}{u.dusun ? ` · Dusun ${u.dusun}` : ''}</span>
-            <span className="t-xs c-3">Daftar: {fmtDate(u.created_at)}</span>
-          </div>
-          <div style={{ display: "flex", gap: 8 }}>
-            <button onClick={() => decide(u.id, 'rejected')} disabled={busyId === u.id} className="btn btn-sm btn-danger">Tolak</button>
-            <button onClick={() => decide(u.id, 'approved')} disabled={busyId === u.id} className="btn btn-sm btn-primary">Setujui</button>
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-// Direktori lengkap semua peternak (bukan cuma yang menunggu) — "lihat
-// semua data" yang diminta: cari, klik satu orang, lihat & edit profilnya
-// plus semua sapi miliknya lewat UserDetailModal.
-function SemuaPeternakTab({ setToast }) {
+// Direktori lengkap semua peternak — cari, klik satu orang, lihat & edit
+// profilnya plus semua sapi miliknya lewat UserDetailModal. Sebelumnya ada
+// alur "Menunggu persetujuan" terpisah (pendaftaran baru ditahan sampai
+// admin menyetujui) — dihapus atas permintaan pengguna, pendaftaran
+// mandiri sekarang langsung aktif (lihat authService.js), jadi tidak ada
+// lagi yang perlu diputuskan di sini.
+function PeternakTab({ setToast }) {
   const [loading, setLoading] = useState(true);
   const [list, setList] = useState([]);
   const [query, setQuery] = useState("");
@@ -393,8 +343,8 @@ function SemuaPeternakTab({ setToast }) {
     u.name?.toLowerCase().includes(q) || u.phone?.includes(q) || u.desa?.toLowerCase().includes(q) || u.kecamatan?.toLowerCase().includes(q)
   );
 
-  const STATUS_BADGE = { approved: 'badge-ok', pending: 'badge-warn', rejected: 'badge-crit' };
-  const STATUS_LABEL = { approved: 'Aktif', pending: 'Menunggu', rejected: 'Ditolak' };
+  const STATUS_BADGE = { approved: 'badge-ok', rejected: 'badge-crit' };
+  const STATUS_LABEL = { approved: 'Aktif', rejected: 'Ditolak' };
 
   return (
     <div>
@@ -426,23 +376,6 @@ function SemuaPeternakTab({ setToast }) {
         onClose={() => setSelected(null)}
         onSaved={(updated) => { setList(prev => prev.map(u => u.id === updated.id ? { ...u, ...updated } : u)); setSelected(updated); }}
       />
-    </div>
-  );
-}
-
-// Pembungkus tab Peternak: "Menunggu" (persetujuan, alur lama tak
-// berubah) dan "Semua" (direktori lengkap, baru).
-function PeternakTab({ setToast, onListChange }) {
-  const [section, setSection] = useState('semua');
-  return (
-    <div>
-      <div className="segmented" style={{ maxWidth: 320, marginBottom: 18 }}>
-        <button onClick={() => setSection('semua')} className={section === 'semua' ? 'active' : ''}>Semua Peternak</button>
-        <button onClick={() => setSection('menunggu')} className={section === 'menunggu' ? 'active' : ''}>Menunggu</button>
-      </div>
-      {section === 'menunggu'
-        ? <PeternakBaruTab setToast={setToast} onListChange={onListChange} />
-        : <SemuaPeternakTab setToast={setToast} />}
     </div>
   );
 }
@@ -700,29 +633,31 @@ export default function AdminApp() {
   const [toast, setToast] = useState(null);
   const [checking, setChecking] = useState(true);
 
-  // Data agregat dipakai di Ringkasan; sub-tab lain melaporkan lewat
-  // onListChange supaya angka di kartu ringkasan & lencana sidebar tetap
-  // sinkron begitu admin menyetujui/menolak/menambah, tanpa refetch ganda.
-  const [overview, setOverview] = useState({ totalPeternak: 0, totalSapi: null, totalPetugas: 0, pending: [], perKecamatan: [], birahi: [], gangguan: [] });
+  // Data agregat dipakai di Ringkasan.
+  const [overview, setOverview] = useState({ totalPeternak: 0, totalSapi: null, totalPetugas: 0, tanpaSapi: 0, terbaru: [], perKecamatan: [], birahi: [], gangguan: [] });
   const [overviewLoading, setOverviewLoading] = useState(true);
   const [pemantauanJump, setPemantauanJump] = useState(null);
 
   const loadOverview = async () => {
     setOverviewLoading(true);
-    const [pendingRes, approvedRes, cattleRes, petugasRes, reproRes] = await Promise.all([
-      adminService.getPendingPeternak(),
+    const [approvedRes, cattleRes, petugasRes, reproRes, tanpaSapiRes] = await Promise.all([
       adminService.getApprovedPeternak(),
       adminService.getCattleCount(),
       adminService.getPetugasList(),
       adminService.getReproMonitoring(),
+      adminService.getPeternakTanpaSapi(),
     ]);
     const perKecamatan = {};
     if (approvedRes.success) approvedRes.users.forEach(u => { perKecamatan[u.kecamatan] = (perKecamatan[u.kecamatan] || 0) + 1; });
+    const terbaru = approvedRes.success
+      ? [...approvedRes.users].sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, 5)
+      : [];
     setOverview({
       totalPeternak: approvedRes.success ? approvedRes.users.length : 0,
       totalSapi: cattleRes.success ? cattleRes.count : null,
       totalPetugas: petugasRes.success ? petugasRes.users.length : 0,
-      pending: pendingRes.success ? pendingRes.users : [],
+      tanpaSapi: tanpaSapiRes.success ? tanpaSapiRes.total : 0,
+      terbaru,
       perKecamatan: Object.entries(perKecamatan).sort((a, b) => b[1] - a[1]),
       birahi: reproRes.success ? reproRes.birahi : [],
       gangguan: reproRes.success ? reproRes.gangguan : [],
@@ -764,13 +699,12 @@ export default function AdminApp() {
     );
   }
 
-  const pendingCount = overview.pending.length;
   const gangguanCount = overview.gangguan.length;
   const TABS = [
     { key: 'ringkasan', label: 'Ringkasan', icon: Icon.home },
     { key: 'pemantauan', label: 'Pemantauan Sapi', icon: Icon.activity, badge: gangguanCount || null },
     { key: 'laporan', label: 'Laporan', icon: Icon.trendUp },
-    { key: 'peternak', label: 'Peternak', icon: Icon.user, badge: pendingCount || null },
+    { key: 'peternak', label: 'Peternak', icon: Icon.user },
     { key: 'petugas', label: 'Petugas', icon: Icon.stethoscope },
   ];
   const PAGE_META = {
@@ -830,6 +764,7 @@ export default function AdminApp() {
             loading={overviewLoading}
             onJumpToPeternak={() => setTab('peternak')}
             onJumpToPemantauan={(section) => { setPemantauanJump(section); setTab('pemantauan'); }}
+            onJumpToLaporan={() => setTab('laporan')}
           />
         )}
         {tab === 'pemantauan' && (
@@ -839,7 +774,7 @@ export default function AdminApp() {
           overviewLoading ? <p className="t-sm c-3">Memuat...</p> : <LaporanTab data={overview} />
         )}
         {tab === 'peternak' && (
-          <PeternakTab setToast={setToast} onListChange={(list) => setOverview(o => ({ ...o, pending: list }))} />
+          <PeternakTab setToast={setToast} />
         )}
         {tab === 'petugas' && (
           <PetugasTab session={session} setToast={setToast} onListChange={(list) => setOverview(o => ({ ...o, totalPetugas: list.length }))} />

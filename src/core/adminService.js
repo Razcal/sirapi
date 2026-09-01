@@ -20,37 +20,6 @@ const LABEL_BIRAHI = new Set([
 // AdminApp.jsx bisa memanggil ini. Mengunci RLS supaya cuma admin yang
 // benar-benar bisa query/ubah baris orang lain adalah kerja susulan.
 export const adminService = {
-  // Peternak yang mendaftar sendiri dan masih menunggu persetujuan.
-  getPendingPeternak: async () => {
-    try {
-      const { data, error } = await supabase
-        .from('users')
-        .select('*')
-        .eq('role', 'peternak')
-        .eq('status', 'pending')
-        .order('created_at', { ascending: true });
-      if (error) throw error;
-      return { success: true, users: data || [] };
-    } catch (error) {
-      return { success: false, error: error.message };
-    }
-  },
-
-  setUserStatus: async (userId, status) => {
-    try {
-      const { data, error } = await supabase
-        .from('users')
-        .update({ status, updated_at: new Date().toISOString() })
-        .eq('id', userId)
-        .select()
-        .single();
-      if (error) throw error;
-      return { success: true, user: data };
-    } catch (error) {
-      return { success: false, error: error.message };
-    }
-  },
-
   getPetugasList: async () => {
     try {
       const { data, error } = await supabase
@@ -136,10 +105,8 @@ export const adminService = {
     }
   },
 
-  // Semua peternak apapun statusnya (approved/pending/rejected) — dipakai
-  // sub-tab "Semua Peternak", beda dari getPendingPeternak yang cuma yang
-  // menunggu. Pencarian dilakukan di sisi klien (jumlah masih ratusan,
-  // belum perlu query server per ketikan).
+  // Direktori lengkap semua peternak. Pencarian dilakukan di sisi klien
+  // (jumlah masih ratusan, belum perlu query server per ketikan).
   getAllPeternak: async () => {
     try {
       const { data, error } = await supabase
