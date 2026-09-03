@@ -2738,6 +2738,60 @@ function ChangePasswordModal({ open, onClose, currentProfile, setAppToast }) {
   );
 }
 
+// Nomor versi dibaca dari native (@capacitor/app → versionName di
+// android/app/build.gradle) supaya selalu sinkron dengan APK yang
+// sungguhan terpasang — tidak perlu diketik ulang manual di sini tiap
+// kali versi dinaikkan. Di web (plugin ini tak ada) jatuh ke angka tetap.
+function AboutModal({ open, onClose }) {
+  const [versionInfo, setVersionInfo] = useState(null);
+
+  useEffect(() => {
+    if (!open) return;
+    import("@capacitor/app")
+      .then(({ App: CapApp }) => CapApp?.getInfo?.())
+      .then((info) => { if (info) setVersionInfo(info); })
+      .catch(() => {});
+  }, [open]);
+
+  if (!open) return null;
+  const versiTampil = versionInfo?.version ? `v${versionInfo.version}` : "v2.0";
+
+  return (
+    <div className="sheet-overlay" style={{ alignItems: "center", padding: 16 }} onClick={onClose}>
+      <div className="card pop-in card-pad" style={{ width: "100%", maxWidth: 360, textAlign: "center", boxShadow: "var(--sh-xl)" }} onClick={(e) => e.stopPropagation()}>
+        <img src={logoTuban} alt="" style={{ width: 52, height: "auto", margin: "0 auto 14px", display: "block" }} />
+        <p className="t-h2 c-1" style={{ margin: "0 0 2px" }}>SIRAPI</p>
+        <p className="t-xs c-3" style={{ margin: "0 0 10px", fontWeight: 700 }}>{versiTampil}</p>
+        <p className="t-sm c-2" style={{ margin: "0 0 18px", lineHeight: 1.5 }}>
+          Sistem Informasi Reproduksi Sapi<br />
+          Dinas Ketahanan Pangan, Pertanian dan Perikanan Kabupaten Tuban
+        </p>
+
+        <hr className="divider" style={{ margin: "0 0 16px" }} />
+
+        <div className="rowlist" style={{ marginBottom: 16, textAlign: "left" }}>
+          <a className="row" style={{ textDecoration: "none" }} href="tel:081555863186">
+            <span className="row-icon" style={{ background: "var(--brand-soft)", color: "var(--brand)" }}>
+              <Icon.phone size={16} />
+            </span>
+            <span className="row-main"><span className="row-title">081555863186</span></span>
+          </a>
+          <a className="row" style={{ textDecoration: "none" }} href="mailto:amriyan.nurrakhman@gmail.com">
+            <span className="row-icon" style={{ background: "var(--info-bg)", color: "var(--info)" }}>
+              <Icon.mail size={16} />
+            </span>
+            <span className="row-main"><span className="row-title">amriyan.nurrakhman@gmail.com</span></span>
+          </a>
+        </div>
+
+        <p className="t-xs c-3" style={{ margin: "0 0 16px" }}>Dibuat oleh M. Amriyan Nurrakhman</p>
+
+        <button onClick={onClose} className="btn btn-secondary btn-block">Tutup</button>
+      </div>
+    </div>
+  );
+}
+
 function ResetPasswordScreen({ onDone, setAppToast }) {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -2886,6 +2940,7 @@ function AppContent() {
   const [helpGuideOpen, setHelpGuideOpen] = useState(false);
   const [rewindOpen, setRewindOpen] = useState(false);
   const [akademiOpen, setAkademiOpen] = useState(false);
+  const [aboutOpen, setAboutOpen] = useState(false);
   const [shareRewind, setShareRewind] = useState(null);
 
   // Satu tempat yang tahu urutan lapisan yang terbuka, dipakai oleh tombol
@@ -2898,6 +2953,7 @@ function AppContent() {
       if (tutorialOpen)       { setTutorialOpen(false); return true; }
       if (helpGuideOpen)      { setHelpGuideOpen(false); return true; }
       if (akademiOpen)        { setAkademiOpen(false); return true; }
+      if (aboutOpen)          { setAboutOpen(false); return true; }
       if (changePasswordOpen) { setChangePasswordOpen(false); return true; }
       if (editProfileOpen)    { setEditProfileOpen(false); return true; }
       if (detailItem)         { setDetailItem(null); return true; }
@@ -2910,7 +2966,7 @@ function AppContent() {
       delete window.__sirapiCloseTop;
       delete window.__openHelpGuide;
     };
-  }, [appConfirm, rewindOpen, tutorialOpen, helpGuideOpen, akademiOpen, changePasswordOpen, editProfileOpen,
+  }, [appConfirm, rewindOpen, tutorialOpen, helpGuideOpen, akademiOpen, aboutOpen, changePasswordOpen, editProfileOpen,
       detailItem, actionItem, addOpen, nav]);
 
   const [pushSubscribed, setPushSubscribed] = useState(false);
@@ -3452,6 +3508,13 @@ function AppContent() {
                         <span className="row-main"><span className="row-title">Hubungi petugas</span></span>
                         <Icon.chevronRight size={18} className="row-chev" />
                       </a>
+                      <button className="row" onClick={() => setAboutOpen(true)}>
+                        <span className="row-icon" style={{ background: "var(--neut-bg)", color: "var(--text-2)" }}>
+                          <Icon.info size={18} />
+                        </span>
+                        <span className="row-main"><span className="row-title">Tentang aplikasi</span></span>
+                        <Icon.chevronRight size={18} className="row-chev" />
+                      </button>
                     </div>
                   </section>
 
@@ -3569,6 +3632,7 @@ function AppContent() {
           <OnboardingTutorial open={tutorialOpen} onClose={() => { setTutorialOpen(false); localStorage.setItem("srtt_tutorial_seen", "1"); }} />
           <HelpGuideScreen open={helpGuideOpen} onClose={() => setHelpGuideOpen(false)} />
           <AcademyView open={akademiOpen} onClose={() => setAkademiOpen(false)} kecamatan={profile?.kecamatan} />
+          <AboutModal open={aboutOpen} onClose={() => setAboutOpen(false)} />
         </>
       )}
     </div>
