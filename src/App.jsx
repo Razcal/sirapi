@@ -2784,7 +2784,7 @@ function AboutModal({ open, onClose }) {
           </a>
         </div>
 
-        <p className="t-xs c-3" style={{ margin: "0 0 16px" }}>Dibuat oleh M. Amriyan Nurrakhman</p>
+        <p className="t-xs c-3" style={{ margin: "0 0 16px" }}>Dibuat oleh drh. M. Amriyan Nurrakhman, M.Si</p>
 
         <button onClick={onClose} className="btn btn-secondary btn-block">Tutup</button>
       </div>
