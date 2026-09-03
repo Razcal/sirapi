@@ -1863,7 +1863,14 @@ function DashboardView({ dbCattle, profile, onAdviceClick, setAppToast, onAddNew
                 </div>
               </div>
             ) : (
-              <div className="stack-8">
+              // Tinggi dibatasi + gulir sendiri — sebelumnya daftar ini
+              // langsung mengikuti tinggi kontennya, jadi kalau ada banyak
+              // sapi mendesak, layar Beranda penuh kotak merah sebelum
+              // sempat sampai ke bagian lain. Sekarang cuma "mengintip"
+              // beberapa kartu teratas (yang paling genting, sudah
+              // diurutkan di atas), sisanya digulir di dalam kotaknya
+              // sendiri — bukan menggulir seluruh halaman.
+              <div className="stack-8" style={{ maxHeight: 560, overflowY: "auto", paddingRight: 2, marginRight: -2 }}>
                 {needAction.map(({ item, analysis }) => (
                   <AdviceCard key={item.id} item={item} analysis={analysis} onClick={onAdviceClick} ownerName={profile?.name} kecamatan={profile?.kecamatan} onOpenLaporanPetugas={onOpenLaporanPetugas} />
                 ))}
