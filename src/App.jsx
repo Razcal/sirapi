@@ -1784,6 +1784,11 @@ function DashboardView({ dbCattle, profile, onAdviceClick, setAppToast, onAddNew
   const betina = total - jantan;
   const pregnant = safeDb.filter((i) => i && (i.status_reproduksi === "PREGNANT" || i.phase === "PREGNANT")).length;
   const [shareModalOpen, setShareModalOpen] = useState(false);
+  // Daftar "Perlu tindakan" sengaja TERTUTUP dulu — dulu langsung terbuka
+  // penuh dan bisa memenuhi layar Beranda dengan kotak merah kalau sapi
+  // mendesaknya banyak. Sekarang cuma jumlahnya yang kelihatan; kartunya
+  // baru muncul (dan halaman ikut bergulir ke bawah) begitu diketuk.
+  const [showNeedAction, setShowNeedAction] = useState(false);
 
   const analysed = safeDb.map((item) => {
     if (!item) return null;
@@ -1843,38 +1848,56 @@ function DashboardView({ dbCattle, profile, onAdviceClick, setAppToast, onAddNew
             </div>
           </section>
 
-          {/* ---- Yang perlu tindakan: sekarang di ATAS dan terbuka ---- */}
+          {/* ---- Yang perlu tindakan: tertutup dulu, diketuk baru terbuka ---- */}
           <section>
-            <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 10 }}>
-              <h2 className="t-h2 c-1">Perlu tindakan</h2>
-              {needAction.length > 0 && (
-                <span className="t-xs c-3" style={{ fontWeight: 600 }}>{needAction.length} ekor</span>
-              )}
-            </div>
-
             {needAction.length === 0 ? (
-              <div className="card">
-                <div className="empty" style={{ padding: "30px 24px" }}>
-                  <div className="empty-icon" style={{ background: "var(--ok-bg)", color: "var(--ok)" }}>
-                    <Icon.checkCircle size={26} />
-                  </div>
-                  <p className="empty-title">Semua sapi dalam kondisi baik</p>
-                  <p className="empty-text" style={{ marginBottom: 0 }}>Tidak ada yang butuh tindakan hari ini.</p>
+              <>
+                <div style={{ marginBottom: 10 }}>
+                  <h2 className="t-h2 c-1">Perlu tindakan</h2>
                 </div>
-              </div>
+                <div className="card">
+                  <div className="empty" style={{ padding: "30px 24px" }}>
+                    <div className="empty-icon" style={{ background: "var(--ok-bg)", color: "var(--ok)" }}>
+                      <Icon.checkCircle size={26} />
+                    </div>
+                    <p className="empty-title">Semua sapi dalam kondisi baik</p>
+                    <p className="empty-text" style={{ marginBottom: 0 }}>Tidak ada yang butuh tindakan hari ini.</p>
+                  </div>
+                </div>
+              </>
             ) : (
-              // Tinggi dibatasi + gulir sendiri — sebelumnya daftar ini
-              // langsung mengikuti tinggi kontennya, jadi kalau ada banyak
-              // sapi mendesak, layar Beranda penuh kotak merah sebelum
-              // sempat sampai ke bagian lain. Sekarang cuma "mengintip"
-              // beberapa kartu teratas (yang paling genting, sudah
-              // diurutkan di atas), sisanya digulir di dalam kotaknya
-              // sendiri — bukan menggulir seluruh halaman.
-              <div className="stack-8" style={{ maxHeight: 560, overflowY: "auto", paddingRight: 2, marginRight: -2 }}>
-                {needAction.map(({ item, analysis }) => (
-                  <AdviceCard key={item.id} item={item} analysis={analysis} onClick={onAdviceClick} ownerName={profile?.name} kecamatan={profile?.kecamatan} onOpenLaporanPetugas={onOpenLaporanPetugas} />
-                ))}
-              </div>
+              <>
+                <button
+                  onClick={() => setShowNeedAction((v) => !v)}
+                  className="card card-pad"
+                  style={{
+                    width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between",
+                    gap: 10, border: 0, cursor: "pointer", textAlign: "left",
+                  }}
+                  aria-expanded={showNeedAction}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <span className="row-icon" style={{ background: "var(--crit-bg)", color: "var(--crit)" }}>
+                      <Icon.alert size={18} />
+                    </span>
+                    <div>
+                      <p className="t-h3 c-1" style={{ margin: 0 }}>Perlu tindakan</p>
+                      <p className="t-xs c-3" style={{ margin: "1px 0 0" }}>{needAction.length} ekor menunggu ditinjau</p>
+                    </div>
+                  </div>
+                  <Icon.chevronDown size={20} className="c-3" style={{
+                    transform: showNeedAction ? "rotate(180deg)" : "none", transition: "transform .2s ease", flexShrink: 0,
+                  }} />
+                </button>
+
+                {showNeedAction && (
+                  <div className="stack-8 fade-in" style={{ marginTop: 10 }}>
+                    {needAction.map(({ item, analysis }) => (
+                      <AdviceCard key={item.id} item={item} analysis={analysis} onClick={onAdviceClick} ownerName={profile?.name} kecamatan={profile?.kecamatan} onOpenLaporanPetugas={onOpenLaporanPetugas} />
+                    ))}
+                  </div>
+                )}
+              </>
             )}
           </section>
 
