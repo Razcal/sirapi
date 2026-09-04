@@ -71,13 +71,20 @@ function RecordActionModal({ open, cattle, onClose, onSaved, setToast }) {
   const [healthType, setHealthType] = useState("LAPOR");
   const [gejala, setGejala] = useState("");
   const [saving, setSaving] = useState(false);
+  // Sama seperti di aplikasi Peternak (App.jsx) - hasil PKB menentukan
+  // seluruh kalender sapi ke depan, jadi tetap wajib ditegaskan di sini
+  // juga walau yang mengisi form ini petugas sendiri, bukan cuma dicatat
+  // buru-buru tanpa pemeriksaan sungguhan.
+  const [pkbConfirmed, setPkbConfirmed] = useState(false);
 
   useEffect(() => {
     if (open) {
       setTab("REPRO"); setRes("NONE"); setDate(todayStrLocal()); setPregMonth("");
-      setHealthType("LAPOR"); setGejala(""); setSaving(false);
+      setHealthType("LAPOR"); setGejala(""); setSaving(false); setPkbConfirmed(false);
     }
   }, [open, cattle?.id]);
+
+  useEffect(() => { setPkbConfirmed(false); }, [res]);
 
   if (!open || !cattle) return null;
   const { options: opsi, hint: opsiHint } = getOpsiReproduksi(cattle);
@@ -86,6 +93,9 @@ function RecordActionModal({ open, cattle, onClose, onSaved, setToast }) {
   const submitRepro = async () => {
     if (res === "NONE") return setToast({ message: "Pilih jenis tindakan.", type: "error" });
     if (res === "POSITIVE" && !punyaIB && !pregMonth) return setToast({ message: "Perkiraan usia kebuntingan wajib diisi (tidak ada catatan IB).", type: "error" });
+    if ((res === "POSITIVE" || res === "NEGATIVE") && !pkbConfirmed) {
+      return setToast({ message: "Wajib centang dulu konfirmasi bahwa pemeriksaan kebuntingan (PKB) sudah benar-benar dilakukan.", type: "error" });
+    }
     setSaving(true);
     const result = await petugasService.recordReproAction(cattle, res, pregMonth, date);
     setSaving(false);
@@ -147,6 +157,17 @@ function RecordActionModal({ open, cattle, onClose, onSaved, setToast }) {
                         {[1,2,3,4,5,6,7,8,9].map(m => <option key={m} value={m}>{m} bulan</option>)}
                       </select>
                     </div>
+                  )}
+                  {(res === "POSITIVE" || res === "NEGATIVE") && (
+                    <label className="callout callout-warn" style={{ marginBottom: 16, alignItems: "flex-start", gap: 10, cursor: "pointer" }}>
+                      <input
+                        type="checkbox"
+                        checked={pkbConfirmed}
+                        onChange={e => setPkbConfirmed(e.target.checked)}
+                        style={{ marginTop: 2, width: 17, height: 17, flexShrink: 0 }}
+                      />
+                      <span>Saya konfirmasi telah melakukan pemeriksaan kebuntingan (PKB) langsung pada sapi ini, bukan mencatat perkiraan.</span>
+                    </label>
                   )}
                   <button onClick={submitRepro} disabled={saving} className="btn btn-primary btn-lg btn-block" style={{ marginTop: 8 }}>{saving ? "Menyimpan..." : "Simpan"}</button>
                 </>

@@ -1204,6 +1204,12 @@ function ActionModal({ open, item, onClose, onSaveRepro, onSaveHealth, setAppToa
   const [dHealth, setDHealth] = useState(todayStr());
   const [kondisi, setKondisi] = useState("");
   const [medicalWarning, setMedicalWarning] = useState(null);
+  // Hasil PKB (bunting/tidak bunting) menentukan seluruh kalender sapi ke
+  // depan (HPL, kering kandang, dst) - jadi wajib ditegaskan dulu bahwa ini
+  // hasil pemeriksaan sungguhan oleh petugas/dokter hewan, bukan cuma
+  // dipilih iseng. Direset tiap kali jenis kondisi diganti supaya tidak
+  // "kebawa" tercentang dari pilihan sebelumnya.
+  const [pkbConfirmed, setPkbConfirmed] = useState(false);
 
   const itemGender = item?.jenis_kelamin || item?.gender;
   const isJantan = itemGender === "JANTAN";
@@ -1215,9 +1221,11 @@ function ActionModal({ open, item, onClose, onSaveRepro, onSaveHealth, setAppToa
       setTab(isJantan ? "KESEHATAN" : "REPRO");
       setResRepro("NONE"); setDRepro(todayStr()); setPregMonth("");
       setDHealth(todayStr()); setKondisi("");
-      setMedicalWarning(null);
+      setMedicalWarning(null); setPkbConfirmed(false);
     }
   }, [open, item?.id, isJantan]);
+
+  useEffect(() => { setPkbConfirmed(false); }, [resRepro]);
 
   useEffect(() => {
     if (resRepro === "IB" && dRepro) {
@@ -1273,6 +1281,9 @@ function ActionModal({ open, item, onClose, onSaveRepro, onSaveHealth, setAppToa
     if (resRepro === "NONE") return setAppToast({ message: "Silakan pilih jenis kondisi terlebih dahulu", type: "error" });
     if (medicalWarning?.includes("❌")) return setAppToast({ message: "Tanggal tidak valid", type: "error" });
     if (resRepro !== 'POSITIVE' && resRepro !== 'NEGATIVE' && !dRepro) return setAppToast({ message: "Tanggal tindakan/kejadian wajib diisi", type: "error" });
+    if ((resRepro === 'POSITIVE' || resRepro === 'NEGATIVE') && !pkbConfirmed) {
+      return setAppToast({ message: "Wajib centang dulu konfirmasi bahwa ini hasil pemeriksaan kebuntingan (PKB) sungguhan oleh petugas/dokter hewan", type: "error" });
+    }
 
     if (resRepro === "POSITIVE") {
       const hasIB = ibSinceCalving(item).length > 0;
@@ -1395,6 +1406,21 @@ function ActionModal({ open, item, onClose, onSaveRepro, onSaveHealth, setAppToa
                   <Icon.alert size={17} stroke={2} />
                   <span>{medicalWarning.replace(/⚠️|❌/g, "").trim()}</span>
                 </div>
+              )}
+
+              {(resRepro === "POSITIVE" || resRepro === "NEGATIVE") && (
+                <label
+                  className="callout callout-warn pop-in"
+                  style={{ marginBottom: 16, alignItems: "flex-start", gap: 10, cursor: "pointer" }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={pkbConfirmed}
+                    onChange={(e) => setPkbConfirmed(e.target.checked)}
+                    style={{ marginTop: 2, width: 17, height: 17, flexShrink: 0 }}
+                  />
+                  <span>Saya konfirmasi hasil ini berdasarkan pemeriksaan kebuntingan (PKB) langsung oleh petugas/dokter hewan, bukan perkiraan sendiri.</span>
+                </label>
               )}
 
               <button onClick={handleSaveRepro} className="btn btn-primary btn-block">Simpan catatan</button>
@@ -2788,7 +2814,7 @@ function AboutModal({ open, onClose }) {
   }, [open]);
 
   if (!open) return null;
-  const versiTampil = versionInfo?.version ? `v${versionInfo.version}` : "v2.4";
+  const versiTampil = versionInfo?.version ? `v${versionInfo.version}` : "v2.5";
 
   return (
     <div className="sheet-overlay" style={{ alignItems: "center", padding: 16 }} onClick={onClose}>
