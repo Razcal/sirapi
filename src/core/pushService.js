@@ -88,6 +88,35 @@ const unsubscribeNative = async (userId) => {
   return { success: true };
 };
 
+// --- Tampilkan notifikasi saat aplikasi sedang dibuka (foreground) --------
+// PENTING: Android TIDAK otomatis menampilkan notifikasi FCM ke system tray
+// kalau aplikasi SIRAPI sedang aktif terbuka di layar (auto-tampil cuma
+// terjadi kalau aplikasi di background/tertutup) — jadi tanpa listener ini,
+// notifikasi datang tapi "hilang" begitu saja kalau peternak sedang membuka
+// aplikasinya persis saat notifikasi masuk. Dipanggil sekali saat aplikasi
+// pertama kali dibuka (lihat App.jsx), bukan cuma saat proses mengaktifkan.
+let foregroundListenerReady = false;
+const initForegroundListener = async () => {
+  if (!Capacitor.isNativePlatform() || foregroundListenerReady) return;
+  foregroundListenerReady = true;
+  try {
+    const { PushNotifications } = await import('@capacitor/push-notifications');
+    const { LocalNotifications } = await import('@capacitor/local-notifications');
+    await LocalNotifications.requestPermissions().catch(() => {});
+    PushNotifications.addListener('pushNotificationReceived', async (notification) => {
+      try {
+        await LocalNotifications.schedule({
+          notifications: [{
+            id: Math.floor(Math.random() * 2147483647),
+            title: notification?.title || 'SIRAPI',
+            body: notification?.body || '',
+          }],
+        });
+      } catch { /* gagal tampilkan lokal - tidak fatal, sudah dicatat FCM */ }
+    });
+  } catch { /* plugin belum siap / bukan APK - lewati diam-diam */ }
+};
+
 // --- Jalur web/PWA (browser biasa) ---------------------------------------
 
 const isSubscribedWeb = async () => {
@@ -145,6 +174,10 @@ const unsubscribeWeb = async () => {
 
 export const pushService = {
   isSupported: () => Capacitor.isNativePlatform() || ('serviceWorker' in navigator && 'PushManager' in window),
+
+  // Dipanggil sekali di App.jsx saat aplikasi dibuka (APK) - lihat catatan
+  // di initForegroundListener di atas. Aman dipanggil berkali-kali.
+  initForegroundListener,
 
   getPermissionStatus: () => {
     if (Capacitor.isNativePlatform()) return 'native'; // dicek async lewat isSubscribed()
