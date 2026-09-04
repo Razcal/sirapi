@@ -3008,6 +3008,36 @@ function AppContent() {
     });
   }, []);
 
+  // Cek pembaruan otomatis — hanya relevan untuk APK terpasang (versi web
+  // selalu otomatis versi terbaru begitu dibuka, tidak perlu dicek). APK
+  // lama tidak bisa memperbarui dirinya sendiri; ini cuma memberi tahu
+  // pengguna kalau ada versi lebih baru, lengkap tautan unduh langsung —
+  // supaya "APK lama tidak tahu ada update" tidak terjadi lagi.
+  const [updateInfo, setUpdateInfo] = useState(null);
+  useEffect(() => {
+    import("@capacitor/app").then(async ({ App: CapApp }) => {
+      const info = await CapApp?.getInfo?.().catch(() => null);
+      const currentVersion = info?.version;
+      if (!currentVersion) return; // bukan APK (browser biasa) — lewati
+
+      const res = await fetch("https://proverti.vercel.app/version.json", { cache: "no-store" }).catch(() => null);
+      if (!res || !res.ok) return;
+      const data = await res.json().catch(() => null);
+      if (!data?.latest) return;
+
+      const isNewer = (a, b) => {
+        const pa = String(a).split(".").map(Number);
+        const pb = String(b).split(".").map(Number);
+        for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+          const na = pa[i] || 0, nb = pb[i] || 0;
+          if (na !== nb) return na > nb;
+        }
+        return false;
+      };
+      if (isNewer(data.latest, currentVersion)) setUpdateInfo(data);
+    }).catch(() => {});
+  }, []);
+
   const handleTogglePush = async () => {
     setPushLoading(true);
     const { pushService } = await import('./core/pushService');
@@ -3340,6 +3370,29 @@ function AppContent() {
               </div>
             </div>
           </header>
+
+          {updateInfo && (
+            <div style={{
+              display: "flex", alignItems: "center", gap: 10, padding: "10px 16px",
+              background: "var(--brand)", color: "#fff", fontSize: 13, fontWeight: 600,
+            }}>
+              <Icon.download size={17} stroke={2.2} style={{ flexShrink: 0 }} />
+              <span style={{ flex: 1, minWidth: 0 }}>
+                Versi baru SIRAPI (v{updateInfo.latest}) tersedia.
+                {updateInfo.notes ? ` ${updateInfo.notes}` : ""}
+              </span>
+              <a
+                href={updateInfo.apkUrl}
+                target="_blank" rel="noopener noreferrer"
+                style={{
+                  flexShrink: 0, background: "#fff", color: "var(--brand-deep)", fontWeight: 700,
+                  fontSize: 12.5, padding: "6px 12px", borderRadius: 999, textDecoration: "none",
+                }}
+              >
+                Unduh
+              </a>
+            </div>
+          )}
 
           <div className="flex-1">
             {nav === "dashboard" && <DashboardView dbCattle={safeDb} onAdviceClick={handleAdviceClick} profile={profile} setAppToast={setAppToast} onAddNew={openAddCattle} onOpenLaporanPetugas={setLaporanItem} />}
