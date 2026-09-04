@@ -418,7 +418,7 @@ function AdviceCard({ item, analysis, onClick, ownerName, kecamatan, onOpenLapor
 
         {analysis.sudahLapor && (
           <p className="t-xs" style={{ margin: "8px 0 0", fontWeight: 700, color: "var(--warn)" }}>
-            ✓ Sudah dilaporkan — dipantau sampai birahi kembali normal (18-24 hari)
+            ✓ Sudah dilaporkan — dipantau hingga sapi menunjukkan tanda birahi kembali
           </p>
         )}
 
@@ -435,7 +435,7 @@ function AdviceCard({ item, analysis, onClick, ownerName, kecamatan, onOpenLapor
               <Icon.phone size={15} stroke={2} /> Hubungi petugas
             </a>
           ) : null}
-          {analysis.needsVet && (
+          {analysis.needsVet && !analysis.sudahLapor && (
             <button
               onClick={(e) => { e.stopPropagation(); onOpenLaporanPetugas && onOpenLaporanPetugas(item); }}
               className="btn btn-sm btn-secondary"
@@ -1126,7 +1126,7 @@ function AssetRecordCard({ item, onEdit, onOpenAction, onOpenDetail, onDelete, h
                 </div>
                 {analysis.sudahLapor && (
                   <span className="t-xs" style={{ fontWeight: 700 }}>
-                    ✓ Sudah dilaporkan — dipantau sampai birahi kembali normal (18-24 hari)
+                    ✓ Sudah dilaporkan — dipantau hingga sapi menunjukkan tanda birahi kembali
                   </span>
                 )}
                 <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
@@ -1140,12 +1140,17 @@ function AssetRecordCard({ item, onEdit, onOpenAction, onOpenDetail, onDelete, h
                   >
                     <Icon.phone size={15} stroke={2} /> Hubungi petugas
                   </a>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); onOpenLaporanPetugas && onOpenLaporanPetugas(item); }}
-                    className="btn btn-sm btn-secondary"
-                  >
-                    <Icon.check size={15} stroke={2} /> Sudah menghubungi petugas
-                  </button>
+                  {/* Sekali sudah ditekan, tombolnya hilang - tidak ada gunanya
+                      dilaporkan berulang-ulang, dan menghindari kesan "belum
+                      dilaporkan" padahal sudah (badge ✓ di atas sudah cukup). */}
+                  {!analysis.sudahLapor && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); onOpenLaporanPetugas && onOpenLaporanPetugas(item); }}
+                      className="btn btn-sm btn-secondary"
+                    >
+                      <Icon.check size={15} stroke={2} /> Sudah menghubungi petugas
+                    </button>
+                  )}
                 </div>
               </div>
             )}
@@ -2814,7 +2819,7 @@ function AboutModal({ open, onClose }) {
   }, [open]);
 
   if (!open) return null;
-  const versiTampil = versionInfo?.version ? `v${versionInfo.version}` : "v2.7";
+  const versiTampil = versionInfo?.version ? `v${versionInfo.version}` : "v2.8";
 
   return (
     <div className="sheet-overlay" style={{ alignItems: "center", padding: 16 }} onClick={onClose}>
