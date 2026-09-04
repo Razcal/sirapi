@@ -2330,6 +2330,10 @@ function AddModal({ open, onClose, onSave, editItem, setAppToast }) {
                 <option>Limosin SPLI</option>
                 <option>PO SPPO</option>
                 <option>Brahman</option>
+                <option>Red Brahman</option>
+                <option>Belgian Blue</option>
+                <option>Red Angus</option>
+                <option>Angus</option>
               </select>
             </FF>
           </div>
@@ -2784,7 +2788,7 @@ function AboutModal({ open, onClose }) {
   }, [open]);
 
   if (!open) return null;
-  const versiTampil = versionInfo?.version ? `v${versionInfo.version}` : "v2.1";
+  const versiTampil = versionInfo?.version ? `v${versionInfo.version}` : "v2.2";
 
   return (
     <div className="sheet-overlay" style={{ alignItems: "center", padding: 16 }} onClick={onClose}>

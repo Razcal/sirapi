@@ -1,5 +1,5 @@
 {
-  "latest": "2.1",
+  "latest": "2.2",
   "apkUrl": "https://proverti.vercel.app/sirapi-latest.apk",
-  "notes": "Perbaikan tambah ternak & pendaftaran akun, batas wajib PKB jadi 3 bulan."
+  "notes": "Tambahan pilihan ras sapi: Red Brahman, Belgian Blue, Red Angus, Angus."
 }
