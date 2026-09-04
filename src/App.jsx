@@ -2788,7 +2788,7 @@ function AboutModal({ open, onClose }) {
   }, [open]);
 
   if (!open) return null;
-  const versiTampil = versionInfo?.version ? `v${versionInfo.version}` : "v2.2";
+  const versiTampil = versionInfo?.version ? `v${versionInfo.version}` : "v2.3";
 
   return (
     <div className="sheet-overlay" style={{ alignItems: "center", padding: 16 }} onClick={onClose}>
@@ -3018,6 +3018,7 @@ function AppContent() {
   // pengguna kalau ada versi lebih baru, lengkap tautan unduh langsung —
   // supaya "APK lama tidak tahu ada update" tidak terjadi lagi.
   const [updateInfo, setUpdateInfo] = useState(null);
+  const [updateDismissed, setUpdateDismissed] = useState(false);
   useEffect(() => {
     import("@capacitor/app").then(async ({ App: CapApp }) => {
       const info = await CapApp?.getInfo?.().catch(() => null);
@@ -3277,7 +3278,59 @@ function AppContent() {
       <DialogSystem />
       <ToastNotification message={appToast?.message} type={appToast?.type} onClose={() => setAppToast(null)} />
       <CustomConfirm {...appConfirm} onCancel={() => setAppConfirm({ open: false })} />
-      
+
+      {/* Dirender di luar semua kondisi splash/intro/login/app di bawah —
+          supaya muncul dari detik pertama aplikasi dibuka (termasuk saat
+          masih splash screen), bukan cuma setelah pengguna berhasil masuk.
+          Pita tipis di topbar sebelumnya sering tidak disadari pengguna;
+          ini sengaja dibuat kartu penuh yang tidak mungkin terlewat. */}
+      {updateInfo && !updateDismissed && (
+        <div style={{
+          position: "fixed", inset: 0, zIndex: 999999, display: "flex",
+          alignItems: "center", justifyContent: "center", padding: 20,
+          background: "rgba(2,36,28,.72)", backdropFilter: "blur(3px)",
+        }}>
+          <div className="pop-in" style={{
+            width: "100%", maxWidth: 360, background: "#fff", borderRadius: 22,
+            padding: "28px 24px", textAlign: "center", boxShadow: "0 24px 60px -20px rgba(0,0,0,.5)",
+          }}>
+            <div style={{
+              width: 56, height: 56, borderRadius: "50%", margin: "0 auto 16px",
+              background: "var(--brand-soft)", color: "var(--brand)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+            }}>
+              <Icon.download size={26} stroke={2.2} />
+            </div>
+            <p style={{ margin: "0 0 6px", fontSize: 19, fontWeight: 800, color: "var(--text-1)" }}>
+              Perbarui Aplikasi Anda
+            </p>
+            <p style={{ margin: "0 0 16px", fontSize: 13.5, color: "var(--text-3)", fontWeight: 600 }}>
+              Versi baru SIRAPI (v{updateInfo.latest}) sudah tersedia
+            </p>
+            {updateInfo.notes && (
+              <p style={{ margin: "0 0 20px", fontSize: 13, color: "var(--text-2)", lineHeight: 1.5 }}>
+                {updateInfo.notes}
+              </p>
+            )}
+            <a
+              href={updateInfo.apkUrl}
+              target="_blank" rel="noopener noreferrer"
+              className="btn btn-primary btn-lg btn-block"
+              style={{ textDecoration: "none", marginBottom: 10 }}
+              onClick={() => setUpdateDismissed(true)}
+            >
+              <Icon.download size={17} stroke={2.2} /> Unduh Pembaruan Sekarang
+            </a>
+            <button
+              onClick={() => setUpdateDismissed(true)}
+              style={{ background: "none", border: 0, color: "var(--text-3)", fontWeight: 700, fontSize: 13, cursor: "pointer", padding: 8 }}
+            >
+              Nanti saja
+            </button>
+          </div>
+        </div>
+      )}
+
       {!hideSplashDOM && (
         <div className="splash-container">
           <HeroScene />
@@ -3374,29 +3427,6 @@ function AppContent() {
               </div>
             </div>
           </header>
-
-          {updateInfo && (
-            <div style={{
-              display: "flex", alignItems: "center", gap: 10, padding: "10px 16px",
-              background: "var(--brand)", color: "#fff", fontSize: 13, fontWeight: 600,
-            }}>
-              <Icon.download size={17} stroke={2.2} style={{ flexShrink: 0 }} />
-              <span style={{ flex: 1, minWidth: 0 }}>
-                Versi baru SIRAPI (v{updateInfo.latest}) tersedia.
-                {updateInfo.notes ? ` ${updateInfo.notes}` : ""}
-              </span>
-              <a
-                href={updateInfo.apkUrl}
-                target="_blank" rel="noopener noreferrer"
-                style={{
-                  flexShrink: 0, background: "#fff", color: "var(--brand-deep)", fontWeight: 700,
-                  fontSize: 12.5, padding: "6px 12px", borderRadius: 999, textDecoration: "none",
-                }}
-              >
-                Unduh
-              </a>
-            </div>
-          )}
 
           <div className="flex-1">
             {nav === "dashboard" && <DashboardView dbCattle={safeDb} onAdviceClick={handleAdviceClick} profile={profile} setAppToast={setAppToast} onAddNew={openAddCattle} onOpenLaporanPetugas={setLaporanItem} />}
