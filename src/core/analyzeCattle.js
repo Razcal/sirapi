@@ -128,18 +128,20 @@ export function getOpsiReproduksi(item) {
   const diLuarSiklusNormal = phase === "BRED" && daysSinceLastIB > 24;
   const pkbMutlakWajib = phase === "BRED" && daysSinceLastIB > 90;
 
-  // Pasca keguguran (fase kembali OPEN setelah TERAPI dicatat), rahim perlu
-  // waktu pulih (involusi uteri) sebelum boleh di-IB lagi — sama seperti
-  // ambang 45 hari yang sudah dipakai analyzeCattle() untuk status "PEMULIHAN
-  // ABORTUS"/"Pemulihan Rahim Pasca Melahirkan". Sebelumnya cuma diperingatkan
-  // lewat teks saran tapi opsi IB tetap bisa langsung dipilih kapan saja
-  // setelah lapor petugas — sekarang benar-benar disembunyikan sampai lewat
-  // masa pemulihan, bukan cuma diperingatkan.
+  // Pasca keguguran (fase kembali OPEN setelah TERAPI dicatat), rahim
+  // umumnya perlu waktu pulih (involusi uteri) sebelum aman di-IB lagi —
+  // 45 hari itu rata-rata (dipakai analyzeCattle() untuk status "PEMULIHAN
+  // ABORTUS"/"Pemulihan Rahim Pasca Melahirkan"), TAPI waktu pulih tiap sapi
+  // beda-beda, ada yang sudah birahi nyata di hari ke-30. Jadi ini SENGAJA
+  // tidak memblokir opsi IB (beda dari pkbMutlakWajib di atas yang memang
+  // blokir) — cuma memberi peringatan supaya peternak tahu masih di rentang
+  // pemulihan dan lebih waspada, keputusan akhir tetap di tangan peternak/
+  // petugas berdasar tanda birahi yang teramati langsung.
   const daysSinceAbortus = item?.abortusDate ? daysDiff(item.abortusDate) : null;
   const dalamPemulihanAbortus = phase === "OPEN" && daysSinceAbortus !== null && daysSinceAbortus <= 45;
 
   const ALL = [
-    { v: "IB",       t: "Inseminasi buatan (IB)",             show: pkbMutlakWajib ? ["CALF", "OPEN", "POSTPARTUM"] : ["CALF", "OPEN", "BRED", "POSTPARTUM"], perlu: () => phase !== "OPEN" || !dalamPemulihanAbortus },
+    { v: "IB",       t: "Inseminasi buatan (IB)",             show: pkbMutlakWajib ? ["CALF", "OPEN", "POSTPARTUM"] : ["CALF", "OPEN", "BRED", "POSTPARTUM"] },
     { v: "POSITIVE", t: "Hasil periksa: bunting (+)",         show: ["BRED", "OPEN", "PREGNANT"], perlu: () => punyaIB || phase === "PREGNANT" },
     { v: "NEGATIVE", t: "Hasil periksa: tidak bunting (−)",   show: ["BRED", "PREGNANT"] },
     { v: "CALVED",   t: "Melahirkan",                          show: ["PREGNANT"] },
@@ -155,7 +157,7 @@ export function getOpsiReproduksi(item) {
   if (pkbMutlakWajib) {
     hint = { level: "crit", text: `Sudah ${daysSinceLastIB} hari sejak IB terakhir — jauh melewati batas wajib PKB (3 bulan / hari ke-90) tanpa pernah diperiksa. Catat dulu hasil PKB (bunting atau tidak bunting) sebelum bisa mencatat IB baru.` };
   } else if (dalamPemulihanAbortus) {
-    hint = { level: "crit", text: `Sapi masih dalam masa pemulihan rahim pasca keguguran (hari ke-${daysSinceAbortus} dari 45 hari) — IB belum bisa dicatat sampai rahim pulih sepenuhnya. Tersisa ${45 - daysSinceAbortus} hari lagi.` };
+    hint = { level: "warn", text: `Hari ke-${daysSinceAbortus} pasca keguguran. Rahim rata-rata perlu sekitar 45 hari untuk pulih (involusi uteri), meski ada juga sapi yang sudah menunjukkan birahi nyata sejak hari ke-30. Kalau sapi memang menunjukkan tanda birahi aktif (3A: Abang, Abuh, Anget) sekarang, IB tetap boleh dicatat — tapi tetap disarankan dipantau petugas mengingat masih dalam rentang pemulihan.` };
   } else if (diLuarSiklusNormal) {
     hint = { level: "warn", text: `Sudah ${daysSinceLastIB} hari sejak IB terakhir — di luar siklus birahi normal (18-24 hari). Kalau sapi memang menunjukkan tanda birahi aktif sekarang, IB tetap boleh langsung dicatat — tapi akan otomatis ditandai untuk dipantau petugas. PKB wajib dilakukan paling lambat 3 bulan (hari ke-90) sejak IB ini.` };
   }
