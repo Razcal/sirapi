@@ -142,6 +142,33 @@ const iso = (offsetDays) => {
   eq('Hari ke-80 → catatan masih warn, belum crit', hintHari80.level, 'warn');
 }
 
+// --- Pasca keguguran: IB tidak boleh ditawarkan lagi sampai rahim pulih
+//     (45 hari), bukan cuma diperingatkan lewat teks — studi kasus dari
+//     pengguna: sapi keguguran, lapor petugas (TERAPI dicatat, fase balik
+//     ke OPEN), tapi opsi IB langsung muncul lagi tanpa jeda sama sekali. ---
+{
+  const sapiPemulihan18Hari = { jenis_kelamin: 'BETINA', status_reproduksi: 'OPEN', abortusDate: iso(-18), pkbLog: [] };
+  const { options: opsiPemulihan, hint: hintPemulihan } = getOpsiReproduksi(sapiPemulihan18Hari);
+  eq('18 hari pasca keguguran → opsi IB TIDAK ditawarkan (rahim belum pulih)', opsiPemulihan.some(o => o.v === 'IB'), false);
+  truthy('18 hari pasca keguguran → opsi terapi medis tetap ada', opsiPemulihan.some(o => o.v === 'TERAPI'));
+  truthy('18 hari pasca keguguran → ada catatan peringatan', !!hintPemulihan);
+  eq('18 hari pasca keguguran → catatan levelnya wajib (crit)', hintPemulihan.level, 'crit');
+
+  const sapiPemulihan45Hari = { jenis_kelamin: 'BETINA', status_reproduksi: 'OPEN', abortusDate: iso(-45), pkbLog: [] };
+  const { options: opsiHari45 } = getOpsiReproduksi(sapiPemulihan45Hari);
+  eq('Persis hari ke-45 pasca keguguran → masih dalam masa pemulihan, IB belum ditawarkan', opsiHari45.some(o => o.v === 'IB'), false);
+
+  const sapiSudahPulih = { jenis_kelamin: 'BETINA', status_reproduksi: 'OPEN', abortusDate: iso(-46), pkbLog: [] };
+  const { options: opsiSudahPulih, hint: hintSudahPulih } = getOpsiReproduksi(sapiSudahPulih);
+  truthy('Lewat hari ke-45 pasca keguguran → IB ditawarkan lagi', opsiSudahPulih.some(o => o.v === 'IB'));
+  eq('Lewat hari ke-45 pasca keguguran → tidak ada catatan pemulihan lagi', hintSudahPulih, null);
+
+  // Sapi OPEN tanpa riwayat keguguran sama sekali → tidak boleh ikut kena blokir ini.
+  const sapiOpenBiasa = { jenis_kelamin: 'BETINA', status_reproduksi: 'OPEN', pkbLog: [] };
+  const { options: opsiOpenBiasa } = getOpsiReproduksi(sapiOpenBiasa);
+  truthy('Sapi OPEN tanpa riwayat keguguran → IB tetap ditawarkan seperti biasa', opsiOpenBiasa.some(o => o.v === 'IB'));
+}
+
 // --- Fitur baru: peringatan proaktif menjelang HPL, bukan cuma setelah lewat ---
 {
   // conceptionDate ~274 hari lalu → HPL (274+9bln10hr≈284) sekitar 10 hari lagi

@@ -2814,7 +2814,7 @@ function AboutModal({ open, onClose }) {
   }, [open]);
 
   if (!open) return null;
-  const versiTampil = versionInfo?.version ? `v${versionInfo.version}` : "v2.5";
+  const versiTampil = versionInfo?.version ? `v${versionInfo.version}` : "v2.6";
 
   return (
     <div className="sheet-overlay" style={{ alignItems: "center", padding: 16 }} onClick={onClose}>
