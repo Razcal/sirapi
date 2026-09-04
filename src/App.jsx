@@ -200,6 +200,7 @@ const DOT_HEX = {
   "cal-neut-soft":  SEV_HEX.neut,
   "bg-blue-300":    SEV_HEX.info,
   "bg-amber-300":   SEV_HEX.warn,
+  "bg-amber-500":   SEV_HEX.warn,
   "bg-rose-300":    SEV_HEX.crit,
   "bg-violet-600":  SEV_HEX.info,
   "bg-blue-500":    SEV_HEX.info,
@@ -272,10 +273,22 @@ function buildHistory(item) {
       colorDot: "bg-emerald-500", rawDate: new Date(d) 
     }));
 
-    (item.abortusLog || []).forEach((d, i) => history.push({ 
-      type: 'abortusLog', originalIndex: i, date: d, label: "Laporan Keguguran (Abortus) 🚨", 
-      desc: "Sapi mengalami keguguran. Sedang menunggu kedatangan petugas medis untuk penanganan.", 
-      colorDot: "bg-rose-600", rawDate: new Date(d) 
+    (item.abortusLog || []).forEach((d, i) => history.push({
+      type: 'abortusLog', originalIndex: i, date: d, label: "Laporan Keguguran (Abortus) 🚨",
+      desc: "Sapi mengalami keguguran. Sedang menunggu kedatangan petugas medis untuk penanganan.",
+      colorDot: "bg-rose-600", rawDate: new Date(d)
+    }));
+
+    // "Sudah menghubungi petugas" (LaporanPetugasModal) sebelumnya cuma
+    // mengubah warna badge (lihat turunkanKeWaspada di analyzeCattle.js),
+    // tidak pernah tercatat sebagai riwayat sendiri - jadi kalau peternak
+    // scroll ke Riwayat terakhir, tidak ada jejak bahwa sapi ini sudah
+    // ditangani/dilaporkan. Sekarang ditambahkan sebagai entri riwayat.
+    (item.laporanPetugasLog || []).forEach((log, i) => history.push({
+      type: 'laporanPetugasLog', originalIndex: i, date: log.date,
+      label: "Sudah Menghubungi Petugas ✅",
+      desc: log.catatan ? `Kata petugas: ${log.catatan}` : "Peternak sudah melaporkan kondisi ini ke petugas dan menunggu tindak lanjut.",
+      colorDot: "bg-amber-500", rawDate: new Date(log.date)
     }));
 
     (item.healthLog || []).forEach((l, i) => {
@@ -1534,7 +1547,7 @@ function LaporanPetugasModal({ open, item, onClose, onSaved }) {
             />
           </div>
           <p className="t-xs c-3" style={{ margin: "0 0 16px" }}>
-            Statusnya tetap ditandai waspada (kuning) sampai sapi menunjukkan birahi normal kembali (18-24 hari) — bukan langsung dianggap beres.
+            Statusnya tetap ditandai waspada (kuning) sampai sapi menunjukkan tanda birahi kembali — bukan langsung dianggap beres.
           </p>
           <button onClick={submit} disabled={saving} className="btn btn-primary btn-block">
             {saving ? "Menyimpan..." : "Simpan laporan"}
@@ -2819,7 +2832,7 @@ function AboutModal({ open, onClose }) {
   }, [open]);
 
   if (!open) return null;
-  const versiTampil = versionInfo?.version ? `v${versionInfo.version}` : "v2.8";
+  const versiTampil = versionInfo?.version ? `v${versionInfo.version}` : "v2.9";
 
   return (
     <div className="sheet-overlay" style={{ alignItems: "center", padding: 16 }} onClick={onClose}>

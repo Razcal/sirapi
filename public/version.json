@@ -1,5 +1,5 @@
 {
-  "latest": "2.8",
+  "latest": "2.9",
   "apkUrl": "https://proverti.vercel.app/sirapi-latest.apk",
-  "notes": "Perbaikan tambah ternak & pendaftaran akun yang sebelumnya gagal, batas wajib pemeriksaan kebuntingan (PKB) jadi 3 bulan, tambahan ras sapi (Red Brahman, Belgian Blue, Red Angus, Angus), pemberitahuan pembaruan yang lebih jelas, perbaikan notifikasi ternak yang sebelumnya tidak muncul saat aplikasi sedang dibuka, konfirmasi wajib untuk hasil bunting/tidak bunting, peringatan (bukan blokir) saat mencatat IB dalam masa pemulihan pasca keguguran, dan tombol 'sudah menghubungi petugas' kini hilang otomatis setelah dilaporkan dengan keterangan yang tidak lagi menyebut jumlah hari pasti."
+  "notes": "Perbaikan tambah ternak & pendaftaran akun yang sebelumnya gagal, batas wajib pemeriksaan kebuntingan (PKB) jadi 3 bulan, tambahan ras sapi (Red Brahman, Belgian Blue, Red Angus, Angus), pemberitahuan pembaruan yang lebih jelas, perbaikan notifikasi ternak yang sebelumnya tidak muncul saat aplikasi sedang dibuka, konfirmasi wajib untuk hasil bunting/tidak bunting, peringatan (bukan blokir) saat mencatat IB dalam masa pemulihan pasca keguguran, tombol 'sudah menghubungi petugas' kini hilang otomatis setelah dilaporkan, dan riwayat sapi sekarang mencatat juga kapan sudah dilaporkan ke petugas."
 }
