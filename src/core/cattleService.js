@@ -55,6 +55,13 @@ export const cattleService = {
       return { success: true, cattle: data };
     } catch (error) {
       console.error("Error Create Cattle:", error);
+      // Kode 23505 = pelanggaran unique constraint. Kalau soal kode sapi
+      // (cattle_user_code_key — unik per peternak, lihat migrasi
+      // SUPABASE_FIX_KODE_SAPI_UNIK_PER_PETERNAK.sql), pesan mentah dari
+      // Postgres diganti kalimat yang jelas maksudnya untuk peternak.
+      if (error.code === '23505' && /code/i.test(error.message || '')) {
+        return { success: false, error: 'Kode sapi ini sudah dipakai untuk salah satu ternak Anda. Gunakan kode lain.' };
+      }
       return { success: false, error: error.message };
     }
   },
@@ -85,6 +92,9 @@ export const cattleService = {
       return { success: true, cattle: data };
     } catch (error) {
       console.error("Error Update Cattle:", error);
+      if (error.code === '23505' && /code/i.test(error.message || '')) {
+        return { success: false, error: 'Kode sapi ini sudah dipakai untuk salah satu ternak Anda. Gunakan kode lain.' };
+      }
       return { success: false, error: error.message };
     }
   },

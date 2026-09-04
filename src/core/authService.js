@@ -35,6 +35,15 @@ export const authService = {
       });
 
       if (authError) {
+        // Email ini sudah pernah dipakai daftar sebelumnya (baik berhasil
+        // penuh, maupun sempat gagal di tengah jalan lalu dicoba lagi).
+        // Pesan asli Supabase macam-macam redaksinya ("User already
+        // registered", "already been registered", dst) — dicocokkan
+        // longgar lewat kata "regist" supaya semua varian tertangkap,
+        // lalu diarahkan ke tindakan yang jelas alih-alih pesan teknis.
+        if (/regist/i.test(authError.message || '')) {
+          throw new Error('Email ini sudah terdaftar. Silakan masuk lewat menu Masuk, atau pakai "Lupa kata sandi?" kalau lupa kata sandinya.');
+        }
         // Jika rate limit, generate UUID lokal untuk user
         if (authError.status === 429 || authError.message?.includes('rate limit') || authError.message?.includes('too many') || authError.message?.includes('429')) {
           console.warn('Rate limit terdeteksi, menggunakan fallback UUID...');
@@ -101,6 +110,18 @@ export const authService = {
 
       if (profileError) {
         console.error('Profile insert error:', profileError);
+        // 23505 = unique constraint di tabel users (email atau nomor HP
+        // sudah dipakai akun lain). Pesan mentah Postgres diganti supaya
+        // peternak tahu persis apa yang perlu diubah, bukan sekadar
+        // "gagal daftar" tanpa alasan.
+        if (profileError.code === '23505') {
+          if (/email/i.test(profileError.message || '')) {
+            throw new Error('Email ini sudah terdaftar. Silakan masuk lewat menu Masuk, atau gunakan email lain.');
+          }
+          if (/phone/i.test(profileError.message || '')) {
+            throw new Error('Nomor HP ini sudah terdaftar dengan akun lain. Gunakan nomor HP lain, atau hubungi admin dinas kalau ini memang nomor Anda.');
+          }
+        }
         throw new Error(`Gagal menyimpan profil: ${profileError.message}`);
       }
 

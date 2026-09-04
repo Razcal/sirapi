@@ -105,20 +105,18 @@ export function applyReproAction(item, res, pregMonth, d) {
 // yang lupa disinkronkan saat salah satu diubah.
 //
 // IB tidak diblokir menurut siklus birahi normal (18-24 hari) maupun di
-// jendela menunggu PKB (25-59 hari, PKB memang belum bisa dilakukan
-// sebelum hari ke-60) — birahi mendesak waktu (aktif cuma ~12-18 jam),
-// jadi opsi IB harus selalu bisa dicatat SEKARANG selama itu. Tapi
-// jendela 25-59 hari itu tetap DI LUAR siklus normal, jadi tetap diberi
-// catatan waspada (hint.level "warn") — bukan diam-diam tanpa keterangan
-// apa pun, IB-nya cuma tidak diblokir.
+// jendela menunggu PKB (25-89 hari) — birahi mendesak waktu (aktif cuma
+// ~12-18 jam), jadi opsi IB harus selalu bisa dicatat SEKARANG selama
+// itu. Tapi jendela 25-89 hari itu tetap DI LUAR siklus normal, jadi
+// tetap diberi catatan waspada (hint.level "warn") — bukan diam-diam
+// tanpa keterangan apa pun, IB-nya cuma tidak diblokir.
 //
-// Begitu lewat hari ke-60 — batas paling lambat PKB semestinya sudah
-// bisa dilakukan, persis titik yang sama saat statusLabel berubah jadi
-// "Waktunya Pemeriksaan Kebuntingan" — PKB jadi MUTLAK wajib (hint.level
-// "crit"): IB baru tidak ditawarkan lagi sampai hasil PKB (bunting/
-// tidak) dicatat lebih dulu. Di titik ini alasan "jangan sampai
-// kehilangan momen kawin" sudah tidak lagi jadi alasan kuat untuk
-// menunda PKB — dua bulan penuh sudah lewat tanpa pernah diperiksa.
+// Begitu lewat hari ke-90 (3 bulan) — batas paling lambat PKB semestinya
+// sudah dilakukan — PKB jadi MUTLAK wajib (hint.level "crit"): IB baru
+// tidak ditawarkan lagi sampai hasil PKB (bunting/tidak) dicatat lebih
+// dulu. Di titik ini alasan "jangan sampai kehilangan momen kawin" sudah
+// tidak lagi jadi alasan kuat untuk menunda PKB — tiga bulan penuh sudah
+// lewat tanpa pernah diperiksa.
 export function getOpsiReproduksi(item) {
   const phase = String(item?.status_reproduksi || item?.phase || "").toUpperCase();
   const punyaIB = ibSinceCalving(item).length > 0;
@@ -128,7 +126,7 @@ export function getOpsiReproduksi(item) {
   const lastIBDate = lastIBEntry ? (typeof lastIBEntry === 'object' ? lastIBEntry.date : lastIBEntry) : null;
   const daysSinceLastIB = lastIBDate ? daysDiff(lastIBDate) : 0;
   const diLuarSiklusNormal = phase === "BRED" && daysSinceLastIB > 24;
-  const pkbMutlakWajib = phase === "BRED" && daysSinceLastIB > 60;
+  const pkbMutlakWajib = phase === "BRED" && daysSinceLastIB > 90;
 
   const ALL = [
     { v: "IB",       t: "Inseminasi buatan (IB)",             show: pkbMutlakWajib ? ["CALF", "OPEN", "POSTPARTUM"] : ["CALF", "OPEN", "BRED", "POSTPARTUM"] },
@@ -145,9 +143,9 @@ export function getOpsiReproduksi(item) {
 
   let hint = null;
   if (pkbMutlakWajib) {
-    hint = { level: "crit", text: `Sudah ${daysSinceLastIB} hari sejak IB terakhir — jauh melewati jadwal PKB (hari ke-60) tanpa pernah diperiksa. Catat dulu hasil PKB (bunting atau tidak bunting) sebelum bisa mencatat IB baru.` };
+    hint = { level: "crit", text: `Sudah ${daysSinceLastIB} hari sejak IB terakhir — jauh melewati batas wajib PKB (3 bulan / hari ke-90) tanpa pernah diperiksa. Catat dulu hasil PKB (bunting atau tidak bunting) sebelum bisa mencatat IB baru.` };
   } else if (diLuarSiklusNormal) {
-    hint = { level: "warn", text: `Sudah ${daysSinceLastIB} hari sejak IB terakhir — di luar siklus birahi normal (18-24 hari). Kalau sapi memang menunjukkan tanda birahi aktif sekarang, IB tetap boleh langsung dicatat — tapi akan otomatis ditandai untuk dipantau petugas. Jadwal PKB tetap di hari ke-60.` };
+    hint = { level: "warn", text: `Sudah ${daysSinceLastIB} hari sejak IB terakhir — di luar siklus birahi normal (18-24 hari). Kalau sapi memang menunjukkan tanda birahi aktif sekarang, IB tetap boleh langsung dicatat — tapi akan otomatis ditandai untuk dipantau petugas. PKB wajib dilakukan paling lambat 3 bulan (hari ke-90) sejak IB ini.` };
   }
 
   return { options, hint };
@@ -323,14 +321,14 @@ export function analyzeCattle(item) {
     else if (phase === "BRED") {
       if (cycles >= 4) { res.color = "rose"; res.statusLabel = "Gangguan Reproduksi: Gagal Bunting Berulang"; res.isUrgent = true; res.needsVet = true; res.advice = `Sapi telah menjalani ${cycles - 1} kali IB (jarak antar IB minimal 18 hari, bukan birahi susulan di siklus yang sama) namun gagal bunting, dan kini memasuki IB ke-${cycles}. Status sementara: Repeat Breeder. Kemungkinan penyebab (belum pasti): gangguan ovarium, endometritis subklinis, ketidaktepatan waktu IB, atau kualitas semen/teknik IB — penyebab sebenarnya hanya bisa dipastikan lewat pemeriksaan. Wajib laporkan ke petugas/dokter hewan untuk pemeriksaan mendalam sebelum IB berikutnya.`; res.adviceColor = "text-rose-800 bg-rose-50 border border-rose-200 font-bold shadow-sm"; }
       else if (suspectSistaGap > 0) { res.color = "rose"; res.statusLabel = "Gangguan Reproduksi: Birahi Tidak Normal"; res.isUrgent = true; res.needsVet = true; res.advice = `Ditemukan jarak antar IB hanya ${suspectSistaGap} hari, padahal siklus birahi normal sapi adalah 18-24 hari. Pola birahi yang terlalu sering dan pendek seperti ini diduga mengarah pada Sista Folikuler (Nymphomania) — namun ini baru indikasi awal, bukan diagnosa pasti. Wajib laporkan ke petugas/dokter hewan untuk pemeriksaan per-rektal/USG ovarium secara mendalam.`; res.adviceColor = "text-rose-800 bg-rose-50 border border-rose-200 font-bold shadow-sm"; }
-      else if (suspectLossGap > 0) { res.color = "rose"; res.statusLabel = "Gangguan Reproduksi: Diduga Keguguran Dini Tak Terpantau"; res.isUrgent = true; res.needsVet = true; res.advice = `Jarak ke IB sebelumnya ${suspectLossGap} hari — jauh melebihi siklus birahi normal (18-24 hari) — dan tidak ada pemeriksaan kebuntingan (PKB) yang tercatat di antara keduanya. Ini baru indikasi awal (suspect), diduga sapi sempat bunting lalu mengalami kematian embrio dini/keguguran dini yang tidak menimbulkan gejala terlihat, sehingga birahi baru muncul kembali belakangan tanpa sempat dipastikan lewat PKB — bukan diagnosa pasti. Wajib laporkan ke petugas/dokter hewan untuk pemeriksaan lebih lanjut. Agar kejadian serupa terpantau lebih awal, usahakan PKB tetap dilakukan pada hari ke-60 pasca IB berikutnya.`; res.adviceColor = "text-rose-800 bg-rose-50 border border-rose-200 font-bold shadow-sm"; }
-      else if (daysSinceLastIB < 60) {
-        const sisaHariPkb = 60 - daysSinceLastIB;
+      else if (suspectLossGap > 0) { res.color = "rose"; res.statusLabel = "Gangguan Reproduksi: Diduga Keguguran Dini Tak Terpantau"; res.isUrgent = true; res.needsVet = true; res.advice = `Jarak ke IB sebelumnya ${suspectLossGap} hari — jauh melebihi siklus birahi normal (18-24 hari) — dan tidak ada pemeriksaan kebuntingan (PKB) yang tercatat di antara keduanya. Ini baru indikasi awal (suspect), diduga sapi sempat bunting lalu mengalami kematian embrio dini/keguguran dini yang tidak menimbulkan gejala terlihat, sehingga birahi baru muncul kembali belakangan tanpa sempat dipastikan lewat PKB — bukan diagnosa pasti. Wajib laporkan ke petugas/dokter hewan untuk pemeriksaan lebih lanjut. Agar kejadian serupa terpantau lebih awal, usahakan PKB tetap dilakukan paling lambat 3 bulan (hari ke-90) pasca IB berikutnya.`; res.adviceColor = "text-rose-800 bg-rose-50 border border-rose-200 font-bold shadow-sm"; }
+      else if (daysSinceLastIB < 90) {
+        const sisaHariPkb = 90 - daysSinceLastIB;
         res.color = "slate"; res.statusLabel = "Diduga Bunting";
         if (daysSinceLastIB < 18) {
           res.advice = `Hari ke-${daysSinceLastIB} pasca IB. Pantau kemungkinan birahi kembali pada hari ke-18 sampai ke-24 (siklus birahi normal). Jika sapi tidak menunjukkan birahi pada periode tersebut, kemungkinan bunting cukup besar. Pemeriksaan kebuntingan hanya boleh dilakukan oleh petugas/dokter hewan yang berkompeten — jangan diperiksa sendiri.`;
         } else {
-          res.advice = `Hari ke-${daysSinceLastIB} pasca IB. Sapi tidak menunjukkan birahi kembali, indikasi bunting cukup baik. Pemeriksaan kebuntingan oleh petugas/dokter hewan dapat dilakukan mulai hari ke-60. Tersisa ${sisaHariPkb} hari menuju jadwal pemeriksaan kebuntingan.`;
+          res.advice = `Hari ke-${daysSinceLastIB} pasca IB. Sapi tidak menunjukkan birahi kembali, indikasi bunting cukup baik. Pemeriksaan kebuntingan oleh petugas/dokter hewan bisa mulai dilakukan, paling lambat 3 bulan (hari ke-90) sejak IB ini. Tersisa ${sisaHariPkb} hari menuju batas waktu pemeriksaan kebuntingan.`;
         }
       }
       else { res.color = "orange"; res.statusLabel = "Waktunya Pemeriksaan Kebuntingan"; res.isUrgent = true; res.advice = `Hari ke-${daysSinceLastIB} pasca IB. Jadwal pemeriksaan kebuntingan telah tiba. Segera hubungi petugas/dokter hewan untuk melakukan pemeriksaan kebuntingan (hanya boleh dilakukan oleh tenaga terlatih), lalu laporkan hasilnya melalui menu Reproduksi.`; res.adviceColor = "text-orange-900 bg-orange-50 border border-orange-200 font-bold shadow-sm"; }
