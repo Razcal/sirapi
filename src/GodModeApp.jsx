@@ -173,6 +173,14 @@ export default function GodModeApp() {
   const [saving, setSaving] = useState(false);
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState(null);
+  // Dipakai sebagai `key` iframe Admin di sebelah kanan - mengubah key
+  // memaksa React lepas-pasang ulang elemennya, otomatis reload iframe
+  // (tidak ada cara lain memaksa reload iframe cross-render selain ini).
+  // Dinaikkan setiap ada perubahan DATA (tambah/edit/hapus/reset), bukan
+  // saat sekadar memuat/melihat daftar - supaya tab Admin tidak reload
+  // sendiri terus-menerus tiap pindah tab di panel kiri.
+  const [adminReloadKey, setAdminReloadKey] = useState(0);
+  const bumpAdminReload = () => setAdminReloadKey((k) => k + 1);
 
   const showToast = (message, type = "success") => {
     setToast({ message, type });
@@ -254,6 +262,7 @@ export default function GodModeApp() {
       showToast("Peternak diperbarui.");
       setEditingUser(null);
       refreshUserView();
+      bumpAdminReload();
     } catch (e) { showToast(e.message, "error"); }
     setSaving(false);
   };
@@ -266,6 +275,7 @@ export default function GodModeApp() {
       showToast("Peternak baru ditambahkan.");
       setCreatingUser(null);
       refreshUserView();
+      bumpAdminReload();
     } catch (e) { showToast(e.message, "error"); }
     setSaving(false);
   };
@@ -277,6 +287,7 @@ export default function GodModeApp() {
     try {
       await callApi(password, "resetPassword", { id: u.id, newPassword: newPw });
       showToast(`Password "${u.name}" berhasil direset.`);
+      bumpAdminReload();
     } catch (e) { showToast(e.message, "error"); }
     setBusy(false);
   };
@@ -288,6 +299,7 @@ export default function GodModeApp() {
       await callApi(password, "deleteUser", { id: u.id });
       showToast("Peternak dihapus.");
       refreshUserView();
+      bumpAdminReload();
     } catch (e) { showToast(e.message, "error"); }
     setBusy(false);
   };
@@ -304,6 +316,7 @@ export default function GodModeApp() {
       showToast("Sapi diperbarui.");
       setEditingCattle(null);
       refreshCattleView();
+      bumpAdminReload();
     } catch (e) { showToast(e.message, "error"); }
     setSaving(false);
   };
@@ -315,6 +328,7 @@ export default function GodModeApp() {
       await callApi(password, "deleteCattle", { id: c.id });
       showToast("Sapi dihapus.");
       refreshCattleView();
+      bumpAdminReload();
     } catch (e) { showToast(e.message, "error"); }
     setBusy(false);
   };
@@ -340,6 +354,7 @@ export default function GodModeApp() {
       showToast("Sapi baru ditambahkan.");
       setCreatingCattle(null);
       loadCattle();
+      bumpAdminReload();
     } catch (e) { showToast(e.message, "error"); }
     setSaving(false);
   };
@@ -663,6 +678,7 @@ export default function GodModeApp() {
           🖥 Halaman Admin (/admin) — login terpisah, pakai akun admin dinas seperti biasa
         </p>
         <iframe
+          key={adminReloadKey}
           title="Admin"
           src="/admin"
           style={{ width: "100%", flex: 1, border: "none", display: "block", minHeight: "70vh" }}
