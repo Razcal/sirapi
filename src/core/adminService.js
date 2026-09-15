@@ -34,15 +34,17 @@ export const adminService = {
     }
   },
 
-  // Peternak yang sudah disetujui — dipakai halaman Laporan admin untuk
-  // hitung sebaran per kecamatan, bukan buat ditampilkan mentah-mentah.
+  // Semua peternak (nama fungsi "Approved" ini sisa jaman sistem persetujuan
+  // dulu - sudah dihapus, semua pendaftaran langsung aktif, jadi filter
+  // status='approved' TIDAK dipakai lagi di sini, cuma role='peternak' yang
+  // masih relevan). Dipakai halaman Laporan admin untuk hitung sebaran per
+  // kecamatan, bukan buat ditampilkan mentah-mentah.
   getApprovedPeternak: async () => {
     try {
       const { data, error } = await supabase
         .from('users')
         .select('id, name, kecamatan, desa, created_at')
-        .eq('role', 'peternak')
-        .eq('status', 'approved');
+        .eq('role', 'peternak');
       if (error) throw error;
       return { success: true, users: data || [] };
     } catch (error) {
@@ -72,8 +74,7 @@ export const adminService = {
       const { data: peternakList, error: peternakError } = await supabase
         .from('users')
         .select('id, name, phone, kecamatan, desa, dusun')
-        .eq('role', 'peternak')
-        .eq('status', 'approved');
+        .eq('role', 'peternak');
       if (peternakError) throw peternakError;
       if (!peternakList || peternakList.length === 0) return { success: true, birahi: [], gangguan: [] };
 
@@ -162,16 +163,15 @@ export const adminService = {
     }
   },
 
-  // Peternak yang sudah disetujui tapi belum input sapi sama sekali —
-  // menunjukkan di kecamatan mana sosialisasi/pendampingan pemakaian
-  // aplikasi paling dibutuhkan, bukan cuma "kurang peternak aktif".
+  // Peternak yang belum input sapi sama sekali — menunjukkan di kecamatan
+  // mana sosialisasi/pendampingan pemakaian aplikasi paling dibutuhkan,
+  // bukan cuma "kurang peternak aktif".
   getPeternakTanpaSapi: async () => {
     try {
       const { data: peternak, error: peternakError } = await supabase
         .from('users')
         .select('id, kecamatan')
-        .eq('role', 'peternak')
-        .eq('status', 'approved');
+        .eq('role', 'peternak');
       if (peternakError) throw peternakError;
 
       const { data: cattleOwners, error: cattleError } = await supabase
@@ -207,8 +207,7 @@ export const adminService = {
       const { data: peternak, error: peternakError } = await supabase
         .from('users')
         .select('id')
-        .eq('role', 'peternak')
-        .eq('status', 'approved');
+        .eq('role', 'peternak');
       if (peternakError) throw peternakError;
       const ids = (peternak || []).map(u => u.id);
       if (ids.length === 0) return { success: true, months: [] };
