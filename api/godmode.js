@@ -58,7 +58,17 @@ export default async function handler(req, res) {
         const { data: byKec } = await db.from('users').select('kecamatan');
         const kecCounts = {};
         (byKec || []).forEach(u => { const k = u.kecamatan || '(kosong)'; kecCounts[k] = (kecCounts[k] || 0) + 1; });
-        return res.status(200).json({ totalUsers, totalCattle, dummyUsers, realUsers: (totalUsers || 0) - (dummyUsers || 0), phaseCounts, kecCounts });
+
+        // Peternak yang SUDAH vs BELUM pernah input sapi sama sekali -
+        // dua himpunan terpisah dari total peternak (bukan bagian dari
+        // phaseCounts, itu hitungan per SAPI bukan per PETERNAK).
+        const { data: allUserIds } = await db.from('users').select('id');
+        const { data: allCattleUserIds } = await db.from('cattle').select('user_id');
+        const withCattleSet = new Set((allCattleUserIds || []).map((c) => c.user_id));
+        const usersWithCattle = (allUserIds || []).filter((u) => withCattleSet.has(u.id)).length;
+        const usersWithoutCattle = (allUserIds || []).length - usersWithCattle;
+
+        return res.status(200).json({ totalUsers, totalCattle, dummyUsers, realUsers: (totalUsers || 0) - (dummyUsers || 0), usersWithCattle, usersWithoutCattle, phaseCounts, kecCounts });
       }
 
       // Sapi bermasalah (status darurat menurut analyzeCattle - sama persis
@@ -101,12 +111,24 @@ export default async function handler(req, res) {
       }
 
       case 'listUsers': {
-        const { search } = payload || {};
+        const { search, onlyWithoutCattle } = payload || {};
         let q = db.from('users').select('id, name, email, phone, kecamatan, desa, dusun, role, status, created_at').order('created_at', { ascending: false }).limit(500);
         if (search) q = q.or(`name.ilike.%${search}%,email.ilike.%${search}%,phone.ilike.%${search}%`);
         const { data, error } = await q;
         if (error) throw error;
-        return res.status(200).json({ users: data });
+
+        // Jumlah sapi per peternak - supaya langsung kelihatan siapa yang
+        // sudah dan belum pernah input sapi tanpa perlu klik satu-satu.
+        const ids = data.map((u) => u.id);
+        const { data: cattleRows } = ids.length
+          ? await db.from('cattle').select('user_id').in('user_id', ids)
+          : { data: [] };
+        const countByUser = {};
+        (cattleRows || []).forEach((c) => { countByUser[c.user_id] = (countByUser[c.user_id] || 0) + 1; });
+        let usersWithCount = data.map((u) => ({ ...u, cattleCount: countByUser[u.id] || 0 }));
+        if (onlyWithoutCattle) usersWithCount = usersWithCount.filter((u) => u.cattleCount === 0);
+
+        return res.status(200).json({ users: usersWithCount });
       }
 
       case 'listCattle': {

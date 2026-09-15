@@ -144,6 +144,7 @@ export default function GodModeApp() {
   const [stats, setStats] = useState(null);
   const [users, setUsers] = useState([]);
   const [userSearch, setUserSearch] = useState("");
+  const [onlyWithoutCattle, setOnlyWithoutCattle] = useState(false);
   const [cattle, setCattle] = useState([]);
   const [cattleSearch, setCattleSearch] = useState("");
   const [filterUserId, setFilterUserId] = useState(null);
@@ -184,11 +185,11 @@ export default function GodModeApp() {
   const loadUsers = useCallback(async () => {
     setBusy(true);
     try {
-      const data = await callApi(password, "listUsers", { search: userSearch });
+      const data = await callApi(password, "listUsers", { search: userSearch, onlyWithoutCattle });
       setUsers(data.users || []);
     } catch (e) { showToast(e.message, "error"); }
     setBusy(false);
-  }, [password, userSearch]);
+  }, [password, userSearch, onlyWithoutCattle]);
 
   const loadCattle = useCallback(async () => {
     setBusy(true);
@@ -362,10 +363,19 @@ export default function GodModeApp() {
                 ["Total sapi", stats.totalCattle],
                 ["Peternak asli", stats.realUsers],
                 ["Peternak dummy", stats.dummyUsers],
+                ["Sudah input sapi", stats.usersWithCattle],
+                ["Belum input sapi", stats.usersWithoutCattle],
               ].map(([label, val]) => (
-                <div key={label} style={{ background: "#161b22", border: "1px solid #30363d", borderRadius: 8, padding: 16 }}>
+                <div
+                  key={label}
+                  onClick={() => { if (label === "Belum input sapi") { setOnlyWithoutCattle(true); setTab("users"); } }}
+                  style={{
+                    background: "#161b22", border: "1px solid " + (label === "Belum input sapi" && val > 0 ? "#9e6a03" : "#30363d"),
+                    borderRadius: 8, padding: 16, cursor: label === "Belum input sapi" ? "pointer" : "default",
+                  }}
+                >
                   <p style={{ fontSize: 11, color: "#8b949e", margin: "0 0 6px", textTransform: "uppercase" }}>{label}</p>
-                  <p style={{ fontSize: 26, margin: 0, fontWeight: 700 }}>{val}</p>
+                  <p style={{ fontSize: 26, margin: 0, fontWeight: 700, color: label === "Belum input sapi" && val > 0 ? "#d29922" : "#e6edf3" }}>{val}</p>
                 </div>
               ))}
             </div>
@@ -392,22 +402,26 @@ export default function GodModeApp() {
 
         {tab === "users" && (
           <div>
-            <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
+            <div style={{ display: "flex", gap: 8, marginBottom: 10, flexWrap: "wrap" }}>
               <input
                 placeholder="Cari nama / email / HP..."
                 value={userSearch}
                 onChange={(e) => setUserSearch(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && loadUsers()}
-                style={{ flex: 1, background: "#161b22", border: "1px solid #30363d", borderRadius: 6, padding: "9px 12px", color: "#e6edf3", fontSize: 13, boxSizing: "border-box" }}
+                style={{ flex: 1, minWidth: 160, background: "#161b22", border: "1px solid #30363d", borderRadius: 6, padding: "9px 12px", color: "#e6edf3", fontSize: 13, boxSizing: "border-box" }}
               />
               <button onClick={() => setCreatingUser({ kecamatan: "", desa: "", dusun: "", rt: "", rw: "", newPassword: "" })} style={btnStyle("#238636")}>+ Peternak baru</button>
             </div>
+            <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12.5, color: "#8b949e", marginBottom: 14, cursor: "pointer" }}>
+              <input type="checkbox" checked={onlyWithoutCattle} onChange={(e) => setOnlyWithoutCattle(e.target.checked)} />
+              Tampilkan yang belum input sapi saja
+            </label>
             <div style={{ overflowX: "auto" }}>
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12.5 }}>
                 <thead>
                   <tr style={{ textAlign: "left", color: "#8b949e", borderBottom: "1px solid #30363d" }}>
                     <th style={{ padding: 8 }}>Nama</th><th style={{ padding: 8 }}>Email</th><th style={{ padding: 8 }}>HP</th>
-                    <th style={{ padding: 8 }}>Kecamatan</th><th style={{ padding: 8 }}>Desa</th><th style={{ padding: 8 }}></th>
+                    <th style={{ padding: 8 }}>Kecamatan</th><th style={{ padding: 8 }}>Desa</th><th style={{ padding: 8 }}>Sapi</th><th style={{ padding: 8 }}></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -418,6 +432,11 @@ export default function GodModeApp() {
                       <td style={{ padding: 8 }}>{u.phone}</td>
                       <td style={{ padding: 8 }}>{u.kecamatan}</td>
                       <td style={{ padding: 8 }}>{u.desa}</td>
+                      <td style={{ padding: 8 }}>
+                        {u.cattleCount === 0
+                          ? <span style={{ background: "#d29922", color: "#0d1117", borderRadius: 4, padding: "2px 7px", fontSize: 10.5, fontWeight: 700 }}>BELUM ADA</span>
+                          : <span style={{ fontWeight: 700 }}>{u.cattleCount}</span>}
+                      </td>
                       <td style={{ padding: 8, whiteSpace: "nowrap" }}>
                         <button onClick={() => { setFilterUserId(u.id); setTab("cattle"); }} style={{ ...btnStyle("#1f6feb"), padding: "4px 8px", fontSize: 11, marginRight: 6 }}>Sapi</button>
                         <button onClick={() => setEditingUser(u)} style={{ ...btnStyle("#30363d"), padding: "4px 8px", fontSize: 11, marginRight: 6 }}>Edit</button>
@@ -428,6 +447,9 @@ export default function GodModeApp() {
                   ))}
                 </tbody>
               </table>
+              {users.length === 0 && !busy && (
+                <p style={{ fontSize: 13, color: "#8b949e", padding: "20px 0", textAlign: "center" }}>Tidak ada peternak yang cocok.</p>
+              )}
             </div>
           </div>
         )}
