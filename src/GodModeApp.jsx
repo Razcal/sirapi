@@ -168,6 +168,8 @@ export default function GodModeApp() {
   const [problems, setProblems] = useState([]);
   const [staleDays, setStaleDays] = useState(30);
   const [noCattleUsers, setNoCattleUsers] = useState([]);
+  const [birahiList, setBirahiList] = useState([]);
+  const [birahiSearch, setBirahiSearch] = useState("");
   const [noCattleSearch, setNoCattleSearch] = useState("");
   const [problemFilter, setProblemFilter] = useState("all"); // all | urgent | stale
   const [saving, setSaving] = useState(false);
@@ -246,10 +248,23 @@ export default function GodModeApp() {
     setBusy(false);
   }, [password, noCattleSearch]);
 
+  // Sapi birahi/siap kawin - muncul paling menonjol di halaman Admin
+  // ("Sapi birahi / siap kawin"), jadi ditegaskan juga di sini sebagai
+  // panel tersendiri, bukan cuma angka di kartu statistik.
+  const loadBirahi = useCallback(async () => {
+    setBusy(true);
+    try {
+      const data = await callApi(password, "listBirahi");
+      setBirahiList(data.birahi || []);
+    } catch (e) { showToast(e.message, "error"); }
+    setBusy(false);
+  }, [password]);
+
   useEffect(() => { if (unlocked && tab === "problems") loadProblems(); }, [unlocked, tab, loadProblems]);
   useEffect(() => { if (unlocked && tab === "users") loadUsers(); }, [unlocked, tab, loadUsers]);
   useEffect(() => { if (unlocked && tab === "cattle") loadCattle(); }, [unlocked, tab, loadCattle]);
   useEffect(() => { if (unlocked && tab === "noCattle") loadNoCattleUsers(); }, [unlocked, tab, loadNoCattleUsers]);
+  useEffect(() => { if (unlocked && tab === "birahi") loadBirahi(); }, [unlocked, tab, loadBirahi]);
 
   // Sama seperti refreshCattleView - tab Peternak biasa dan tab Belum Input
   // Sapi sama-sama bisa buka modal edit/reset/hapus peternak yang sama.
@@ -301,9 +316,13 @@ export default function GodModeApp() {
   };
 
   // Refresh daftar yang sedang aktif dilihat - bisa dipanggil dari tab Sapi
-  // biasa ATAUPUN dari tab Perlu Perhatian (keduanya bisa buka modal edit
-  // sapi yang sama).
-  const refreshCattleView = () => { if (tab === "problems") loadProblems(); else loadCattle(); };
+  // biasa, Perlu Perhatian, ATAUPUN Birahi/Siap Kawin (semua bisa buka
+  // modal edit sapi yang sama).
+  const refreshCattleView = () => {
+    if (tab === "problems") loadProblems();
+    else if (tab === "birahi") loadBirahi();
+    else loadCattle();
+  };
 
   const saveCattle = async (fields) => {
     setSaving(true);
@@ -327,9 +346,10 @@ export default function GodModeApp() {
     setBusy(false);
   };
 
-  // Daftar Perlu Perhatian cuma bawa field ringkas (lihat listProblems di
-  // godmode.js) - ambil dulu record lengkapnya sebelum buka modal edit.
-  const openCattleFromProblem = async (p) => {
+  // Daftar Perlu Perhatian maupun Birahi/Siap Kawin cuma bawa field ringkas
+  // (lihat listProblems/listBirahi di godmode.js) - ambil dulu record
+  // lengkapnya sebelum buka modal edit.
+  const openCattleFromSlimList = async (p) => {
     setBusy(true);
     try {
       const data = await callApi(password, "listCattle", { id: p.id });
@@ -384,13 +404,13 @@ export default function GodModeApp() {
       <div style={{ flex: "1 1 520px", minWidth: 0, display: "flex", flexDirection: "column", borderRight: "1px solid #30363d" }}>
         <div style={{ borderBottom: "1px solid #30363d", padding: "14px 20px", display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
           <strong style={{ letterSpacing: 1 }}>⚡ SIRAPI GODMODE</strong>
-          {["stats", "users", "cattle", "problems", "noCattle"].map((t) => (
+          {["stats", "users", "cattle", "birahi", "problems", "noCattle"].map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
               style={{ background: tab === t ? "#238636" : "transparent", color: tab === t ? "#fff" : "#8b949e", border: "1px solid " + (tab === t ? "#238636" : "#30363d"), borderRadius: 6, padding: "6px 14px", fontSize: 12.5, cursor: "pointer", fontWeight: 600 }}
             >
-              {t === "stats" ? "Statistik" : t === "users" ? "Peternak" : t === "cattle" ? "Sapi" : t === "problems" ? "⚠ Perlu Perhatian" : "🚫 Belum Input Sapi"}
+              {t === "stats" ? "Statistik" : t === "users" ? "Peternak" : t === "cattle" ? "Sapi" : t === "birahi" ? "🔥 Birahi/Siap Kawin" : t === "problems" ? "⚠ Perlu Perhatian" : "🚫 Belum Input Sapi"}
             </button>
           ))}
           <span style={{ marginLeft: "auto", fontSize: 11, color: "#484f58" }}>{busy ? "memuat..." : ""}</span>
@@ -407,19 +427,28 @@ export default function GodModeApp() {
                 ["Peternak dummy", stats.dummyUsers],
                 ["Sudah input sapi", stats.usersWithCattle],
                 ["Belum input sapi", stats.usersWithoutCattle],
-              ].map(([label, val]) => (
-                <div
-                  key={label}
-                  onClick={() => { if (label === "Belum input sapi") setTab("noCattle"); }}
-                  style={{
-                    background: "#161b22", border: "1px solid " + (label === "Belum input sapi" && val > 0 ? "#9e6a03" : "#30363d"),
-                    borderRadius: 8, padding: 16, cursor: label === "Belum input sapi" ? "pointer" : "default",
-                  }}
-                >
-                  <p style={{ fontSize: 11, color: "#8b949e", margin: "0 0 6px", textTransform: "uppercase" }}>{label}</p>
-                  <p style={{ fontSize: 26, margin: 0, fontWeight: 700, color: label === "Belum input sapi" && val > 0 ? "#d29922" : "#e6edf3" }}>{val}</p>
-                </div>
-              ))}
+                ["Birahi / Siap Kawin", stats.birahiCount],
+                ["Gangguan Reproduksi", stats.gangguanCount],
+              ].map(([label, val]) => {
+                const clickTab = label === "Belum input sapi" ? "noCattle" : label === "Birahi / Siap Kawin" ? "birahi" : label === "Gangguan Reproduksi" ? "problems" : null;
+                const isWarn = label === "Belum input sapi" && val > 0;
+                const isHot = label === "Birahi / Siap Kawin" && val > 0;
+                const isCrit = label === "Gangguan Reproduksi" && val > 0;
+                return (
+                  <div
+                    key={label}
+                    onClick={() => { if (clickTab) setTab(clickTab); }}
+                    style={{
+                      background: "#161b22",
+                      border: "1px solid " + (isWarn ? "#9e6a03" : isHot ? "#bf8700" : isCrit ? "#da3633" : "#30363d"),
+                      borderRadius: 8, padding: 16, cursor: clickTab ? "pointer" : "default",
+                    }}
+                  >
+                    <p style={{ fontSize: 11, color: "#8b949e", margin: "0 0 6px", textTransform: "uppercase" }}>{label}</p>
+                    <p style={{ fontSize: 26, margin: 0, fontWeight: 700, color: isWarn ? "#d29922" : isHot ? "#e3b341" : isCrit ? "#f85149" : "#e6edf3" }}>{val}</p>
+                  </div>
+                );
+              })}
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
               <div>
@@ -593,7 +622,7 @@ export default function GodModeApp() {
                           {p.daysSinceUpdate === null ? "tidak diketahui" : `${p.daysSinceUpdate} hari lalu`}
                         </td>
                         <td style={{ padding: 8, whiteSpace: "nowrap" }}>
-                          <button onClick={() => openCattleFromProblem(p)} style={{ ...btnStyle("#30363d"), padding: "4px 8px", fontSize: 11, marginRight: 6 }}>Edit</button>
+                          <button onClick={() => openCattleFromSlimList(p)} style={{ ...btnStyle("#30363d"), padding: "4px 8px", fontSize: 11, marginRight: 6 }}>Edit</button>
                           <button onClick={() => deleteCattle(p)} style={{ ...btnStyle("#da3633"), padding: "4px 8px", fontSize: 11 }}>Hapus</button>
                         </td>
                       </tr>
@@ -602,6 +631,60 @@ export default function GodModeApp() {
               </table>
               {problems.length === 0 && !busy && (
                 <p style={{ fontSize: 13, color: "#8b949e", padding: "20px 0", textAlign: "center" }}>Tidak ada sapi bermasalah maupun yang tidak diupdate. Semua aman.</p>
+              )}
+            </div>
+          </div>
+        )}
+
+        {tab === "birahi" && (
+          <div>
+            <p style={{ fontSize: 12, color: "#8b949e", margin: "0 0 14px" }}>
+              Sapi yang sedang birahi/siap kawin sekarang — metrik inti SIRAPI, sama persis logikanya dengan mission card "Sapi birahi / siap kawin" di halaman Admin. Birahi mendesak waktu (cuma ~12-18 jam aktif), jadi peternak/petugas perlu segera bertindak selagi masih dalam status ini.
+            </p>
+            <input
+              placeholder="Cari kode sapi / nama peternak..."
+              value={birahiSearch}
+              onChange={(e) => setBirahiSearch(e.target.value)}
+              style={{ width: "100%", background: "#161b22", border: "1px solid #30363d", borderRadius: 6, padding: "9px 12px", color: "#e6edf3", fontSize: 13, marginBottom: 14, boxSizing: "border-box" }}
+            />
+            <div style={{ overflowX: "auto" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12.5 }}>
+                <thead>
+                  <tr style={{ textAlign: "left", color: "#8b949e", borderBottom: "1px solid #30363d" }}>
+                    <th style={{ padding: 8 }}>Kode</th><th style={{ padding: 8 }}>Peternak</th><th style={{ padding: 8 }}>Status</th>
+                    <th style={{ padding: 8 }}>Kecamatan</th><th style={{ padding: 8 }}></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {birahiList
+                    .filter((b) => !birahiSearch || b.code?.toLowerCase().includes(birahiSearch.toLowerCase()) || b.ownerName?.toLowerCase().includes(birahiSearch.toLowerCase()))
+                    .map((b) => (
+                      <tr key={b.id} style={{ borderBottom: "1px solid #21262d" }}>
+                        <td style={{ padding: 8, fontWeight: 700 }}>{b.code}</td>
+                        <td style={{ padding: 8 }}>
+                          <button onClick={() => { setFilterUserId(b.user_id); setTab("cattle"); }} style={{ background: "none", border: "none", color: "#58a6ff", cursor: "pointer", padding: 0, fontSize: 12.5, textDecoration: "underline" }}>
+                            {b.ownerName}
+                          </button>
+                        </td>
+                        <td style={{ padding: 8 }}>
+                          <span style={{ background: "#9e6a03", color: "#fff", borderRadius: 4, padding: "2px 7px", fontSize: 10.5, fontWeight: 700, marginRight: 6 }}>🔥</span>
+                          {b.statusLabel}
+                        </td>
+                        <td style={{ padding: 8, color: "#8b949e" }}>{b.ownerKecamatan} / {b.ownerDesa}</td>
+                        <td style={{ padding: 8, whiteSpace: "nowrap" }}>
+                          <a
+                            href={waLinkTo(b.ownerPhone, `Halo Pak/Bu, sapi ${b.code} sedang menunjukkan tanda birahi - segera catat IB kalau memang siap dikawinkan (birahi cuma aktif ~12-18 jam).`)}
+                            target="_blank" rel="noopener noreferrer"
+                            style={{ ...btnStyle("#25D366"), padding: "4px 8px", fontSize: 11, marginRight: 6, textDecoration: "none", display: "inline-block" }}
+                          >WA</a>
+                          <button onClick={() => openCattleFromSlimList(b)} style={{ ...btnStyle("#30363d"), padding: "4px 8px", fontSize: 11 }}>Edit</button>
+                        </td>
+                      </tr>
+                    ))}
+                </tbody>
+              </table>
+              {birahiList.length === 0 && !busy && (
+                <p style={{ fontSize: 13, color: "#8b949e", padding: "20px 0", textAlign: "center" }}>Tidak ada sapi birahi/siap kawin saat ini.</p>
               )}
             </div>
           </div>

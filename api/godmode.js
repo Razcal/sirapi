@@ -20,6 +20,18 @@ const uuid = () => 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) =
   return v.toString(16);
 });
 
+// Sama persis dengan LABEL_BIRAHI di adminService.js (halaman Admin) -
+// disalin (bukan diimpor) karena adminService.js membawa client Supabase
+// sisi-anon-nya sendiri yang tidak perlu ikut ke sini. Kalau daftar label
+// ini berubah di analyzeCattle.js/adminService.js, ingat update juga di
+// sini supaya angka "Birahi/Siap Kawin" tetap sama di kedua tempat.
+const LABEL_BIRAHI = new Set([
+  'SIAP IB',
+  'DARA SIAP KAWIN',
+  'Siap Dikawinkan Kembali',
+  'WASPADA: BIRAHI TERTUNDA',
+]);
+
 // Hash bcrypt dari password godmode - BUKAN password aslinya, tidak bisa
 // dibalik jadi teks asli. Aman disimpan di kode.
 const PASSWORD_HASH = '$2b$10$OuaufZhdaRD2qCrR9/.rsOIk90Nq9pv.PDujm040WQr.NfFj8Vs0.';
@@ -56,27 +68,40 @@ export default async function handler(req, res) {
         // aktif) - kalau tidak, dua angka yang katanya sama-sama "total
         // peternak" bisa beda tampilannya (sempat kejadian: godmode ikut
         // menghitung 4 akun admin/petugas yang bukan peternak).
-        const { count: totalUsers } = await db.from('users').select('id', { count: 'exact', head: true }).eq('role', 'peternak');
-        const { count: totalCattle } = await db.from('cattle').select('id', { count: 'exact', head: true });
+        const { data: peternakRows } = await db.from('users').select('id, kecamatan').eq('role', 'peternak');
+        const totalUsers = (peternakRows || []).length;
+        const peternakIds = new Set((peternakRows || []).map((u) => u.id));
+
         const { count: dummyUsers } = await db.from('users').select('id', { count: 'exact', head: true }).like('email', '%@demo.sirapi.id');
-        const { data: byPhase } = await db.from('cattle').select('status_reproduksi');
-        const phaseCounts = {};
-        (byPhase || []).forEach(c => { const p = c.status_reproduksi || 'N/A'; phaseCounts[p] = (phaseCounts[p] || 0) + 1; });
-        const { data: byKec } = await db.from('users').select('kecamatan').eq('role', 'peternak');
+
         const kecCounts = {};
-        (byKec || []).forEach(u => { const k = u.kecamatan || '(kosong)'; kecCounts[k] = (kecCounts[k] || 0) + 1; });
+        (peternakRows || []).forEach((u) => { const k = u.kecamatan || '(kosong)'; kecCounts[k] = (kecCounts[k] || 0) + 1; });
 
-        // Peternak yang SUDAH vs BELUM pernah input sapi sama sekali -
-        // dua himpunan terpisah dari total peternak (bukan bagian dari
-        // phaseCounts, itu hitungan per SAPI bukan per PETERNAK). Sama
-        // persis basis datanya dengan totalUsers di atas (role saja).
-        const { data: allUserIds } = await db.from('users').select('id').eq('role', 'peternak');
-        const { data: allCattleUserIds } = await db.from('cattle').select('user_id');
-        const withCattleSet = new Set((allCattleUserIds || []).map((c) => c.user_id));
-        const usersWithCattle = (allUserIds || []).filter((u) => withCattleSet.has(u.id)).length;
-        const usersWithoutCattle = (allUserIds || []).length - usersWithCattle;
+        // Satu query buat semua sapi, dipakai bareng untuk phaseCounts, sudah
+        // vs belum input sapi, DAN birahi/gangguan (adminService.js
+        // getReproMonitoring) - lebih hemat daripada query berkali-kali
+        // dengan filter beda-beda.
+        const { data: allCattle } = await db.from('cattle').select('*');
+        const totalCattle = (allCattle || []).length;
+        const phaseCounts = {};
+        const withCattleSet = new Set();
+        let birahiCount = 0;
+        let gangguanCount = 0;
+        (allCattle || []).forEach((c) => {
+          const p = c.status_reproduksi || 'N/A';
+          phaseCounts[p] = (phaseCounts[p] || 0) + 1;
+          if (!peternakIds.has(c.user_id)) return; // sapi nyasar milik akun bukan peternak - dilewati, sama seperti adminService.js
+          withCattleSet.add(c.user_id);
+          let analysis = null;
+          try { analysis = analyzeCattle(c); } catch { /* data cacat - dilewati dari birahi/gangguan, tetap kehitung di phaseCounts */ }
+          if (!analysis) return;
+          if (analysis.needsVet) gangguanCount++;
+          else if (LABEL_BIRAHI.has(analysis.statusLabel)) birahiCount++;
+        });
+        const usersWithCattle = withCattleSet.size;
+        const usersWithoutCattle = totalUsers - usersWithCattle;
 
-        return res.status(200).json({ totalUsers, totalCattle, dummyUsers, realUsers: (totalUsers || 0) - (dummyUsers || 0), usersWithCattle, usersWithoutCattle, phaseCounts, kecCounts });
+        return res.status(200).json({ totalUsers, totalCattle, dummyUsers, realUsers: (totalUsers || 0) - (dummyUsers || 0), usersWithCattle, usersWithoutCattle, birahiCount, gangguanCount, phaseCounts, kecCounts });
       }
 
       // Sapi bermasalah (status darurat menurut analyzeCattle - sama persis
@@ -116,6 +141,39 @@ export default async function handler(req, res) {
 
         problems.sort((a, b) => (b.isUrgent - a.isUrgent) || ((b.daysSinceUpdate ?? 9999) - (a.daysSinceUpdate ?? 9999)));
         return res.status(200).json({ problems, staleDays });
+      }
+
+      // Sapi birahi/siap kawin - metrik inti SIRAPI yang muncul paling
+      // menonjol di halaman Admin ("Sapi birahi / siap kawin", mission
+      // card pertama). Logikanya sama persis dengan adminService.js
+      // getReproMonitoring: needsVet dikeluarkan dulu (itu domain
+      // "gangguan", bukan birahi), baru dicocokkan ke LABEL_BIRAHI.
+      case 'listBirahi': {
+        const { data: peternakRows } = await db.from('users').select('id, name, phone, kecamatan, desa').eq('role', 'peternak');
+        const ownerById = {};
+        (peternakRows || []).forEach((u) => { ownerById[u.id] = u; });
+
+        const { data: cattleList, error } = await db.from('cattle').select('*');
+        if (error) throw error;
+
+        const birahi = [];
+        (cattleList || []).forEach((c) => {
+          const owner = ownerById[c.user_id];
+          if (!owner) return;
+          let analysis = null;
+          try { analysis = analyzeCattle(c); } catch { return; }
+          if (!analysis || analysis.needsVet) return;
+          if (!LABEL_BIRAHI.has(analysis.statusLabel)) return;
+          birahi.push({
+            id: c.id, user_id: c.user_id, code: c.code,
+            ownerName: owner.name, ownerPhone: owner.phone, ownerKecamatan: owner.kecamatan, ownerDesa: owner.desa,
+            statusLabel: analysis.statusLabel, advice: analysis.advice,
+            updated_at: c.updated_at,
+          });
+        });
+
+        birahi.sort((a, b) => new Date(b.updated_at || 0) - new Date(a.updated_at || 0));
+        return res.status(200).json({ birahi });
       }
 
       case 'listUsers': {
