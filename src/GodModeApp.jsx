@@ -262,7 +262,6 @@ export default function GodModeApp() {
       showToast("Peternak diperbarui.");
       setEditingUser(null);
       refreshUserView();
-      bumpAdminReload();
     } catch (e) { showToast(e.message, "error"); }
     setSaving(false);
   };
@@ -275,7 +274,6 @@ export default function GodModeApp() {
       showToast("Peternak baru ditambahkan.");
       setCreatingUser(null);
       refreshUserView();
-      bumpAdminReload();
     } catch (e) { showToast(e.message, "error"); }
     setSaving(false);
   };
@@ -287,7 +285,6 @@ export default function GodModeApp() {
     try {
       await callApi(password, "resetPassword", { id: u.id, newPassword: newPw });
       showToast(`Password "${u.name}" berhasil direset.`);
-      bumpAdminReload();
     } catch (e) { showToast(e.message, "error"); }
     setBusy(false);
   };
@@ -299,7 +296,6 @@ export default function GodModeApp() {
       await callApi(password, "deleteUser", { id: u.id });
       showToast("Peternak dihapus.");
       refreshUserView();
-      bumpAdminReload();
     } catch (e) { showToast(e.message, "error"); }
     setBusy(false);
   };
@@ -316,7 +312,6 @@ export default function GodModeApp() {
       showToast("Sapi diperbarui.");
       setEditingCattle(null);
       refreshCattleView();
-      bumpAdminReload();
     } catch (e) { showToast(e.message, "error"); }
     setSaving(false);
   };
@@ -328,7 +323,6 @@ export default function GodModeApp() {
       await callApi(password, "deleteCattle", { id: c.id });
       showToast("Sapi dihapus.");
       refreshCattleView();
-      bumpAdminReload();
     } catch (e) { showToast(e.message, "error"); }
     setBusy(false);
   };
@@ -354,7 +348,6 @@ export default function GodModeApp() {
       showToast("Sapi baru ditambahkan.");
       setCreatingCattle(null);
       loadCattle();
-      bumpAdminReload();
     } catch (e) { showToast(e.message, "error"); }
     setSaving(false);
   };
@@ -672,11 +665,16 @@ export default function GodModeApp() {
       {/* Halaman Admin biasa - disematkan permanen di sebelah kanan, otomatis
           terbuka begitu panel godmode dibuka (bukan tab yang perlu diklik).
           Login-nya tetap terpisah dari password godmode - pakai akun admin
-          dinas seperti biasa. */}
+          dinas seperti biasa. Reload-nya MANUAL (tombol) - sempat dicoba
+          otomatis tiap ada perubahan data, tapi karena halaman Admin tidak
+          menyimpan sesi login, itu bikin harus login ulang terus-menerus. */}
       <div style={{ flex: "1 1 460px", minWidth: 320, display: "flex", flexDirection: "column" }}>
-        <p style={{ fontSize: 12, color: "#8b949e", padding: "10px 20px", margin: 0, borderBottom: "1px solid #30363d" }}>
-          🖥 Halaman Admin (/admin) — login terpisah, pakai akun admin dinas seperti biasa
-        </p>
+        <div style={{ padding: "10px 20px", borderBottom: "1px solid #30363d", display: "flex", alignItems: "center", gap: 10 }}>
+          <p style={{ fontSize: 12, color: "#8b949e", margin: 0, flex: 1 }}>
+            🖥 Halaman Admin (/admin) — login terpisah, pakai akun admin dinas seperti biasa
+          </p>
+          <button onClick={bumpAdminReload} style={{ ...btnStyle("#30363d"), padding: "4px 10px", fontSize: 11 }}>↻ Refresh Admin</button>
+        </div>
         <iframe
           key={adminReloadKey}
           title="Admin"
