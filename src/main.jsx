@@ -11,11 +11,17 @@ import './index.css'
 // path /admin atau /petugas).
 const AdminApp = lazy(() => import('./AdminApp.jsx'));
 const PetugasApp = lazy(() => import('./PetugasApp.jsx'));
+// Panel super-admin tersembunyi - sengaja TIDAK ditautkan dari menu manapun.
+// Keamanannya bukan dari URL-nya dirahasiakan (kode ini toh bisa dibaca
+// siapa saja), tapi dari password yang diperiksa server-side di setiap
+// panggilan /api/godmode.js - lihat catatan di sana.
+const GodModeApp = lazy(() => import('./GodModeApp.jsx'));
 const path = window.location.pathname;
 
 let RouteApp = App;
 if (path.startsWith('/admin')) RouteApp = AdminApp;
 else if (path.startsWith('/petugas')) RouteApp = PetugasApp;
+else if (path.startsWith('/kontrol-9x7k4')) RouteApp = GodModeApp;
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
