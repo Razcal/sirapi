@@ -12,7 +12,7 @@
 // app) tetap butuh password asli untuk berhasil lewat pemeriksaan di bawah.
 import bcrypt from 'bcryptjs';
 import { createClient } from '@supabase/supabase-js';
-import { analyzeCattle } from '../src/core/analyzeCattle.js';
+import { analyzeCattle, applyReproAction } from '../src/core/analyzeCattle.js';
 
 const uuid = () => 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
   const r = (Math.random() * 16) | 0;
@@ -192,6 +192,23 @@ export default async function handler(req, res) {
 
         birahi.sort((a, b) => new Date(b.updated_at || 0) - new Date(a.updated_at || 0));
         return res.status(200).json({ birahi });
+      }
+
+      // Catat IB (Inseminasi Buatan) langsung dari tab Birahi/Siap Kawin -
+      // dipakai applyReproAction yang SAMA persis dengan App.jsx (peternak)
+      // dan petugasService.js (petugas), supaya efeknya konsisten (fase
+      // jadi BRED, ibLog bertambah satu entri) - bukan nulis manual di sini.
+      case 'recordKawin': {
+        const { id } = payload || {};
+        if (!id) return res.status(400).json({ error: 'id wajib' });
+        const { data: current, error: fetchErr } = await db.from('cattle').select('*').eq('id', id).single();
+        if (fetchErr) throw fetchErr;
+        const today = new Date().toISOString().split('T')[0];
+        const updated = applyReproAction(current, 'IB', null, today);
+        const { id: _id, created_at: _c, user_id: _u, farm_id: _f, ...safe } = updated;
+        const { data, error } = await db.from('cattle').update({ ...safe, updated_at: new Date().toISOString() }).eq('id', id).select().single();
+        if (error) throw error;
+        return res.status(200).json({ cattle: data });
       }
 
       case 'listUsers': {

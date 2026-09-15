@@ -360,6 +360,20 @@ export default function GodModeApp() {
     setBusy(false);
   };
 
+  // Catat IB langsung dari tab Birahi/Siap Kawin - sapinya otomatis
+  // hilang dari daftar birahi setelah ini (fasenya berubah jadi BRED,
+  // bukan lagi "siap kawin"), makanya refresh dengan loadBirahi().
+  const recordKawin = async (b) => {
+    if (!confirm(`Catat IB (Inseminasi Buatan) untuk sapi "${b.code}" hari ini?`)) return;
+    setBusy(true);
+    try {
+      await callApi(password, "recordKawin", { id: b.id });
+      showToast(`IB tercatat untuk sapi ${b.code}.`);
+      loadBirahi();
+    } catch (e) { showToast(e.message, "error"); }
+    setBusy(false);
+  };
+
   const createCattle = async (fields) => {
     if (!filterUserId) return showToast("Pilih peternak dulu (tombol \"Sapi\" di tab Peternak).", "error");
     setSaving(true);
@@ -677,6 +691,7 @@ export default function GodModeApp() {
                             target="_blank" rel="noopener noreferrer"
                             style={{ ...btnStyle("#25D366"), padding: "4px 8px", fontSize: 11, marginRight: 6, textDecoration: "none", display: "inline-block" }}
                           >WA</a>
+                          <button onClick={() => recordKawin(b)} style={{ ...btnStyle("#bf8700"), padding: "4px 8px", fontSize: 11, marginRight: 6 }}>🔥 Kawin</button>
                           <button onClick={() => openCattleFromSlimList(b)} style={{ ...btnStyle("#30363d"), padding: "4px 8px", fontSize: 11 }}>Edit</button>
                         </td>
                       </tr>
