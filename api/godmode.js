@@ -12,6 +12,7 @@
 // app) tetap butuh password asli untuk berhasil lewat pemeriksaan di bawah.
 import bcrypt from 'bcryptjs';
 import { createClient } from '@supabase/supabase-js';
+import { analyzeCattle } from '../src/core/analyzeCattle.js';
 
 const uuid = () => 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
   const r = (Math.random() * 16) | 0;
@@ -60,6 +61,45 @@ export default async function handler(req, res) {
         return res.status(200).json({ totalUsers, totalCattle, dummyUsers, realUsers: (totalUsers || 0) - (dummyUsers || 0), phaseCounts, kecCounts });
       }
 
+      // Sapi bermasalah (status darurat menurut analyzeCattle - sama persis
+      // logikanya dengan yang dipakai Dashboard peternak & notifikasi
+      // harian, supaya tidak ada definisi "bermasalah" yang beda-beda) ATAU
+      // sudah lama tidak ada aktivitas apa pun tercatat (updated_at lebih
+      // tua dari `staleDays`, default 30 hari) - indikasi peternaknya tidak
+      // rajin memperbarui datanya di aplikasi.
+      case 'listProblems': {
+        const staleDays = Number(payload?.staleDays) || 30;
+        const { data: cattleList, error } = await db.from('cattle').select('*');
+        if (error) throw error;
+
+        const userIds = [...new Set(cattleList.map(c => c.user_id))];
+        const { data: userRows } = await db.from('users').select('id, name, email').in('id', userIds.length ? userIds : ['00000000-0000-0000-0000-000000000000']);
+        const ownerById = {};
+        (userRows || []).forEach(u => { ownerById[u.id] = u; });
+
+        const now = Date.now();
+        const problems = cattleList.map((c) => {
+          let analysis = null;
+          try { analysis = analyzeCattle(c); } catch { /* data cacat - tetap ditampilkan sebagai masalah */ }
+          const updatedAt = c.updated_at ? new Date(c.updated_at).getTime() : null;
+          const daysSinceUpdate = updatedAt ? Math.floor((now - updatedAt) / 86400000) : null;
+          const owner = ownerById[c.user_id];
+          return {
+            id: c.id, user_id: c.user_id, code: c.code,
+            ownerName: owner?.name || '(peternak tidak ditemukan)',
+            ownerEmail: owner?.email || '',
+            statusLabel: analysis?.statusLabel || 'DATA TIDAK VALID',
+            color: analysis?.color || 'rose',
+            isUrgent: !!analysis?.isUrgent,
+            daysSinceUpdate,
+            isStale: daysSinceUpdate === null || daysSinceUpdate > staleDays,
+          };
+        }).filter((c) => c.isUrgent || c.isStale);
+
+        problems.sort((a, b) => (b.isUrgent - a.isUrgent) || ((b.daysSinceUpdate ?? 9999) - (a.daysSinceUpdate ?? 9999)));
+        return res.status(200).json({ problems, staleDays });
+      }
+
       case 'listUsers': {
         const { search } = payload || {};
         let q = db.from('users').select('id, name, email, phone, kecamatan, desa, dusun, role, status, created_at').order('created_at', { ascending: false }).limit(500);
@@ -70,8 +110,9 @@ export default async function handler(req, res) {
       }
 
       case 'listCattle': {
-        const { search, userId } = payload || {};
+        const { search, userId, id } = payload || {};
         let q = db.from('cattle').select('*').order('created_at', { ascending: false }).limit(500);
+        if (id) q = q.eq('id', id);
         if (userId) q = q.eq('user_id', userId);
         if (search) q = q.ilike('code', `%${search}%`);
         const { data, error } = await q;

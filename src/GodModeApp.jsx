@@ -41,15 +41,25 @@ function EditModal({ title, fields, initial, onCancel, onSave, saving }) {
   if (!initial) return null;
 
   const handleSave = () => {
-    const final = { ...values };
+    // Bangun `final` cuma dari field yang benar-benar didaftarkan di
+    // `fields` (bukan sekadar spread `values`/`initial` apa adanya) -
+    // supaya kalau `initial` kebetulan membawa properti tambahan (mis.
+    // dari tab "Perlu Perhatian" yang menyisipkan ownerName/isUrgent/dst
+    // ke objek sapi untuk keperluan tampilan), properti asing itu TIDAK
+    // ikut terkirim ke updateCattle/updateUser dan bikin server menolak
+    // kolom yang tidak dikenal.
+    const final = {};
     for (const f of fields) {
-      if (f.type !== "json") continue;
-      const raw = (rawJson[f.key] ?? "").trim();
-      try {
-        final[f.key] = raw === "" ? (f.default ?? []) : JSON.parse(raw);
-      } catch (e) {
-        setJsonErr(`Format JSON tidak valid di "${f.label}": ${e.message}`);
-        return;
+      if (f.type === "json") {
+        const raw = (rawJson[f.key] ?? "").trim();
+        try {
+          final[f.key] = raw === "" ? (f.default ?? []) : JSON.parse(raw);
+        } catch (e) {
+          setJsonErr(`Format JSON tidak valid di "${f.label}": ${e.message}`);
+          return;
+        }
+      } else {
+        final[f.key] = values[f.key];
       }
     }
     setJsonErr("");
@@ -141,6 +151,9 @@ export default function GodModeApp() {
   const [editingCattle, setEditingCattle] = useState(null);
   const [creatingUser, setCreatingUser] = useState(null);
   const [creatingCattle, setCreatingCattle] = useState(null);
+  const [problems, setProblems] = useState([]);
+  const [staleDays, setStaleDays] = useState(30);
+  const [problemFilter, setProblemFilter] = useState("all"); // all | urgent | stale
   const [saving, setSaving] = useState(false);
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState(null);
@@ -186,6 +199,16 @@ export default function GodModeApp() {
     setBusy(false);
   }, [password, cattleSearch, filterUserId]);
 
+  const loadProblems = useCallback(async () => {
+    setBusy(true);
+    try {
+      const data = await callApi(password, "listProblems", { staleDays });
+      setProblems(data.problems || []);
+    } catch (e) { showToast(e.message, "error"); }
+    setBusy(false);
+  }, [password, staleDays]);
+
+  useEffect(() => { if (unlocked && tab === "problems") loadProblems(); }, [unlocked, tab, loadProblems]);
   useEffect(() => { if (unlocked && tab === "users") loadUsers(); }, [unlocked, tab, loadUsers]);
   useEffect(() => { if (unlocked && tab === "cattle") loadCattle(); }, [unlocked, tab, loadCattle]);
 
@@ -234,13 +257,18 @@ export default function GodModeApp() {
     setBusy(false);
   };
 
+  // Refresh daftar yang sedang aktif dilihat - bisa dipanggil dari tab Sapi
+  // biasa ATAUPUN dari tab Perlu Perhatian (keduanya bisa buka modal edit
+  // sapi yang sama).
+  const refreshCattleView = () => { if (tab === "problems") loadProblems(); else loadCattle(); };
+
   const saveCattle = async (fields) => {
     setSaving(true);
     try {
       await callApi(password, "updateCattle", { id: editingCattle.id, fields });
       showToast("Sapi diperbarui.");
       setEditingCattle(null);
-      loadCattle();
+      refreshCattleView();
     } catch (e) { showToast(e.message, "error"); }
     setSaving(false);
   };
@@ -251,7 +279,20 @@ export default function GodModeApp() {
     try {
       await callApi(password, "deleteCattle", { id: c.id });
       showToast("Sapi dihapus.");
-      loadCattle();
+      refreshCattleView();
+    } catch (e) { showToast(e.message, "error"); }
+    setBusy(false);
+  };
+
+  // Daftar Perlu Perhatian cuma bawa field ringkas (lihat listProblems di
+  // godmode.js) - ambil dulu record lengkapnya sebelum buka modal edit.
+  const openCattleFromProblem = async (p) => {
+    setBusy(true);
+    try {
+      const data = await callApi(password, "listCattle", { id: p.id });
+      const full = (data.cattle || [])[0];
+      if (!full) return showToast("Sapi tidak ditemukan (mungkin baru saja dihapus).", "error");
+      setEditingCattle(full);
     } catch (e) { showToast(e.message, "error"); }
     setBusy(false);
   };
@@ -298,13 +339,13 @@ export default function GodModeApp() {
     <div style={page}>
       <div style={{ borderBottom: "1px solid #30363d", padding: "14px 20px", display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
         <strong style={{ letterSpacing: 1 }}>⚡ SIRAPI GODMODE</strong>
-        {["stats", "users", "cattle"].map((t) => (
+        {["stats", "users", "cattle", "problems"].map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
             style={{ background: tab === t ? "#238636" : "transparent", color: tab === t ? "#fff" : "#8b949e", border: "1px solid " + (tab === t ? "#238636" : "#30363d"), borderRadius: 6, padding: "6px 14px", fontSize: 12.5, cursor: "pointer", fontWeight: 600 }}
           >
-            {t === "stats" ? "Statistik" : t === "users" ? "Peternak" : "Sapi"}
+            {t === "stats" ? "Statistik" : t === "users" ? "Peternak" : t === "cattle" ? "Sapi" : "⚠ Perlu Perhatian"}
           </button>
         ))}
         <span style={{ marginLeft: "auto", fontSize: 11, color: "#484f58" }}>{busy ? "memuat..." : ""}</span>
@@ -434,6 +475,69 @@ export default function GodModeApp() {
                   ))}
                 </tbody>
               </table>
+            </div>
+          </div>
+        )}
+
+        {tab === "problems" && (
+          <div>
+            <div style={{ display: "flex", gap: 8, marginBottom: 6, flexWrap: "wrap", alignItems: "center" }}>
+              {[["all", "Semua"], ["urgent", "Bermasalah saja"], ["stale", "Tidak diupdate saja"]].map(([v, label]) => (
+                <button
+                  key={v}
+                  onClick={() => setProblemFilter(v)}
+                  style={{ background: problemFilter === v ? "#1f6feb" : "transparent", color: problemFilter === v ? "#fff" : "#8b949e", border: "1px solid " + (problemFilter === v ? "#1f6feb" : "#30363d"), borderRadius: 6, padding: "5px 12px", fontSize: 12, cursor: "pointer" }}
+                >{label}</button>
+              ))}
+              <span style={{ marginLeft: "auto", fontSize: 12, color: "#8b949e" }}>Batas "tidak diupdate":</span>
+              <select
+                value={staleDays}
+                onChange={(e) => setStaleDays(Number(e.target.value))}
+                style={{ background: "#161b22", border: "1px solid #30363d", borderRadius: 6, padding: "5px 9px", color: "#e6edf3", fontSize: 12 }}
+              >
+                {[14, 30, 60, 90].map((d) => <option key={d} value={d}>{d} hari</option>)}
+              </select>
+            </div>
+            <p style={{ fontSize: 12, color: "#8b949e", margin: "0 0 14px" }}>
+              "Bermasalah" = status darurat menurut sistem (sama seperti yang muncul di Dashboard peternak). "Tidak diupdate" = tidak ada catatan apa pun tercatat lebih dari {staleDays} hari - indikasi peternaknya tidak rajin memperbarui aplikasi.
+            </p>
+            <div style={{ overflowX: "auto" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12.5 }}>
+                <thead>
+                  <tr style={{ textAlign: "left", color: "#8b949e", borderBottom: "1px solid #30363d" }}>
+                    <th style={{ padding: 8 }}>Kode</th><th style={{ padding: 8 }}>Peternak</th><th style={{ padding: 8 }}>Status</th>
+                    <th style={{ padding: 8 }}>Terakhir update</th><th style={{ padding: 8 }}></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {problems
+                    .filter((p) => problemFilter === "all" || (problemFilter === "urgent" ? p.isUrgent : p.isStale))
+                    .map((p) => (
+                      <tr key={p.id} style={{ borderBottom: "1px solid #21262d" }}>
+                        <td style={{ padding: 8, fontWeight: 700 }}>{p.code}</td>
+                        <td style={{ padding: 8 }}>
+                          <button onClick={() => { setFilterUserId(p.user_id); setTab("cattle"); }} style={{ background: "none", border: "none", color: "#58a6ff", cursor: "pointer", padding: 0, fontSize: 12.5, textDecoration: "underline" }}>
+                            {p.ownerName}
+                          </button>
+                        </td>
+                        <td style={{ padding: 8 }}>
+                          {p.isUrgent && <span style={{ background: "#da3633", color: "#fff", borderRadius: 4, padding: "2px 7px", fontSize: 10.5, fontWeight: 700, marginRight: 6 }}>DARURAT</span>}
+                          {p.statusLabel}
+                        </td>
+                        <td style={{ padding: 8, color: p.isStale ? "#d29922" : "#8b949e" }}>
+                          {p.daysSinceUpdate === null ? "tidak diketahui" : `${p.daysSinceUpdate} hari lalu`}
+                        </td>
+                        <td style={{ padding: 8, whiteSpace: "nowrap" }}>
+                          <button onClick={() => openCattleFromProblem(p)} style={{ ...btnStyle("#30363d"), padding: "4px 8px", fontSize: 11, marginRight: 6 }}>Edit</button>
+                          <button onClick={() => deleteCattle(p)} style={{ ...btnStyle("#da3633"), padding: "4px 8px", fontSize: 11 }}>Hapus</button>
+                        </td>
+                      </tr>
+                    ))}
+                </tbody>
+              </table>
+              {problems.length === 0 && !busy && (
+                <p style={{ fontSize: 13, color: "#8b949e", padding: "20px 0", textAlign: "center" }}>Tidak ada sapi bermasalah maupun yang tidak diupdate. Semua aman.</p>
+              )}
             </div>
           </div>
         )}
