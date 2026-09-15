@@ -7,6 +7,20 @@ import { useState, useEffect, useCallback } from "react";
 // aksi), bukan satu-satunya penjaga keamanan.
 const STORAGE_KEY = "sirapi_godmode_pw";
 
+// Link WhatsApp ke peternak langsung (bukan ke petugas) - untuk tindak
+// lanjut "kenapa belum input sapi". Nomor lokal (08xx) diubah ke format
+// internasional (628xx) yang dipakai wa.me.
+const waLinkTo = (phone, message) => {
+  const digits = String(phone || "").replace(/\D/g, "");
+  const intl = digits.startsWith("0") ? "62" + digits.slice(1) : digits;
+  return `https://wa.me/${intl}?text=${encodeURIComponent(message)}`;
+};
+
+const daysAgo = (iso) => {
+  if (!iso) return null;
+  return Math.floor((Date.now() - new Date(iso).getTime()) / 86400000);
+};
+
 async function callApi(password, action, payload) {
   const res = await fetch("/api/godmode", {
     method: "POST",
@@ -144,7 +158,6 @@ export default function GodModeApp() {
   const [stats, setStats] = useState(null);
   const [users, setUsers] = useState([]);
   const [userSearch, setUserSearch] = useState("");
-  const [onlyWithoutCattle, setOnlyWithoutCattle] = useState(false);
   const [cattle, setCattle] = useState([]);
   const [cattleSearch, setCattleSearch] = useState("");
   const [filterUserId, setFilterUserId] = useState(null);
@@ -154,6 +167,8 @@ export default function GodModeApp() {
   const [creatingCattle, setCreatingCattle] = useState(null);
   const [problems, setProblems] = useState([]);
   const [staleDays, setStaleDays] = useState(30);
+  const [noCattleUsers, setNoCattleUsers] = useState([]);
+  const [noCattleSearch, setNoCattleSearch] = useState("");
   const [problemFilter, setProblemFilter] = useState("all"); // all | urgent | stale
   const [saving, setSaving] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -185,11 +200,11 @@ export default function GodModeApp() {
   const loadUsers = useCallback(async () => {
     setBusy(true);
     try {
-      const data = await callApi(password, "listUsers", { search: userSearch, onlyWithoutCattle });
+      const data = await callApi(password, "listUsers", { search: userSearch });
       setUsers(data.users || []);
     } catch (e) { showToast(e.message, "error"); }
     setBusy(false);
-  }, [password, userSearch, onlyWithoutCattle]);
+  }, [password, userSearch]);
 
   const loadCattle = useCallback(async () => {
     setBusy(true);
@@ -209,9 +224,28 @@ export default function GodModeApp() {
     setBusy(false);
   }, [password, staleDays]);
 
+  // Panel masalah tersendiri - peternak yang belum pernah input sapi sama
+  // sekali. Lepas dari filter/checkbox di tab Peternak (yang itu untuk
+  // pencarian biasa) - ini ditegaskan sebagai kategori "masalah" sendiri,
+  // sejajar dengan tab Perlu Perhatian, bukan cuma opsi filter kecil.
+  const loadNoCattleUsers = useCallback(async () => {
+    setBusy(true);
+    try {
+      const data = await callApi(password, "listUsers", { search: noCattleSearch, onlyWithoutCattle: true });
+      const sorted = [...(data.users || [])].sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+      setNoCattleUsers(sorted);
+    } catch (e) { showToast(e.message, "error"); }
+    setBusy(false);
+  }, [password, noCattleSearch]);
+
   useEffect(() => { if (unlocked && tab === "problems") loadProblems(); }, [unlocked, tab, loadProblems]);
   useEffect(() => { if (unlocked && tab === "users") loadUsers(); }, [unlocked, tab, loadUsers]);
   useEffect(() => { if (unlocked && tab === "cattle") loadCattle(); }, [unlocked, tab, loadCattle]);
+  useEffect(() => { if (unlocked && tab === "noCattle") loadNoCattleUsers(); }, [unlocked, tab, loadNoCattleUsers]);
+
+  // Sama seperti refreshCattleView - tab Peternak biasa dan tab Belum Input
+  // Sapi sama-sama bisa buka modal edit/reset/hapus peternak yang sama.
+  const refreshUserView = () => { if (tab === "noCattle") loadNoCattleUsers(); else loadUsers(); };
 
   const saveUser = async (fields) => {
     setSaving(true);
@@ -219,7 +253,7 @@ export default function GodModeApp() {
       await callApi(password, "updateUser", { id: editingUser.id, fields });
       showToast("Peternak diperbarui.");
       setEditingUser(null);
-      loadUsers();
+      refreshUserView();
     } catch (e) { showToast(e.message, "error"); }
     setSaving(false);
   };
@@ -231,7 +265,7 @@ export default function GodModeApp() {
       await callApi(password, "createUser", { fields: rest, password: newPassword });
       showToast("Peternak baru ditambahkan.");
       setCreatingUser(null);
-      loadUsers();
+      refreshUserView();
     } catch (e) { showToast(e.message, "error"); }
     setSaving(false);
   };
@@ -253,7 +287,7 @@ export default function GodModeApp() {
     try {
       await callApi(password, "deleteUser", { id: u.id });
       showToast("Peternak dihapus.");
-      loadUsers();
+      refreshUserView();
     } catch (e) { showToast(e.message, "error"); }
     setBusy(false);
   };
@@ -342,13 +376,13 @@ export default function GodModeApp() {
       <div style={{ flex: "1 1 520px", minWidth: 0, display: "flex", flexDirection: "column", borderRight: "1px solid #30363d" }}>
         <div style={{ borderBottom: "1px solid #30363d", padding: "14px 20px", display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
           <strong style={{ letterSpacing: 1 }}>⚡ SIRAPI GODMODE</strong>
-          {["stats", "users", "cattle", "problems"].map((t) => (
+          {["stats", "users", "cattle", "problems", "noCattle"].map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
               style={{ background: tab === t ? "#238636" : "transparent", color: tab === t ? "#fff" : "#8b949e", border: "1px solid " + (tab === t ? "#238636" : "#30363d"), borderRadius: 6, padding: "6px 14px", fontSize: 12.5, cursor: "pointer", fontWeight: 600 }}
             >
-              {t === "stats" ? "Statistik" : t === "users" ? "Peternak" : t === "cattle" ? "Sapi" : "⚠ Perlu Perhatian"}
+              {t === "stats" ? "Statistik" : t === "users" ? "Peternak" : t === "cattle" ? "Sapi" : t === "problems" ? "⚠ Perlu Perhatian" : "🚫 Belum Input Sapi"}
             </button>
           ))}
           <span style={{ marginLeft: "auto", fontSize: 11, color: "#484f58" }}>{busy ? "memuat..." : ""}</span>
@@ -368,7 +402,7 @@ export default function GodModeApp() {
               ].map(([label, val]) => (
                 <div
                   key={label}
-                  onClick={() => { if (label === "Belum input sapi") { setOnlyWithoutCattle(true); setTab("users"); } }}
+                  onClick={() => { if (label === "Belum input sapi") setTab("noCattle"); }}
                   style={{
                     background: "#161b22", border: "1px solid " + (label === "Belum input sapi" && val > 0 ? "#9e6a03" : "#30363d"),
                     borderRadius: 8, padding: 16, cursor: label === "Belum input sapi" ? "pointer" : "default",
@@ -412,10 +446,9 @@ export default function GodModeApp() {
               />
               <button onClick={() => setCreatingUser({ kecamatan: "", desa: "", dusun: "", rt: "", rw: "", newPassword: "" })} style={btnStyle("#238636")}>+ Peternak baru</button>
             </div>
-            <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12.5, color: "#8b949e", marginBottom: 14, cursor: "pointer" }}>
-              <input type="checkbox" checked={onlyWithoutCattle} onChange={(e) => setOnlyWithoutCattle(e.target.checked)} />
-              Tampilkan yang belum input sapi saja
-            </label>
+            <p style={{ fontSize: 12, color: "#8b949e", marginBottom: 14 }}>
+              Peternak yang belum input sapi sama sekali punya panel tersendiri: tab "🚫 Belum Input Sapi".
+            </p>
             <div style={{ overflowX: "auto" }}>
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12.5 }}>
                 <thead>
@@ -561,6 +594,59 @@ export default function GodModeApp() {
               </table>
               {problems.length === 0 && !busy && (
                 <p style={{ fontSize: 13, color: "#8b949e", padding: "20px 0", textAlign: "center" }}>Tidak ada sapi bermasalah maupun yang tidak diupdate. Semua aman.</p>
+              )}
+            </div>
+          </div>
+        )}
+
+        {tab === "noCattle" && (
+          <div>
+            <p style={{ fontSize: 12, color: "#8b949e", margin: "0 0 14px" }}>
+              Peternak yang sudah terdaftar tapi belum pernah mencatat satu ekor sapi pun - ini masalah tersendiri (bukan cuma soal pencarian), karena berarti aplikasi tidak dipakai sesuai tujuannya. Diurutkan dari yang paling lama terdaftar.
+            </p>
+            <input
+              placeholder="Cari nama / email / HP..."
+              value={noCattleSearch}
+              onChange={(e) => setNoCattleSearch(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && loadNoCattleUsers()}
+              style={{ width: "100%", background: "#161b22", border: "1px solid #30363d", borderRadius: 6, padding: "9px 12px", color: "#e6edf3", fontSize: 13, marginBottom: 14, boxSizing: "border-box" }}
+            />
+            <div style={{ overflowX: "auto" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12.5 }}>
+                <thead>
+                  <tr style={{ textAlign: "left", color: "#8b949e", borderBottom: "1px solid #30363d" }}>
+                    <th style={{ padding: 8 }}>Nama</th><th style={{ padding: 8 }}>HP</th><th style={{ padding: 8 }}>Kecamatan / Desa</th>
+                    <th style={{ padding: 8 }}>Terdaftar sejak</th><th style={{ padding: 8 }}></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {noCattleUsers.map((u) => {
+                    const d = daysAgo(u.created_at);
+                    return (
+                      <tr key={u.id} style={{ borderBottom: "1px solid #21262d" }}>
+                        <td style={{ padding: 8 }}>{u.name}</td>
+                        <td style={{ padding: 8 }}>{u.phone}</td>
+                        <td style={{ padding: 8 }}>{u.kecamatan} / {u.desa}</td>
+                        <td style={{ padding: 8, color: d !== null && d > 30 ? "#d29922" : "#8b949e" }}>
+                          {d === null ? "tidak diketahui" : `${d} hari lalu`}
+                        </td>
+                        <td style={{ padding: 8, whiteSpace: "nowrap" }}>
+                          <a
+                            href={waLinkTo(u.phone, `Halo Pak/Bu ${u.name}, ini dari Dinas Ketahanan Pangan, Pertanian dan Perikanan Tuban. Kami lihat akun SIRAPI Bapak/Ibu belum ada data sapinya - ada kendala saat mengisi, atau butuh bantuan?`)}
+                            target="_blank" rel="noopener noreferrer"
+                            style={{ ...btnStyle("#25D366"), padding: "4px 8px", fontSize: 11, marginRight: 6, textDecoration: "none", display: "inline-block" }}
+                          >WA</a>
+                          <button onClick={() => { setFilterUserId(u.id); setTab("cattle"); }} style={{ ...btnStyle("#1f6feb"), padding: "4px 8px", fontSize: 11, marginRight: 6 }}>+ Sapi</button>
+                          <button onClick={() => setEditingUser(u)} style={{ ...btnStyle("#30363d"), padding: "4px 8px", fontSize: 11, marginRight: 6 }}>Edit</button>
+                          <button onClick={() => deleteUser(u)} style={{ ...btnStyle("#da3633"), padding: "4px 8px", fontSize: 11 }}>Hapus</button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+              {noCattleUsers.length === 0 && !busy && (
+                <p style={{ fontSize: 13, color: "#8b949e", padding: "20px 0", textAlign: "center" }}>Semua peternak sudah input sapi. Tidak ada yang perlu ditindaklanjuti.</p>
               )}
             </div>
           </div>
