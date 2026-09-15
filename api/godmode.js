@@ -49,20 +49,27 @@ export default async function handler(req, res) {
   try {
     switch (action) {
       case 'stats': {
-        const { count: totalUsers } = await db.from('users').select('id', { count: 'exact', head: true });
+        // "Total peternak" dkk HARUS didefinisikan persis sama dengan
+        // halaman Admin biasa (lihat adminService.js getPeternakTanpaSapi:
+        // role='peternak' DAN status='approved') - kalau tidak, dua angka
+        // yang katanya sama-sama "total peternak" bisa beda tampilannya
+        // (sempat kejadian: godmode ikut menghitung 4 akun admin/petugas
+        // yang bukan peternak, jadi selisih 4 dari angka Admin resmi).
+        const { count: totalUsers } = await db.from('users').select('id', { count: 'exact', head: true }).eq('role', 'peternak').eq('status', 'approved');
         const { count: totalCattle } = await db.from('cattle').select('id', { count: 'exact', head: true });
         const { count: dummyUsers } = await db.from('users').select('id', { count: 'exact', head: true }).like('email', '%@demo.sirapi.id');
         const { data: byPhase } = await db.from('cattle').select('status_reproduksi');
         const phaseCounts = {};
         (byPhase || []).forEach(c => { const p = c.status_reproduksi || 'N/A'; phaseCounts[p] = (phaseCounts[p] || 0) + 1; });
-        const { data: byKec } = await db.from('users').select('kecamatan');
+        const { data: byKec } = await db.from('users').select('kecamatan').eq('role', 'peternak').eq('status', 'approved');
         const kecCounts = {};
         (byKec || []).forEach(u => { const k = u.kecamatan || '(kosong)'; kecCounts[k] = (kecCounts[k] || 0) + 1; });
 
         // Peternak yang SUDAH vs BELUM pernah input sapi sama sekali -
         // dua himpunan terpisah dari total peternak (bukan bagian dari
-        // phaseCounts, itu hitungan per SAPI bukan per PETERNAK).
-        const { data: allUserIds } = await db.from('users').select('id');
+        // phaseCounts, itu hitungan per SAPI bukan per PETERNAK). Sama
+        // persis basis datanya dengan totalUsers di atas (role+status).
+        const { data: allUserIds } = await db.from('users').select('id').eq('role', 'peternak').eq('status', 'approved');
         const { data: allCattleUserIds } = await db.from('cattle').select('user_id');
         const withCattleSet = new Set((allCattleUserIds || []).map((c) => c.user_id));
         const usersWithCattle = (allUserIds || []).filter((u) => withCattleSet.has(u.id)).length;
@@ -114,6 +121,10 @@ export default async function handler(req, res) {
         const { search, onlyWithoutCattle } = payload || {};
         let q = db.from('users').select('id, name, email, phone, kecamatan, desa, dusun, role, status, created_at').order('created_at', { ascending: false }).limit(500);
         if (search) q = q.or(`name.ilike.%${search}%,email.ilike.%${search}%,phone.ilike.%${search}%`);
+        // "Belum Input Sapi" itu metrik peternak, sama seperti di stats -
+        // ikut disaring role+status juga di sini biar akun admin/petugas
+        // yang memang tidak pernah punya sapi tidak ikut nongol di sini.
+        if (onlyWithoutCattle) q = q.eq('role', 'peternak').eq('status', 'approved');
         const { data, error } = await q;
         if (error) throw error;
 
