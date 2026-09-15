@@ -339,19 +339,31 @@ export default function GodModeApp() {
     <div style={page}>
       <div style={{ borderBottom: "1px solid #30363d", padding: "14px 20px", display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
         <strong style={{ letterSpacing: 1 }}>⚡ SIRAPI GODMODE</strong>
-        {["stats", "users", "cattle", "problems"].map((t) => (
+        {["stats", "users", "cattle", "problems", "admin"].map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
             style={{ background: tab === t ? "#238636" : "transparent", color: tab === t ? "#fff" : "#8b949e", border: "1px solid " + (tab === t ? "#238636" : "#30363d"), borderRadius: 6, padding: "6px 14px", fontSize: 12.5, cursor: "pointer", fontWeight: 600 }}
           >
-            {t === "stats" ? "Statistik" : t === "users" ? "Peternak" : t === "cattle" ? "Sapi" : "⚠ Perlu Perhatian"}
+            {t === "stats" ? "Statistik" : t === "users" ? "Peternak" : t === "cattle" ? "Sapi" : t === "problems" ? "⚠ Perlu Perhatian" : "🖥 Admin"}
           </button>
         ))}
         <span style={{ marginLeft: "auto", fontSize: 11, color: "#484f58" }}>{busy ? "memuat..." : ""}</span>
       </div>
 
-      <div style={{ padding: 20, maxWidth: 1100, margin: "0 auto" }}>
+      <div style={tab === "admin" ? { padding: 0 } : { padding: 20, maxWidth: 1100, margin: "0 auto" }}>
+        {tab === "admin" && (
+          <div>
+            <p style={{ fontSize: 12, color: "#8b949e", padding: "10px 20px", margin: 0, borderBottom: "1px solid #30363d" }}>
+              Ini halaman Admin biasa (/admin), ditampilkan langsung di sini biar tidak perlu pindah tab. Login-nya terpisah, pakai akun admin dinas seperti biasa.
+            </p>
+            <iframe
+              title="Admin"
+              src="/admin"
+              style={{ width: "100%", height: "calc(100vh - 96px)", border: "none", display: "block" }}
+            />
+          </div>
+        )}
         {tab === "stats" && stats && (
           <div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(160px,1fr))", gap: 12, marginBottom: 24 }}>
