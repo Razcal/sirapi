@@ -336,34 +336,24 @@ export default function GodModeApp() {
   }
 
   return (
-    <div style={page}>
-      <div style={{ borderBottom: "1px solid #30363d", padding: "14px 20px", display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
-        <strong style={{ letterSpacing: 1 }}>⚡ SIRAPI GODMODE</strong>
-        {["stats", "users", "cattle", "problems", "admin"].map((t) => (
-          <button
-            key={t}
-            onClick={() => setTab(t)}
-            style={{ background: tab === t ? "#238636" : "transparent", color: tab === t ? "#fff" : "#8b949e", border: "1px solid " + (tab === t ? "#238636" : "#30363d"), borderRadius: 6, padding: "6px 14px", fontSize: 12.5, cursor: "pointer", fontWeight: 600 }}
-          >
-            {t === "stats" ? "Statistik" : t === "users" ? "Peternak" : t === "cattle" ? "Sapi" : t === "problems" ? "⚠ Perlu Perhatian" : "🖥 Admin"}
-          </button>
-        ))}
-        <span style={{ marginLeft: "auto", fontSize: 11, color: "#484f58" }}>{busy ? "memuat..." : ""}</span>
-      </div>
+    <div style={{ ...page, display: "flex", flexWrap: "wrap", minHeight: "100vh" }}>
+      {/* Panel kontrol godmode - sisi kiri */}
+      <div style={{ flex: "1 1 520px", minWidth: 0, display: "flex", flexDirection: "column", borderRight: "1px solid #30363d" }}>
+        <div style={{ borderBottom: "1px solid #30363d", padding: "14px 20px", display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
+          <strong style={{ letterSpacing: 1 }}>⚡ SIRAPI GODMODE</strong>
+          {["stats", "users", "cattle", "problems"].map((t) => (
+            <button
+              key={t}
+              onClick={() => setTab(t)}
+              style={{ background: tab === t ? "#238636" : "transparent", color: tab === t ? "#fff" : "#8b949e", border: "1px solid " + (tab === t ? "#238636" : "#30363d"), borderRadius: 6, padding: "6px 14px", fontSize: 12.5, cursor: "pointer", fontWeight: 600 }}
+            >
+              {t === "stats" ? "Statistik" : t === "users" ? "Peternak" : t === "cattle" ? "Sapi" : "⚠ Perlu Perhatian"}
+            </button>
+          ))}
+          <span style={{ marginLeft: "auto", fontSize: 11, color: "#484f58" }}>{busy ? "memuat..." : ""}</span>
+        </div>
 
-      <div style={tab === "admin" ? { padding: 0 } : { padding: 20, maxWidth: 1100, margin: "0 auto" }}>
-        {tab === "admin" && (
-          <div>
-            <p style={{ fontSize: 12, color: "#8b949e", padding: "10px 20px", margin: 0, borderBottom: "1px solid #30363d" }}>
-              Ini halaman Admin biasa (/admin), ditampilkan langsung di sini biar tidak perlu pindah tab. Login-nya terpisah, pakai akun admin dinas seperti biasa.
-            </p>
-            <iframe
-              title="Admin"
-              src="/admin"
-              style={{ width: "100%", height: "calc(100vh - 96px)", border: "none", display: "block" }}
-            />
-          </div>
-        )}
+        <div style={{ padding: 20, flex: 1 }}>
         {tab === "stats" && stats && (
           <div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(160px,1fr))", gap: 12, marginBottom: 24 }}>
@@ -553,6 +543,22 @@ export default function GodModeApp() {
             </div>
           </div>
         )}
+        </div>
+      </div>
+
+      {/* Halaman Admin biasa - disematkan permanen di sebelah kanan, otomatis
+          terbuka begitu panel godmode dibuka (bukan tab yang perlu diklik).
+          Login-nya tetap terpisah dari password godmode - pakai akun admin
+          dinas seperti biasa. */}
+      <div style={{ flex: "1 1 460px", minWidth: 320, display: "flex", flexDirection: "column" }}>
+        <p style={{ fontSize: 12, color: "#8b949e", padding: "10px 20px", margin: 0, borderBottom: "1px solid #30363d" }}>
+          🖥 Halaman Admin (/admin) — login terpisah, pakai akun admin dinas seperti biasa
+        </p>
+        <iframe
+          title="Admin"
+          src="/admin"
+          style={{ width: "100%", flex: 1, border: "none", display: "block", minHeight: "70vh" }}
+        />
       </div>
 
       <EditModal
