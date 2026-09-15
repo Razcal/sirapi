@@ -13,6 +13,12 @@
 import bcrypt from 'bcryptjs';
 import { createClient } from '@supabase/supabase-js';
 
+const uuid = () => 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+  const r = (Math.random() * 16) | 0;
+  const v = c === 'x' ? r : (r & 0x3) | 0x8;
+  return v.toString(16);
+});
+
 // Hash bcrypt dari password godmode - BUKAN password aslinya, tidak bisa
 // dibalik jadi teks asli. Aman disimpan di kode.
 const PASSWORD_HASH = '$2b$10$OuaufZhdaRD2qCrR9/.rsOIk90Nq9pv.PDujm040WQr.NfFj8Vs0.';
@@ -93,6 +99,58 @@ export default async function handler(req, res) {
         return res.status(200).json({ success: true });
       }
 
+      // Peternak baru + kandangnya sekaligus (matching alur register() biasa,
+      // tapi tanpa Supabase Auth - langsung pakai password_hash seperti
+      // akun bcrypt-fallback lain). Kalau password tidak diisi, pakai
+      // password demo default.
+      case 'createUser': {
+        const { fields, password: newPw } = payload || {};
+        if (!fields?.name || !fields?.email || !fields?.phone) {
+          return res.status(400).json({ error: 'Nama, email, dan No. HP wajib diisi' });
+        }
+        const id = uuid();
+        const nowIso = new Date().toISOString();
+        const passwordHash = await bcrypt.hash(newPw || 'sirapi123', 10);
+        const userRow = {
+          id,
+          email: fields.email.trim().toLowerCase(),
+          phone: fields.phone.trim(),
+          name: fields.name.trim(),
+          kecamatan: fields.kecamatan || '',
+          desa: fields.desa || '',
+          dusun: fields.dusun || '',
+          rt: fields.rt || '',
+          rw: fields.rw || '',
+          photo: null,
+          role: fields.role || 'peternak',
+          status: 'approved',
+          password_hash: passwordHash,
+          created_at: nowIso,
+          updated_at: nowIso,
+        };
+        const { data: user, error } = await db.from('users').insert([userRow]).select().single();
+        if (error) throw error;
+        const { error: farmErr } = await db.from('farms').insert([{
+          id: uuid(), user_id: id, name: `Kandang ${userRow.name}`,
+          address: `Desa ${userRow.desa}, Kec. ${userRow.kecamatan}, Kab. Tuban`,
+          created_at: nowIso, updated_at: nowIso,
+        }]);
+        if (farmErr) throw farmErr;
+        return res.status(200).json({ user });
+      }
+
+      // Reset password peternak - butuh ini karena TIDAK ADA cara lain di
+      // seluruh aplikasi untuk admin mereset password peternak yang lupa
+      // (fitur "lupa password" yang ada di app cuma untuk akun Google Auth).
+      case 'resetPassword': {
+        const { id, newPassword } = payload || {};
+        if (!id || !newPassword) return res.status(400).json({ error: 'id dan newPassword wajib' });
+        const passwordHash = await bcrypt.hash(newPassword, 10);
+        const { error } = await db.from('users').update({ password_hash: passwordHash }).eq('id', id);
+        if (error) throw error;
+        return res.status(200).json({ success: true });
+      }
+
       case 'updateCattle': {
         const { id, fields } = payload || {};
         if (!id || !fields) return res.status(400).json({ error: 'id dan fields wajib' });
@@ -108,6 +166,37 @@ export default async function handler(req, res) {
         const { error } = await db.from('cattle').delete().eq('id', id);
         if (error) throw error;
         return res.status(200).json({ success: true });
+      }
+
+      // Sapi baru untuk peternak manapun. Kandangnya diambil otomatis kalau
+      // sudah punya (biasanya iya), dibuatkan kalau belum - sama seperti
+      // alur AddModal di aplikasi peternak biasa.
+      case 'createCattle': {
+        const { userId, fields } = payload || {};
+        if (!userId || !fields?.code) return res.status(400).json({ error: 'userId dan code wajib' });
+
+        let { data: farm } = await db.from('farms').select('id').eq('user_id', userId).limit(1).maybeSingle();
+        if (!farm) {
+          const { data: user } = await db.from('users').select('name, desa, kecamatan').eq('id', userId).single();
+          const nowIso = new Date().toISOString();
+          const { data: newFarm, error: farmErr } = await db.from('farms').insert([{
+            id: uuid(), user_id: userId, name: `Kandang ${user?.name || 'Peternak'}`,
+            address: `Desa ${user?.desa || ''}, Kec. ${user?.kecamatan || ''}, Kab. Tuban`,
+            created_at: nowIso, updated_at: nowIso,
+          }]).select().single();
+          if (farmErr) throw farmErr;
+          farm = newFarm;
+        }
+
+        const { data: cattle, error } = await db.from('cattle').insert([{
+          farm_id: farm.id,
+          user_id: userId,
+          ...fields,
+          code: String(fields.code).trim().toUpperCase(),
+          updated_at: new Date().toISOString(),
+        }]).select().single();
+        if (error) throw error;
+        return res.status(200).json({ cattle });
       }
 
       default:

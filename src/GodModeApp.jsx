@@ -18,13 +18,47 @@ async function callApi(password, action, payload) {
   return data;
 }
 
+// field.type: "text" (default) | "date" | "number" | "select" | "json"
+// "json" dipakai untuk kolom riwayat (ibLog, pkbLog, dst) yang bentuknya
+// array/objek - diedit sebagai teks JSON mentah, baru di-parse saat Simpan
+// (bukan tiap ketikan, supaya JSON belum lengkap tidak langsung error).
 function EditModal({ title, fields, initial, onCancel, onSave, saving }) {
-  const [values, setValues] = useState(initial || {});
-  useEffect(() => setValues(initial || {}), [initial]);
+  const [values, setValues] = useState({});
+  const [rawJson, setRawJson] = useState({});
+  const [jsonErr, setJsonErr] = useState("");
+
+  useEffect(() => {
+    if (!initial) return;
+    setValues(initial);
+    setJsonErr("");
+    const rj = {};
+    fields.forEach((f) => {
+      if (f.type === "json") rj[f.key] = JSON.stringify(initial[f.key] ?? (f.default ?? []), null, 2);
+    });
+    setRawJson(rj);
+  }, [initial]); // eslint-disable-line
+
   if (!initial) return null;
+
+  const handleSave = () => {
+    const final = { ...values };
+    for (const f of fields) {
+      if (f.type !== "json") continue;
+      const raw = (rawJson[f.key] ?? "").trim();
+      try {
+        final[f.key] = raw === "" ? (f.default ?? []) : JSON.parse(raw);
+      } catch (e) {
+        setJsonErr(`Format JSON tidak valid di "${f.label}": ${e.message}`);
+        return;
+      }
+    }
+    setJsonErr("");
+    onSave(final);
+  };
+
   return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.6)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
-      <div style={{ background: "#161b22", border: "1px solid #30363d", borderRadius: 10, padding: 20, width: "100%", maxWidth: 480, maxHeight: "85vh", overflowY: "auto" }}>
+      <div style={{ background: "#161b22", border: "1px solid #30363d", borderRadius: 10, padding: 20, width: "100%", maxWidth: 520, maxHeight: "88vh", overflowY: "auto" }}>
         <h3 style={{ color: "#e6edf3", margin: "0 0 14px", fontSize: 16 }}>{title}</h3>
         {fields.map((f) => (
           <div key={f.key} style={{ marginBottom: 10 }}>
@@ -37,6 +71,13 @@ function EditModal({ title, fields, initial, onCancel, onSave, saving }) {
               >
                 {f.options.map((o) => <option key={o} value={o}>{o}</option>)}
               </select>
+            ) : f.type === "json" ? (
+              <textarea
+                value={rawJson[f.key] ?? ""}
+                onChange={(e) => setRawJson((r) => ({ ...r, [f.key]: e.target.value }))}
+                rows={4}
+                style={{ width: "100%", background: "#0d1117", border: "1px solid #30363d", borderRadius: 6, padding: "7px 9px", color: "#7ee787", fontSize: 11.5, fontFamily: "ui-monospace, monospace", boxSizing: "border-box", resize: "vertical" }}
+              />
             ) : (
               <input
                 type={f.type || "text"}
@@ -47,14 +88,37 @@ function EditModal({ title, fields, initial, onCancel, onSave, saving }) {
             )}
           </div>
         ))}
+        {jsonErr && <p style={{ color: "#f85149", fontSize: 12, margin: "4px 0 10px" }}>{jsonErr}</p>}
         <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
           <button onClick={onCancel} style={btnStyle("#30363d")}>Batal</button>
-          <button onClick={() => onSave(values)} disabled={saving} style={btnStyle("#238636", 1)}>{saving ? "Menyimpan..." : "Simpan"}</button>
+          <button onClick={handleSave} disabled={saving} style={btnStyle("#238636", 1)}>{saving ? "Menyimpan..." : "Simpan"}</button>
         </div>
       </div>
     </div>
   );
 }
+
+// Field lengkap sapi - dipakai untuk Edit maupun Tambah baru. Kolom riwayat
+// (ibLog dst) diedit sebagai JSON mentah - "selengkap mungkin" termasuk
+// akses langsung ke riwayat, bukan cuma field ringkasan seperti di
+// aplikasi peternak biasa.
+const CATTLE_FIELDS = [
+  { key: "code", label: "Kode" },
+  { key: "jenis_kelamin", label: "Jenis kelamin", type: "select", options: ["BETINA", "JANTAN"] },
+  { key: "jenis_ras", label: "Ras" },
+  { key: "asal_usul_sapi", label: "Asal usul", type: "select", options: ["KANDANG", "PASAR"] },
+  { key: "tanggal_lahir", label: "Tanggal lahir", type: "date" },
+  { key: "status_reproduksi", label: "Status reproduksi", type: "select", options: ["CALF", "OPEN", "BRED", "PREGNANT", "POSTPARTUM", "ABORTUS_PENDING", "N/A"] },
+  { key: "jumlah_beranak", label: "Jumlah beranak" },
+  { key: "conceptionDate", label: "Tanggal kawin (untuk fase Bunting)", type: "date" },
+  { key: "ibLog", label: "Riwayat IB (JSON)", type: "json", default: [] },
+  { key: "pkbLog", label: "Riwayat PKB (JSON)", type: "json", default: [] },
+  { key: "calvingLog", label: "Riwayat Melahirkan (JSON)", type: "json", default: [] },
+  { key: "abortusLog", label: "Riwayat Keguguran (JSON)", type: "json", default: [] },
+  { key: "therapyLog", label: "Riwayat Terapi (JSON)", type: "json", default: [] },
+  { key: "healthLog", label: "Riwayat Kesehatan (JSON)", type: "json", default: [] },
+  { key: "laporanPetugasLog", label: "Riwayat Lapor Petugas (JSON)", type: "json", default: [] },
+];
 
 const btnStyle = (bg, flex) => ({
   flex: flex || "none", background: bg, color: "#fff", border: "none", borderRadius: 6,
@@ -75,6 +139,8 @@ export default function GodModeApp() {
   const [filterUserId, setFilterUserId] = useState(null);
   const [editingUser, setEditingUser] = useState(null);
   const [editingCattle, setEditingCattle] = useState(null);
+  const [creatingUser, setCreatingUser] = useState(null);
+  const [creatingCattle, setCreatingCattle] = useState(null);
   const [saving, setSaving] = useState(false);
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState(null);
@@ -134,6 +200,29 @@ export default function GodModeApp() {
     setSaving(false);
   };
 
+  const createUser = async (fields) => {
+    setSaving(true);
+    try {
+      const { newPassword, ...rest } = fields;
+      await callApi(password, "createUser", { fields: rest, password: newPassword });
+      showToast("Peternak baru ditambahkan.");
+      setCreatingUser(null);
+      loadUsers();
+    } catch (e) { showToast(e.message, "error"); }
+    setSaving(false);
+  };
+
+  const resetPassword = async (u) => {
+    const newPw = prompt(`Password baru untuk "${u.name}" (kosongkan untuk batal):`);
+    if (!newPw) return;
+    setBusy(true);
+    try {
+      await callApi(password, "resetPassword", { id: u.id, newPassword: newPw });
+      showToast(`Password "${u.name}" berhasil direset.`);
+    } catch (e) { showToast(e.message, "error"); }
+    setBusy(false);
+  };
+
   const deleteUser = async (u) => {
     if (!confirm(`Hapus peternak "${u.name}" beserta SEMUA sapinya? Tidak bisa dibatalkan.`)) return;
     setBusy(true);
@@ -165,6 +254,18 @@ export default function GodModeApp() {
       loadCattle();
     } catch (e) { showToast(e.message, "error"); }
     setBusy(false);
+  };
+
+  const createCattle = async (fields) => {
+    if (!filterUserId) return showToast("Pilih peternak dulu (tombol \"Sapi\" di tab Peternak).", "error");
+    setSaving(true);
+    try {
+      await callApi(password, "createCattle", { userId: filterUserId, fields });
+      showToast("Sapi baru ditambahkan.");
+      setCreatingCattle(null);
+      loadCattle();
+    } catch (e) { showToast(e.message, "error"); }
+    setSaving(false);
   };
 
   const page = { minHeight: "100vh", background: "#0d1117", color: "#e6edf3", fontFamily: "ui-monospace, 'SF Mono', Menlo, monospace" };
@@ -248,13 +349,16 @@ export default function GodModeApp() {
 
         {tab === "users" && (
           <div>
-            <input
-              placeholder="Cari nama / email / HP..."
-              value={userSearch}
-              onChange={(e) => setUserSearch(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && loadUsers()}
-              style={{ width: "100%", background: "#161b22", border: "1px solid #30363d", borderRadius: 6, padding: "9px 12px", color: "#e6edf3", fontSize: 13, marginBottom: 14, boxSizing: "border-box" }}
-            />
+            <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
+              <input
+                placeholder="Cari nama / email / HP..."
+                value={userSearch}
+                onChange={(e) => setUserSearch(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && loadUsers()}
+                style={{ flex: 1, background: "#161b22", border: "1px solid #30363d", borderRadius: 6, padding: "9px 12px", color: "#e6edf3", fontSize: 13, boxSizing: "border-box" }}
+              />
+              <button onClick={() => setCreatingUser({ kecamatan: "", desa: "", dusun: "", rt: "", rw: "", newPassword: "" })} style={btnStyle("#238636")}>+ Peternak baru</button>
+            </div>
             <div style={{ overflowX: "auto" }}>
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12.5 }}>
                 <thead>
@@ -274,6 +378,7 @@ export default function GodModeApp() {
                       <td style={{ padding: 8, whiteSpace: "nowrap" }}>
                         <button onClick={() => { setFilterUserId(u.id); setTab("cattle"); }} style={{ ...btnStyle("#1f6feb"), padding: "4px 8px", fontSize: 11, marginRight: 6 }}>Sapi</button>
                         <button onClick={() => setEditingUser(u)} style={{ ...btnStyle("#30363d"), padding: "4px 8px", fontSize: 11, marginRight: 6 }}>Edit</button>
+                        <button onClick={() => resetPassword(u)} style={{ ...btnStyle("#9e6a03"), padding: "4px 8px", fontSize: 11, marginRight: 6 }}>Reset Sandi</button>
                         <button onClick={() => deleteUser(u)} style={{ ...btnStyle("#da3633"), padding: "4px 8px", fontSize: 11 }}>Hapus</button>
                       </td>
                     </tr>
@@ -295,7 +400,16 @@ export default function GodModeApp() {
                 style={{ flex: 1, background: "#161b22", border: "1px solid #30363d", borderRadius: 6, padding: "9px 12px", color: "#e6edf3", fontSize: 13, boxSizing: "border-box" }}
               />
               {filterUserId && <button onClick={() => setFilterUserId(null)} style={btnStyle("#30363d")}>Lihat semua peternak</button>}
+              {filterUserId && (
+                <button
+                  onClick={() => setCreatingCattle({ jenis_kelamin: "BETINA", asal_usul_sapi: "KANDANG", status_reproduksi: "CALF", jumlah_beranak: 0, code: "", jenis_ras: "SIMENTAL SPSI", tanggal_lahir: "" })}
+                  style={btnStyle("#238636")}
+                >+ Sapi baru</button>
+              )}
             </div>
+            {!filterUserId && (
+              <p style={{ fontSize: 12, color: "#8b949e", marginBottom: 10 }}>Pilih peternak dulu (tombol "Sapi" di tab Peternak) untuk bisa menambah sapi baru.</p>
+            )}
             <div style={{ overflowX: "auto" }}>
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12.5 }}>
                 <thead>
@@ -342,20 +456,36 @@ export default function GodModeApp() {
         ]}
       />
       <EditModal
+        title="Tambah peternak baru"
+        initial={creatingUser}
+        saving={saving}
+        onCancel={() => setCreatingUser(null)}
+        onSave={createUser}
+        fields={[
+          { key: "name", label: "Nama" },
+          { key: "email", label: "Email" },
+          { key: "phone", label: "No. HP" },
+          { key: "kecamatan", label: "Kecamatan" },
+          { key: "desa", label: "Desa" },
+          { key: "dusun", label: "Dusun" },
+          { key: "newPassword", label: "Password (kosongkan = sirapi123)" },
+        ]}
+      />
+      <EditModal
         title={`Edit sapi: ${editingCattle?.code || ""}`}
         initial={editingCattle}
         saving={saving}
         onCancel={() => setEditingCattle(null)}
         onSave={saveCattle}
-        fields={[
-          { key: "code", label: "Kode" },
-          { key: "jenis_kelamin", label: "Jenis kelamin", type: "select", options: ["BETINA", "JANTAN"] },
-          { key: "jenis_ras", label: "Ras" },
-          { key: "asal_usul_sapi", label: "Asal usul", type: "select", options: ["KANDANG", "PASAR"] },
-          { key: "tanggal_lahir", label: "Tanggal lahir", type: "date" },
-          { key: "status_reproduksi", label: "Status reproduksi", type: "select", options: ["CALF", "OPEN", "BRED", "PREGNANT", "POSTPARTUM", "ABORTUS_PENDING", "N/A"] },
-          { key: "jumlah_beranak", label: "Jumlah beranak" },
-        ]}
+        fields={CATTLE_FIELDS}
+      />
+      <EditModal
+        title="Tambah sapi baru"
+        initial={creatingCattle}
+        saving={saving}
+        onCancel={() => setCreatingCattle(null)}
+        onSave={createCattle}
+        fields={CATTLE_FIELDS}
       />
 
       {toast && (
