@@ -36,6 +36,26 @@ const LABEL_BIRAHI = new Set([
 // dibalik jadi teks asli. Aman disimpan di kode.
 const PASSWORD_HASH = '$2b$10$OuaufZhdaRD2qCrR9/.rsOIk90Nq9pv.PDujm040WQr.NfFj8Vs0.';
 
+// Supabase/PostgREST diam-diam membatasi hasil .select() ke default
+// max-rows (biasanya 1000) kalau tidak diberi .range() - TIDAK error,
+// cuma memotong tanpa pemberitahuan. Ketahuan lewat totalCattle yang
+// nempel persis di angka 1000 padahal baris sungguhannya 1047. Dipakai
+// untuk semua penghitungan agregat penuh tabel cattle (stats,
+// listProblems, listBirahi) - kalau tidak, angka birahi/gangguan/dst
+// bisa diam-diam salah begitu tabelnya lewat 1000 baris.
+async function fetchAllRows(buildQuery, pageSize = 1000) {
+  let all = [];
+  let from = 0;
+  for (;;) {
+    const { data, error } = await buildQuery().range(from, from + pageSize - 1);
+    if (error) throw error;
+    all = all.concat(data || []);
+    if (!data || data.length < pageSize) break;
+    from += pageSize;
+  }
+  return all;
+}
+
 let supabase = null;
 function getSupabase() {
   if (supabase) return supabase;
@@ -68,21 +88,21 @@ export default async function handler(req, res) {
         // aktif) - kalau tidak, dua angka yang katanya sama-sama "total
         // peternak" bisa beda tampilannya (sempat kejadian: godmode ikut
         // menghitung 4 akun admin/petugas yang bukan peternak).
-        const { data: peternakRows } = await db.from('users').select('id, kecamatan').eq('role', 'peternak');
-        const totalUsers = (peternakRows || []).length;
-        const peternakIds = new Set((peternakRows || []).map((u) => u.id));
+        const peternakRows = await fetchAllRows(() => db.from('users').select('id, kecamatan').eq('role', 'peternak'));
+        const totalUsers = peternakRows.length;
+        const peternakIds = new Set(peternakRows.map((u) => u.id));
 
         const { count: dummyUsers } = await db.from('users').select('id', { count: 'exact', head: true }).like('email', '%@demo.sirapi.id');
 
         const kecCounts = {};
-        (peternakRows || []).forEach((u) => { const k = u.kecamatan || '(kosong)'; kecCounts[k] = (kecCounts[k] || 0) + 1; });
+        peternakRows.forEach((u) => { const k = u.kecamatan || '(kosong)'; kecCounts[k] = (kecCounts[k] || 0) + 1; });
 
         // Satu query buat semua sapi, dipakai bareng untuk phaseCounts, sudah
         // vs belum input sapi, DAN birahi/gangguan (adminService.js
         // getReproMonitoring) - lebih hemat daripada query berkali-kali
         // dengan filter beda-beda.
-        const { data: allCattle } = await db.from('cattle').select('*');
-        const totalCattle = (allCattle || []).length;
+        const allCattle = await fetchAllRows(() => db.from('cattle').select('*'));
+        const totalCattle = allCattle.length;
         const phaseCounts = {};
         const withCattleSet = new Set();
         let birahiCount = 0;
@@ -112,8 +132,7 @@ export default async function handler(req, res) {
       // rajin memperbarui datanya di aplikasi.
       case 'listProblems': {
         const staleDays = Number(payload?.staleDays) || 30;
-        const { data: cattleList, error } = await db.from('cattle').select('*');
-        if (error) throw error;
+        const cattleList = await fetchAllRows(() => db.from('cattle').select('*'));
 
         const userIds = [...new Set(cattleList.map(c => c.user_id))];
         const { data: userRows } = await db.from('users').select('id, name, email').in('id', userIds.length ? userIds : ['00000000-0000-0000-0000-000000000000']);
@@ -149,15 +168,14 @@ export default async function handler(req, res) {
       // getReproMonitoring: needsVet dikeluarkan dulu (itu domain
       // "gangguan", bukan birahi), baru dicocokkan ke LABEL_BIRAHI.
       case 'listBirahi': {
-        const { data: peternakRows } = await db.from('users').select('id, name, phone, kecamatan, desa').eq('role', 'peternak');
+        const peternakRows = await fetchAllRows(() => db.from('users').select('id, name, phone, kecamatan, desa').eq('role', 'peternak'));
         const ownerById = {};
-        (peternakRows || []).forEach((u) => { ownerById[u.id] = u; });
+        peternakRows.forEach((u) => { ownerById[u.id] = u; });
 
-        const { data: cattleList, error } = await db.from('cattle').select('*');
-        if (error) throw error;
+        const cattleList = await fetchAllRows(() => db.from('cattle').select('*'));
 
         const birahi = [];
-        (cattleList || []).forEach((c) => {
+        cattleList.forEach((c) => {
           const owner = ownerById[c.user_id];
           if (!owner) return;
           let analysis = null;
@@ -190,11 +208,11 @@ export default async function handler(req, res) {
         // Jumlah sapi per peternak - supaya langsung kelihatan siapa yang
         // sudah dan belum pernah input sapi tanpa perlu klik satu-satu.
         const ids = data.map((u) => u.id);
-        const { data: cattleRows } = ids.length
-          ? await db.from('cattle').select('user_id').in('user_id', ids)
-          : { data: [] };
+        const cattleRows = ids.length
+          ? await fetchAllRows(() => db.from('cattle').select('user_id').in('user_id', ids))
+          : [];
         const countByUser = {};
-        (cattleRows || []).forEach((c) => { countByUser[c.user_id] = (countByUser[c.user_id] || 0) + 1; });
+        cattleRows.forEach((c) => { countByUser[c.user_id] = (countByUser[c.user_id] || 0) + 1; });
         let usersWithCount = data.map((u) => ({ ...u, cattleCount: countByUser[u.id] || 0 }));
         if (onlyWithoutCattle) usersWithCount = usersWithCount.filter((u) => u.cattleCount === 0);
 

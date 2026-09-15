@@ -14,6 +14,28 @@ const LABEL_BIRAHI = new Set([
   "WASPADA: BIRAHI TERTUNDA",
 ]);
 
+// Supabase/PostgREST diam-diam membatasi hasil .select() ke default
+// max-rows (1000) kalau tidak diberi .range() - TIDAK error, cuma
+// memotong tanpa pemberitahuan. Ketahuan lewat totalCattle yang nempel
+// persis di angka 1000 padahal baris sungguhannya sudah 1047 (tabel
+// cattle baru saja lewat ambang ini). Dipakai untuk query yang
+// menghitung/memindai SEMUA sapi (getReproMonitoring, getPeternakTanpaSapi,
+// getGangguanTrend) - kalau tidak, "Sapi birahi/siap kawin" dan "Gangguan
+// reproduksi" di halaman Admin bisa diam-diam salah begitu sapinya makin
+// banyak.
+async function fetchAllRows(buildQuery, pageSize = 1000) {
+  let all = [];
+  let from = 0;
+  for (;;) {
+    const { data, error } = await buildQuery().range(from, from + pageSize - 1);
+    if (error) throw error;
+    all = all.concat(data || []);
+    if (!data || data.length < pageSize) break;
+    from += pageSize;
+  }
+  return all;
+}
+
 // Semua fungsi di sini mengandalkan RLS di tabel `users` (belum dikunci
 // ketat per Agustus 2026 — lihat catatan di App.jsx/README terkait). Untuk
 // sekarang siapa pun yang berhasil login dan lolos gate role==='admin' di
@@ -41,12 +63,10 @@ export const adminService = {
   // kecamatan, bukan buat ditampilkan mentah-mentah.
   getApprovedPeternak: async () => {
     try {
-      const { data, error } = await supabase
-        .from('users')
-        .select('id, name, kecamatan, desa, created_at')
-        .eq('role', 'peternak');
-      if (error) throw error;
-      return { success: true, users: data || [] };
+      const data = await fetchAllRows(() =>
+        supabase.from('users').select('id, name, kecamatan, desa, created_at').eq('role', 'peternak')
+      );
+      return { success: true, users: data };
     } catch (error) {
       return { success: false, error: error.message };
     }
@@ -81,11 +101,9 @@ export const adminService = {
       const peternakById = {};
       peternakList.forEach(u => { peternakById[u.id] = u; });
 
-      const { data: cattleList, error: cattleError } = await supabase
-        .from('cattle')
-        .select('*')
-        .in('user_id', peternakList.map(u => u.id));
-      if (cattleError) throw cattleError;
+      const cattleList = await fetchAllRows(() =>
+        supabase.from('cattle').select('*').in('user_id', peternakList.map(u => u.id))
+      );
 
       const birahi = [];
       const gangguan = [];
@@ -110,13 +128,10 @@ export const adminService = {
   // (jumlah masih ratusan, belum perlu query server per ketikan).
   getAllPeternak: async () => {
     try {
-      const { data, error } = await supabase
-        .from('users')
-        .select('*')
-        .eq('role', 'peternak')
-        .order('name', { ascending: true });
-      if (error) throw error;
-      return { success: true, users: (data || []).map((u) => { const { password_hash: _password_hash, ...safe } = u; return safe; }) };
+      const data = await fetchAllRows(() =>
+        supabase.from('users').select('*').eq('role', 'peternak').order('name', { ascending: true })
+      );
+      return { success: true, users: data.map((u) => { const { password_hash: _password_hash, ...safe } = u; return safe; }) };
     } catch (error) {
       return { success: false, error: error.message };
     }
@@ -174,12 +189,9 @@ export const adminService = {
         .eq('role', 'peternak');
       if (peternakError) throw peternakError;
 
-      const { data: cattleOwners, error: cattleError } = await supabase
-        .from('cattle')
-        .select('user_id');
-      if (cattleError) throw cattleError;
+      const cattleOwners = await fetchAllRows(() => supabase.from('cattle').select('user_id'));
 
-      const ownerSet = new Set((cattleOwners || []).map(c => c.user_id));
+      const ownerSet = new Set(cattleOwners.map(c => c.user_id));
       const tanpaSapi = (peternak || []).filter(u => !ownerSet.has(u.id));
       const perKecamatan = {};
       tanpaSapi.forEach(u => { perKecamatan[u.kecamatan] = (perKecamatan[u.kecamatan] || 0) + 1; });
@@ -216,11 +228,9 @@ export const adminService = {
       // reproduksi yang tercatat dengan tanggal (lihat
       // SUPABASE_ABORTUS_COLUMNS_MIGRATION.sql untuk riwayat kenapa
       // abortusLog sempat tidak bisa dipakai di sini).
-      const { data: cattleList, error: cattleError } = await supabase
-        .from('cattle')
-        .select('pkbLog, abortusLog')
-        .in('user_id', ids);
-      if (cattleError) throw cattleError;
+      const cattleList = await fetchAllRows(() =>
+        supabase.from('cattle').select('pkbLog, abortusLog').in('user_id', ids)
+      );
 
       const now = new Date();
       const buckets = [];
