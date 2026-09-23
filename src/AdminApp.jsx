@@ -97,14 +97,15 @@ function AdminLogin({ onLoggedIn }) {
 function RingkasanTab({ data, loading, onJumpToPeternak, onJumpToPemantauan, onJumpToLaporan }) {
   if (loading) return <p className="t-sm c-3">Memuat...</p>;
 
-  const { totalPeternak, totalSapi, totalPetugas, tanpaSapi, terbaru, perKecamatan, birahi, gangguan } = data;
+  const { totalPeternak, totalSapi, totalPetugas, tanpaSapi, terbaru, perKecamatan, birahi, gangguan, kawin, bunting, kelahiranTerbaru } = data;
 
   return (
     <div>
-      {/* Inti tujuan SIRAPI — bukan hitung peternak/sapi, tapi sapi mana yang
-          birahi (siap kawin sekarang) dan mana yang diduga ada gangguan
-          reproduksi. Sengaja ditaruh paling atas, lebih besar dari stat
-          tile administratif di bawahnya. */}
+      {/* Inti tujuan SIRAPI — bukan hitung peternak/sapi, tapi tahapan
+          reproduksi sapi saat ini: birahi (siap kawin) → sudah dikawin
+          (IB tercatat, menunggu PKB) → positif bunting, plus gangguan
+          reproduksi sebagai kartu peringatan terpisah. Sengaja ditaruh
+          paling atas, lebih besar dari stat tile administratif di bawahnya. */}
       <div className="mission-grid">
         <button className="mission-card is-warn" onClick={() => onJumpToPemantauan('birahi')}>
           <div className="mission-card-head">
@@ -116,6 +117,26 @@ function RingkasanTab({ data, loading, onJumpToPeternak, onJumpToPemantauan, onJ
             <p className="mission-desc">Jumlah sapi pada fase birahi atau siap dikawinkan.</p>
           </div>
         </button>
+        <div className="mission-card is-info" style={{ cursor: "default" }}>
+          <div className="mission-card-head">
+            <span className="mission-icon"><Icon.check size={18} stroke={2.2} /></span>
+            <span className="mission-count">{nf.format(kawin)}</span>
+          </div>
+          <div>
+            <p className="mission-label">Sudah dikawin</p>
+            <p className="mission-desc">Sapi sudah menerima IB, menunggu jadwal pemeriksaan kebuntingan (PKB).</p>
+          </div>
+        </div>
+        <div className="mission-card is-ok" style={{ cursor: "default" }}>
+          <div className="mission-card-head">
+            <span className="mission-icon"><Icon.checkCircle size={18} stroke={2.2} /></span>
+            <span className="mission-count">{nf.format(bunting)}</span>
+          </div>
+          <div>
+            <p className="mission-label">Positif bunting</p>
+            <p className="mission-desc">Sapi dengan hasil PKB positif, sedang dalam masa kebuntingan.</p>
+          </div>
+        </div>
         <button className="mission-card is-crit" onClick={() => onJumpToPemantauan('gangguan')}>
           <div className="mission-card-head">
             <span className="mission-icon"><Icon.alertCircle size={18} stroke={2.2} /></span>
@@ -197,6 +218,26 @@ function RingkasanTab({ data, loading, onJumpToPeternak, onJumpToPemantauan, onJ
             </div>
           )}
         </div>
+      </div>
+
+      <div className="card card-pad" style={{ marginTop: 16 }}>
+        <p className="t-over" style={{ marginBottom: 14 }}>Kelahiran terbaru</p>
+        {kelahiranTerbaru.length === 0 ? (
+          <p className="t-sm c-3">Belum ada kelahiran yang tercatat.</p>
+        ) : (
+          <div className="rowlist">
+            {kelahiranTerbaru.map((k, i) => (
+              <div key={`${k.cattle.id}-${k.date}-${i}`} className="row" style={{ cursor: "default" }}>
+                <span className="admin-avatar" style={{ background: "var(--ok-bg)", color: "var(--ok)" }}><Icon.cow size={16} stroke={2} /></span>
+                <div className="row-main">
+                  <span className="row-title">{k.cattle.code || k.cattle.id} <span className="c-3" style={{ fontWeight: 500 }}>· {k.peternak.name}</span></span>
+                  <span className="row-sub">{k.peternak.desa}, {k.peternak.kecamatan}</span>
+                </div>
+                <span className="t-xs c-3 tabular">{fmtDate(k.date)}</span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -630,7 +671,7 @@ export default function AdminApp() {
   const [checking, setChecking] = useState(true);
 
   // Data agregat dipakai di Ringkasan.
-  const [overview, setOverview] = useState({ totalPeternak: 0, totalSapi: null, totalPetugas: 0, tanpaSapi: 0, terbaru: [], perKecamatan: [], birahi: [], gangguan: [] });
+  const [overview, setOverview] = useState({ totalPeternak: 0, totalSapi: null, totalPetugas: 0, tanpaSapi: 0, terbaru: [], perKecamatan: [], birahi: [], gangguan: [], kawin: 0, bunting: 0, kelahiranTerbaru: [] });
   const [overviewLoading, setOverviewLoading] = useState(true);
   const [pemantauanJump, setPemantauanJump] = useState(null);
 
@@ -657,6 +698,9 @@ export default function AdminApp() {
       perKecamatan: Object.entries(perKecamatan).sort((a, b) => b[1] - a[1]),
       birahi: reproRes.success ? reproRes.birahi : [],
       gangguan: reproRes.success ? reproRes.gangguan : [],
+      kawin: reproRes.success ? reproRes.kawin : 0,
+      bunting: reproRes.success ? reproRes.bunting : 0,
+      kelahiranTerbaru: reproRes.success ? reproRes.kelahiranTerbaru : [],
     });
     setOverviewLoading(false);
   };

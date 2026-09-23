@@ -981,7 +981,7 @@ input[type="checkbox"], input[type="radio"] {
 /* Kartu "misi" — birahi & gangguan reproduksi. Ini inti tujuan SIRAPI
    (bukan sekadar hitung peternak/sapi), jadi sengaja dibuat lebih besar
    dan lebih menonjol daripada stat tile biasa di bawahnya. */
-.mission-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; margin-bottom: 22px; }
+.mission-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 22px; }
 .mission-card {
   background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg);
   padding: 18px 20px; box-shadow: var(--sh-xs); cursor: pointer; text-align: left;
@@ -996,14 +996,22 @@ input[type="checkbox"], input[type="radio"] {
 }
 .mission-card.is-warn .mission-icon { background: var(--warn-bg); color: var(--warn); }
 .mission-card.is-crit .mission-icon { background: var(--crit-bg); color: var(--crit); }
+.mission-card.is-info .mission-icon { background: var(--info-bg); color: var(--info); }
+.mission-card.is-ok   .mission-icon { background: var(--ok-bg);   color: var(--ok); }
 .mission-count {
   font-size: 34px; font-weight: 800; letter-spacing: -.03em; line-height: 1;
   font-variant-numeric: tabular-nums;
 }
 .mission-card.is-warn .mission-count { color: var(--warn); }
 .mission-card.is-crit .mission-count { color: var(--crit); }
+.mission-card.is-info .mission-count { color: var(--info); }
+.mission-card.is-ok   .mission-count { color: var(--ok); }
 .mission-label { font-size: 14.5px; font-weight: 700; color: var(--text); margin: 0; }
 .mission-desc { font-size: 12.5px; color: var(--text-3); margin: 0; line-height: 1.4; }
+
+@media (max-width: 1200px) {
+  .mission-grid { grid-template-columns: repeat(2, 1fr); }
+}
 
 @media (max-width: 900px) {
   .admin-shell { flex-direction: column; }

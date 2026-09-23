@@ -107,11 +107,15 @@ export default async function handler(req, res) {
         const withCattleSet = new Set();
         let birahiCount = 0;
         let gangguanCount = 0;
+        let kawinCount = 0;
+        let buntingCount = 0;
         (allCattle || []).forEach((c) => {
           const p = c.status_reproduksi || 'N/A';
           phaseCounts[p] = (phaseCounts[p] || 0) + 1;
           if (!peternakIds.has(c.user_id)) return; // sapi nyasar milik akun bukan peternak - dilewati, sama seperti adminService.js
           withCattleSet.add(c.user_id);
+          if (c.status_reproduksi === 'BRED') kawinCount++;
+          else if (c.status_reproduksi === 'PREGNANT') buntingCount++;
           let analysis = null;
           try { analysis = analyzeCattle(c); } catch { /* data cacat - dilewati dari birahi/gangguan, tetap kehitung di phaseCounts */ }
           if (!analysis) return;
@@ -121,7 +125,7 @@ export default async function handler(req, res) {
         const usersWithCattle = withCattleSet.size;
         const usersWithoutCattle = totalUsers - usersWithCattle;
 
-        return res.status(200).json({ totalUsers, totalCattle, dummyUsers, realUsers: (totalUsers || 0) - (dummyUsers || 0), usersWithCattle, usersWithoutCattle, birahiCount, gangguanCount, phaseCounts, kecCounts });
+        return res.status(200).json({ totalUsers, totalCattle, dummyUsers, realUsers: (totalUsers || 0) - (dummyUsers || 0), usersWithCattle, usersWithoutCattle, birahiCount, gangguanCount, kawinCount, buntingCount, phaseCounts, kecCounts });
       }
 
       // Sapi bermasalah (status darurat menurut analyzeCattle - sama persis

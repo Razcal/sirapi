@@ -94,7 +94,9 @@ export const adminService = {
       const peternakList = await fetchAllRows(() =>
         supabase.from('users').select('id, name, phone, kecamatan, desa, dusun').eq('role', 'peternak')
       );
-      if (peternakList.length === 0) return { success: true, birahi: [], gangguan: [] };
+      if (peternakList.length === 0) {
+        return { success: true, birahi: [], gangguan: [], kawin: 0, bunting: 0, kelahiranTerbaru: [] };
+      }
 
       const peternakById = {};
       peternakList.forEach(u => { peternakById[u.id] = u; });
@@ -105,9 +107,28 @@ export const adminService = {
 
       const birahi = [];
       const gangguan = [];
+      // Corong reproduksi: birahi → sudah dikawin (IB tercatat, menunggu PKB)
+      // → positif bunting. "kawin"/"bunting" dihitung langsung dari
+      // status_reproduksi (fase tersimpan di data), BUKAN dari label
+      // analyzeCattle - supaya tetap terhitung sekalipun analisisnya gagal
+      // (data tidak lengkap), dan supaya jelas beda dengan birahi/gangguan
+      // yang memang butuh interpretasi analyzeCattle.
+      let kawin = 0;
+      let bunting = 0;
+      const kelahiranTerbaru = [];
+
       (cattleList || []).forEach(item => {
         const peternak = peternakById[item.user_id];
         if (!peternak) return; // sapi milik akun yang bukan peternak (petugas/admin) — lewati
+
+        if (item.status_reproduksi === 'BRED') kawin++;
+        else if (item.status_reproduksi === 'PREGNANT') bunting++;
+
+        (item.calvingLog || []).forEach(dateStr => {
+          if (!dateStr) return;
+          kelahiranTerbaru.push({ cattle: item, peternak, date: dateStr });
+        });
+
         let analysis = null;
         try { analysis = analyzeCattle(item); } catch { return; }
         if (!analysis) return;
@@ -116,7 +137,9 @@ export const adminService = {
         else if (LABEL_BIRAHI.has(analysis.statusLabel)) birahi.push(row);
       });
 
-      return { success: true, birahi, gangguan };
+      kelahiranTerbaru.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+      return { success: true, birahi, gangguan, kawin, bunting, kelahiranTerbaru: kelahiranTerbaru.slice(0, 8) };
     } catch (error) {
       return { success: false, error: error.message };
     }

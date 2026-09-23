@@ -442,6 +442,8 @@ export default function GodModeApp() {
                 ["Sudah input sapi", stats.usersWithCattle],
                 ["Belum input sapi", stats.usersWithoutCattle],
                 ["Birahi / Siap Kawin", stats.birahiCount],
+                ["Sudah Dikawin", stats.kawinCount],
+                ["Positif Bunting", stats.buntingCount],
                 ["Gangguan Reproduksi", stats.gangguanCount],
               ].map(([label, val]) => {
                 const clickTab = label === "Belum input sapi" ? "noCattle" : label === "Birahi / Siap Kawin" ? "birahi" : label === "Gangguan Reproduksi" ? "problems" : null;
