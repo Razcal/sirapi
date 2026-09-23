@@ -91,12 +91,10 @@ export const adminService = {
   // penilaian di ketiga tempat selalu konsisten.
   getReproMonitoring: async () => {
     try {
-      const { data: peternakList, error: peternakError } = await supabase
-        .from('users')
-        .select('id, name, phone, kecamatan, desa, dusun')
-        .eq('role', 'peternak');
-      if (peternakError) throw peternakError;
-      if (!peternakList || peternakList.length === 0) return { success: true, birahi: [], gangguan: [] };
+      const peternakList = await fetchAllRows(() =>
+        supabase.from('users').select('id, name, phone, kecamatan, desa, dusun').eq('role', 'peternak')
+      );
+      if (peternakList.length === 0) return { success: true, birahi: [], gangguan: [] };
 
       const peternakById = {};
       peternakList.forEach(u => { peternakById[u.id] = u; });
@@ -109,7 +107,7 @@ export const adminService = {
       const gangguan = [];
       (cattleList || []).forEach(item => {
         const peternak = peternakById[item.user_id];
-        if (!peternak) return; // sapi milik peternak yang belum/tidak approved — lewati
+        if (!peternak) return; // sapi milik akun yang bukan peternak (petugas/admin) — lewati
         let analysis = null;
         try { analysis = analyzeCattle(item); } catch { return; }
         if (!analysis) return;
@@ -183,16 +181,14 @@ export const adminService = {
   // bukan cuma "kurang peternak aktif".
   getPeternakTanpaSapi: async () => {
     try {
-      const { data: peternak, error: peternakError } = await supabase
-        .from('users')
-        .select('id, kecamatan')
-        .eq('role', 'peternak');
-      if (peternakError) throw peternakError;
+      const peternak = await fetchAllRows(() =>
+        supabase.from('users').select('id, kecamatan').eq('role', 'peternak')
+      );
 
       const cattleOwners = await fetchAllRows(() => supabase.from('cattle').select('user_id'));
 
       const ownerSet = new Set(cattleOwners.map(c => c.user_id));
-      const tanpaSapi = (peternak || []).filter(u => !ownerSet.has(u.id));
+      const tanpaSapi = peternak.filter(u => !ownerSet.has(u.id));
       const perKecamatan = {};
       tanpaSapi.forEach(u => { perKecamatan[u.kecamatan] = (perKecamatan[u.kecamatan] || 0) + 1; });
 
@@ -216,12 +212,10 @@ export const adminService = {
   // bukan potret kondisi sapi saat ini (itu tugas getReproMonitoring).
   getGangguanTrend: async () => {
     try {
-      const { data: peternak, error: peternakError } = await supabase
-        .from('users')
-        .select('id')
-        .eq('role', 'peternak');
-      if (peternakError) throw peternakError;
-      const ids = (peternak || []).map(u => u.id);
+      const peternak = await fetchAllRows(() =>
+        supabase.from('users').select('id').eq('role', 'peternak')
+      );
+      const ids = peternak.map(u => u.id);
       if (ids.length === 0) return { success: true, months: [] };
 
       // Hasil PKB negatif + kejadian keguguran — dua sinyal masalah

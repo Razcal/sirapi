@@ -343,9 +343,6 @@ function PeternakTab({ setToast }) {
     u.name?.toLowerCase().includes(q) || u.phone?.includes(q) || u.desa?.toLowerCase().includes(q) || u.kecamatan?.toLowerCase().includes(q)
   );
 
-  const STATUS_BADGE = { approved: 'badge-ok', rejected: 'badge-crit' };
-  const STATUS_LABEL = { approved: 'Aktif', rejected: 'Ditolak' };
-
   return (
     <div>
       <div className="input-icon" style={{ marginBottom: 16, maxWidth: 420 }}>
@@ -364,7 +361,6 @@ function PeternakTab({ setToast }) {
                 <span className="row-title">{u.name}</span>
                 <span className="row-sub">{u.phone} · {u.desa}, {u.kecamatan}</span>
               </div>
-              <span className={`badge ${STATUS_BADGE[u.status] || 'badge-neut'}`}>{STATUS_LABEL[u.status] || u.status}</span>
               <Icon.chevronRight size={17} className="row-chev" />
             </button>
           ))}
