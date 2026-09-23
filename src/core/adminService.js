@@ -276,4 +276,59 @@ export const adminService = {
       return { success: false, error: error.message };
     }
   },
+
+  // Kejadian reproduksi (IB, hasil PKB, kelahiran, keguguran) mentah dalam
+  // rentang tanggal tertentu — beda dari getGangguanTrend (itu tren
+  // bulanan tetap 6 bulan, cuma untuk masalah). Ini untuk "kolekting data"
+  // apa adanya per periode bebas (harian, rentang custom, atau setahun
+  // penuh), dipakai tab Laporan untuk filter + unduh CSV buat keperluan
+  // laporan ke pimpinan.
+  getEventsInRange: async ({ from, to }) => {
+    try {
+      const peternak = await fetchAllRows(() =>
+        supabase.from('users').select('id, name, kecamatan, desa').eq('role', 'peternak')
+      );
+      if (peternak.length === 0) return { success: true, events: [] };
+      const peternakById = {};
+      peternak.forEach(u => { peternakById[u.id] = u; });
+
+      const cattleList = await fetchAllRows(() =>
+        supabase.from('cattle').select('code, user_id, ibLog, pkbLog, calvingLog, abortusLog').in('user_id', peternak.map(u => u.id))
+      );
+
+      const fromTime = from ? new Date(from).getTime() : -Infinity;
+      const toTime = to ? new Date(`${to}T23:59:59`).getTime() : Infinity;
+      const inRange = (dateStr) => {
+        if (!dateStr) return false;
+        const t = new Date(dateStr).getTime();
+        return !Number.isNaN(t) && t >= fromTime && t <= toTime;
+      };
+
+      const events = [];
+      cattleList.forEach(item => {
+        const owner = peternakById[item.user_id];
+        if (!owner) return;
+        const base = { cattleCode: item.code, peternakName: owner.name, kecamatan: owner.kecamatan, desa: owner.desa };
+
+        (item.ibLog || []).forEach(e => {
+          const date = typeof e === 'object' ? e.date : e;
+          if (inRange(date)) events.push({ ...base, date, jenis: 'Inseminasi Buatan (IB)' });
+        });
+        (item.pkbLog || []).forEach(e => {
+          if (inRange(e?.date)) events.push({ ...base, date: e.date, jenis: e.result === 'POSITIVE' ? 'PKB Positif (Bunting)' : 'PKB Negatif' });
+        });
+        (item.calvingLog || []).forEach(date => {
+          if (inRange(date)) events.push({ ...base, date, jenis: 'Kelahiran' });
+        });
+        (item.abortusLog || []).forEach(date => {
+          if (inRange(date)) events.push({ ...base, date, jenis: 'Keguguran' });
+        });
+      });
+
+      events.sort((a, b) => new Date(b.date) - new Date(a.date));
+      return { success: true, events };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  },
 };

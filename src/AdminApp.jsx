@@ -297,6 +297,128 @@ function PemantauanTab({ data, loading, jumpTo }) {
 
 /* --------------------------------------------------------- LAPORAN ----- */
 
+const isoDate = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+const JENIS_TONE = {
+  'Inseminasi Buatan (IB)': 'badge-info',
+  'PKB Positif (Bunting)': 'badge-ok',
+  'PKB Negatif': 'badge-crit',
+  'Kelahiran': 'badge-ok',
+  'Keguguran': 'badge-crit',
+};
+
+// Filter kejadian reproduksi per tanggal/rentang/tahun, plus unduh CSV —
+// supaya admin bisa "kolekting data" untuk keperluan laporan ke pimpinan
+// tanpa perlu minta bantuan siapa pun mengambilnya langsung dari database.
+function EventCollectorCard() {
+  const today = new Date();
+  const firstOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+  const [fromDate, setFromDate] = useState(isoDate(firstOfMonth));
+  const [toDate, setToDate] = useState(isoDate(today));
+  const [events, setEvents] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  const load = async (from, to) => {
+    setLoading(true);
+    const res = await adminService.getEventsInRange({ from, to });
+    setEvents(res.success ? res.events : []);
+    setLoading(false);
+  };
+
+  useEffect(() => { load(fromDate, toDate); }, []); // eslint-disable-line
+
+  const applyPreset = (from, to) => {
+    setFromDate(from); setToDate(to);
+    load(from, to);
+  };
+
+  const presetHariIni = () => { const d = isoDate(today); applyPreset(d, d); };
+  const presetMingguIni = () => { const d = new Date(today); d.setDate(d.getDate() - 6); applyPreset(isoDate(d), isoDate(today)); };
+  const presetBulanIni = () => applyPreset(isoDate(new Date(today.getFullYear(), today.getMonth(), 1)), isoDate(today));
+  const presetTahunIni = () => applyPreset(isoDate(new Date(today.getFullYear(), 0, 1)), isoDate(today));
+
+  const downloadCSV = () => {
+    if (!events || events.length === 0) return;
+    const header = ['Tanggal', 'Jenis Kejadian', 'Kode Sapi', 'Peternak', 'Kecamatan', 'Desa'];
+    const rows = events.map(e => [e.date, e.jenis, e.cattleCode || '', e.peternakName, e.kecamatan, e.desa]);
+    const csv = [header, ...rows]
+      .map(r => r.map(v => `"${String(v ?? '').replace(/"/g, '""')}"`).join(','))
+      .join('\n');
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `sirapi-kejadian-${fromDate}_sd_${toDate}.csv`;
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(url);
+  };
+
+  const summary = {};
+  (events || []).forEach(e => { summary[e.jenis] = (summary[e.jenis] || 0) + 1; });
+
+  return (
+    <div className="card card-pad" style={{ marginBottom: 16 }}>
+      <p className="t-over" style={{ marginBottom: 4 }}>Kolekting data — filter kejadian per tanggal</p>
+      <p className="t-xs c-3" style={{ margin: "0 0 14px" }}>
+        Semua Inseminasi Buatan (IB), hasil PKB, kelahiran, dan keguguran yang tercatat pada rentang tanggal ini — siap diunduh untuk keperluan laporan.
+      </p>
+
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "flex-end", marginBottom: 14 }}>
+        <div className="field" style={{ margin: 0 }}>
+          <label className="field-label">Dari tanggal</label>
+          <input type="date" className="input" value={fromDate} max={toDate} onChange={e => { setFromDate(e.target.value); load(e.target.value, toDate); }} />
+        </div>
+        <div className="field" style={{ margin: 0 }}>
+          <label className="field-label">Sampai tanggal</label>
+          <input type="date" className="input" value={toDate} min={fromDate} max={isoDate(today)} onChange={e => { setToDate(e.target.value); load(fromDate, e.target.value); }} />
+        </div>
+        <button onClick={presetHariIni} className="btn btn-sm btn-secondary">Hari ini</button>
+        <button onClick={presetMingguIni} className="btn btn-sm btn-secondary">7 hari terakhir</button>
+        <button onClick={presetBulanIni} className="btn btn-sm btn-secondary">Bulan ini</button>
+        <button onClick={presetTahunIni} className="btn btn-sm btn-secondary">Tahun ini</button>
+        <button onClick={downloadCSV} disabled={!events || events.length === 0} className="btn btn-sm btn-primary" style={{ marginLeft: "auto" }}>
+          <Icon.download size={15} stroke={2.2} /> Unduh CSV
+        </button>
+      </div>
+
+      {loading ? <p className="t-sm c-3">Memuat...</p> : !events || events.length === 0 ? (
+        <p className="t-sm c-3">Tidak ada kejadian tercatat pada rentang tanggal ini.</p>
+      ) : (
+        <>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 14 }}>
+            {Object.entries(summary).map(([jenis, count]) => (
+              <span key={jenis} className={`badge ${JENIS_TONE[jenis] || 'badge-neut'}`}>{jenis}: {count}</span>
+            ))}
+          </div>
+          <div style={{ maxHeight: 360, overflowY: "auto" }}>
+            <table className="t-sm" style={{ width: "100%", borderCollapse: "collapse" }}>
+              <thead>
+                <tr style={{ textAlign: "left", borderBottom: "1px solid var(--border)" }}>
+                  <th style={{ padding: "6px 8px" }}>Tanggal</th>
+                  <th style={{ padding: "6px 8px" }}>Jenis</th>
+                  <th style={{ padding: "6px 8px" }}>Kode Sapi</th>
+                  <th style={{ padding: "6px 8px" }}>Peternak</th>
+                  <th style={{ padding: "6px 8px" }}>Kecamatan / Desa</th>
+                </tr>
+              </thead>
+              <tbody>
+                {events.map((e, i) => (
+                  <tr key={i} style={{ borderBottom: "1px solid var(--border)" }}>
+                    <td className="tabular" style={{ padding: "6px 8px", whiteSpace: "nowrap" }}>{fmtDate(e.date)}</td>
+                    <td style={{ padding: "6px 8px" }}>{e.jenis}</td>
+                    <td style={{ padding: "6px 8px", fontWeight: 700 }}>{e.cattleCode || '-'}</td>
+                    <td style={{ padding: "6px 8px" }}>{e.peternakName}</td>
+                    <td style={{ padding: "6px 8px", color: "var(--text-3)" }}>{e.desa}, {e.kecamatan}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 // Rekapitulasi data, bukan potret "hari ini" seperti Ringkasan/Pemantauan:
 // sebaran gangguan reproduksi per kecamatan dan per jenis, status
 // pencatatan sapi per kecamatan, dan tren laporan enam bulan terakhir.
@@ -322,6 +444,8 @@ function LaporanTab({ data }) {
 
   return (
     <div>
+      <EventCollectorCard />
+
       <div className="admin-grid-2" style={{ marginBottom: 16 }}>
         <div className="card card-pad">
           <p className="t-over" style={{ marginBottom: 4 }}>Gangguan reproduksi per kecamatan</p>
