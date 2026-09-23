@@ -917,9 +917,21 @@ export default function AdminApp() {
       </aside>
 
       <main className="admin-main">
-        <div className="admin-page-head">
-          <h1>{PAGE_META[tab].title}</h1>
-          <p>{PAGE_META[tab].sub}</p>
+        <div className="admin-page-head" style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+          <div>
+            <h1>{PAGE_META[tab].title}</h1>
+            <p>{PAGE_META[tab].sub}</p>
+          </div>
+          {/* Data Ringkasan/Pemantauan/Laporan cuma dimuat sekali saat login,
+              TIDAK otomatis refresh - kalau halaman dibiarkan terbuka lama,
+              angkanya "beku" padahal data asli terus berubah (peternak lain
+              terus input sapi). Tombol ini supaya tidak perlu reload seluruh
+              halaman cuma untuk lihat angka terbaru. */}
+          {['ringkasan', 'pemantauan', 'laporan'].includes(tab) && (
+            <button onClick={loadOverview} disabled={overviewLoading} className="btn btn-sm btn-secondary" style={{ flexShrink: 0 }}>
+              <Icon.refresh size={15} stroke={2.2} /> {overviewLoading ? "Memuat..." : "Refresh data"}
+            </button>
+          )}
         </div>
 
         {tab === 'ringkasan' && (
