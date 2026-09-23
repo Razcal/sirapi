@@ -843,7 +843,18 @@ export default function AdminApp() {
     })();
   }, []);
 
-  useEffect(() => { if (admin) loadOverview(); }, [admin]);
+  // Penyegaran otomatis berkala - tanpa ini, dashboard yang dibiarkan
+  // terbuka di satu tab (mis. layar kantor yang tidak pernah ditutup)
+  // akan menampilkan angka yang sama persis SELAMANYA, karena sebelumnya
+  // data cuma diambil sekali saat halaman pertama dibuka. Tombol "Refresh
+  // data" di header tetap ada untuk yang mau lihat seketika, ini jaring
+  // pengaman supaya tidak bergantung pada orang ingat mengklik.
+  useEffect(() => {
+    if (!admin) return;
+    loadOverview();
+    const interval = setInterval(loadOverview, 5 * 60 * 1000); // tiap 5 menit
+    return () => clearInterval(interval);
+  }, [admin]);
 
   useEffect(() => {
     if (!toast) return;
