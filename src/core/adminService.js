@@ -95,7 +95,7 @@ export const adminService = {
         supabase.from('users').select('id, name, phone, kecamatan, desa, dusun').eq('role', 'peternak')
       );
       if (peternakList.length === 0) {
-        return { success: true, birahi: [], gangguan: [], kawin: 0, bunting: 0, evaluasiBirahi1: 0, evaluasiBirahi2: 0, kelahiranTerbaru: [] };
+        return { success: true, birahi: [], gangguan: [], kawin: 0, bunting: 0, evaluasiBirahi1: 0, evaluasiBirahi2: 0, berpotensiBunting: 0, kelahiranTerbaru: [] };
       }
 
       const peternakById = {};
@@ -125,6 +125,11 @@ export const adminService = {
       // di analyzeCattle.js untuk aturan wajib PKB hari ke-90 itu sendiri).
       let evaluasiBirahi1 = 0;
       let evaluasiBirahi2 = 0;
+      // Sudah lewat jendela evaluasi kedua (>48 hari sejak IB terakhir)
+      // TANPA IB susulan tercatat (artinya tidak pernah tercatat kembali
+      // birahi) - kandidat kuat bunting, tapi tetap "berpotensi" bukan
+      // "positif" karena belum ada PKB resmi dari petugas.
+      let berpotensiBunting = 0;
       const kelahiranTerbaru = [];
 
       (cattleList || []).forEach(item => {
@@ -140,6 +145,7 @@ export const adminService = {
             const daysSinceIB = daysDiff(lastDate);
             if (daysSinceIB >= 18 && daysSinceIB <= 24) evaluasiBirahi1++;
             else if (daysSinceIB >= 36 && daysSinceIB <= 48) evaluasiBirahi2++;
+            else if (daysSinceIB > 48) berpotensiBunting++;
           }
         }
         else if (item.status_reproduksi === 'PREGNANT') bunting++;
@@ -159,7 +165,7 @@ export const adminService = {
 
       kelahiranTerbaru.sort((a, b) => new Date(b.date) - new Date(a.date));
 
-      return { success: true, birahi, gangguan, kawin, bunting, evaluasiBirahi1, evaluasiBirahi2, kelahiranTerbaru: kelahiranTerbaru.slice(0, 8) };
+      return { success: true, birahi, gangguan, kawin, bunting, evaluasiBirahi1, evaluasiBirahi2, berpotensiBunting, kelahiranTerbaru: kelahiranTerbaru.slice(0, 8) };
     } catch (error) {
       return { success: false, error: error.message };
     }

@@ -98,15 +98,22 @@ function RingkasanTab({ data, loading, onJumpToPeternak, onJumpToPemantauan, onJ
   const [showBirahiInfo, setShowBirahiInfo] = useState(false);
   if (loading) return <p className="t-sm c-3">Memuat...</p>;
 
-  const { totalPeternak, totalSapi, totalPetugas, tanpaSapi, terbaru, perKecamatan, birahi, gangguan, kawin, bunting, evaluasiBirahi1, evaluasiBirahi2, kelahiranTerbaru } = data;
+  const { totalPeternak, totalSapi, totalPetugas, tanpaSapi, terbaru, perKecamatan, birahi, gangguan, kawin, bunting, evaluasiBirahi1, evaluasiBirahi2, berpotensiBunting, kelahiranTerbaru } = data;
+
+  const FUNNEL = [
+    { label: "Sudah dikawin", value: kawin, desc: "IB tercatat" },
+    { label: "Evaluasi Birahi 1", value: evaluasiBirahi1, desc: "Hari ke-21 (18-24 hari)" },
+    { label: "Evaluasi Birahi 2", value: evaluasiBirahi2, desc: "Hari ke-42 (36-48 hari)" },
+    { label: "Berpotensi bunting", value: berpotensiBunting, desc: "Lewat hari ke-48, belum PKB" },
+  ];
 
   return (
     <div>
       {/* Inti tujuan SIRAPI — bukan hitung peternak/sapi, tapi tahapan
-          reproduksi sapi saat ini: birahi (siap kawin) → sudah dikawin
-          (IB tercatat, menunggu PKB) → positif bunting, plus gangguan
-          reproduksi sebagai kartu peringatan terpisah. Sengaja ditaruh
-          paling atas, lebih besar dari stat tile administratif di bawahnya. */}
+          reproduksi sapi saat ini: birahi (siap kawin) → positif bunting,
+          plus gangguan reproduksi sebagai kartu peringatan terpisah.
+          Sengaja ditaruh paling atas, lebih besar dari stat tile
+          administratif di bawahnya. */}
       <div className="mission-grid">
         <button className="mission-card is-warn" onClick={() => onJumpToPemantauan('birahi')}>
           <div className="mission-card-head">
@@ -118,16 +125,6 @@ function RingkasanTab({ data, loading, onJumpToPeternak, onJumpToPemantauan, onJ
             <p className="mission-desc">Jumlah sapi pada fase birahi atau siap dikawinkan.</p>
           </div>
         </button>
-        <div className="mission-card is-info" style={{ cursor: "default" }}>
-          <div className="mission-card-head">
-            <span className="mission-icon"><Icon.check size={18} stroke={2.2} /></span>
-            <span className="mission-count">{nf.format(kawin)}</span>
-          </div>
-          <div>
-            <p className="mission-label">Sudah dikawin</p>
-            <p className="mission-desc">Sapi sudah menerima IB, menunggu jadwal pemeriksaan kebuntingan (PKB).</p>
-          </div>
-        </div>
         <div className="mission-card is-ok" style={{ cursor: "default" }}>
           <div className="mission-card-head">
             <span className="mission-icon"><Icon.checkCircle size={18} stroke={2.2} /></span>
@@ -150,18 +147,19 @@ function RingkasanTab({ data, loading, onJumpToPeternak, onJumpToPemantauan, onJ
         </button>
       </div>
 
-      {/* Dua titik cek dini pasca-kawin (bukan diagnosa pasti — cuma
-          indikasi awal). Ditaruh terpisah dari mission-grid supaya jelas
-          ini "pecahan" dari Sudah Dikawin di atas, bukan kategori sejajar
-          baru. */}
+      {/* Alur pasca-kawin - satu baris tersambung (bukan kartu terpisah
+          seperti sebelumnya) supaya urutannya kebaca jelas: makin ke
+          kanan, makin lama sejak IB & makin kuat indikasi buntingnya.
+          Bukan diagnosa pasti sampai kotak terakhir - PKB oleh petugas
+          di bulan ke-3 tetap wajib untuk hasil yang valid. */}
       <div className="card card-pad" style={{ marginBottom: 22 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: showBirahiInfo ? 8 : 14 }}>
-          <p className="t-over" style={{ margin: 0 }}>Evaluasi birahi pasca-kawin</p>
+          <p className="t-over" style={{ margin: 0 }}>Alur pasca-kawin menuju kebuntingan</p>
           <button
             onClick={() => setShowBirahiInfo(v => !v)}
             className="icon-btn"
             style={{ width: 20, height: 20, background: showBirahiInfo ? "var(--info-bg)" : "var(--surface-3)", color: showBirahiInfo ? "var(--info)" : "var(--text-2)" }}
-            aria-label="Penjelasan evaluasi birahi"
+            aria-label="Penjelasan alur"
             title="Penjelasan"
           >
             <Icon.info size={13} stroke={2.4} />
@@ -169,24 +167,24 @@ function RingkasanTab({ data, loading, onJumpToPeternak, onJumpToPemantauan, onJ
         </div>
         {showBirahiInfo && (
           <p className="t-xs c-3" style={{ margin: "0 0 14px", padding: "10px 12px", background: "var(--info-bg)", borderRadius: "var(--r)", color: "var(--info)" }}>
-            Titik cek dini dari sapi yang sudah dikawin: kalau tidak muncul tanda birahi lagi di jendela ini, ada indikasi awal kemungkinan bunting — bukan diagnosa pasti. Pemeriksaan kebuntingan (PKB) oleh petugas di bulan ke-3 tetap wajib agar hasilnya valid.
+            Dari sapi yang sudah dikawin (IB), dua titik cek dini di hari ke-21 dan ke-42: kalau tidak muncul tanda birahi lagi, ada indikasi awal kemungkinan bunting. Lewat hari ke-48 tanpa birahi lagi = berpotensi bunting. Ini semua BUKAN diagnosa pasti — pemeriksaan kebuntingan (PKB) oleh petugas di bulan ke-3 tetap wajib agar hasilnya valid.
           </p>
         )}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))", gap: 14 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", background: "var(--info-bg)", borderRadius: "var(--r)" }}>
-            <span style={{ fontSize: 26, fontWeight: 800, color: "var(--info)", fontVariantNumeric: "tabular-nums" }}>{nf.format(evaluasiBirahi1)}</span>
-            <div>
-              <p style={{ margin: 0, fontSize: 13.5, fontWeight: 700, color: "var(--text)" }}>Evaluasi Birahi 1</p>
-              <p style={{ margin: 0, fontSize: 12, color: "var(--text-3)" }}>Hari ke-21 pasca IB (siklus pertama, 18-24 hari)</p>
-            </div>
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", background: "var(--info-bg)", borderRadius: "var(--r)" }}>
-            <span style={{ fontSize: 26, fontWeight: 800, color: "var(--info)", fontVariantNumeric: "tabular-nums" }}>{nf.format(evaluasiBirahi2)}</span>
-            <div>
-              <p style={{ margin: 0, fontSize: 13.5, fontWeight: 700, color: "var(--text)" }}>Evaluasi Birahi 2</p>
-              <p style={{ margin: 0, fontSize: 12, color: "var(--text-3)" }}>Hari ke-42 pasca IB (siklus kedua, 36-48 hari)</p>
-            </div>
-          </div>
+        <div style={{ display: "flex", alignItems: "stretch", flexWrap: "wrap", gap: 0 }}>
+          {FUNNEL.map((step, i) => (
+            <React.Fragment key={step.label}>
+              <div style={{ flex: "1 1 160px", display: "flex", flexDirection: "column", gap: 2, padding: "10px 14px", background: "var(--info-bg)", borderRadius: "var(--r)" }}>
+                <span style={{ fontSize: 24, fontWeight: 800, color: "var(--info)", fontVariantNumeric: "tabular-nums" }}>{nf.format(step.value)}</span>
+                <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: "var(--text)" }}>{step.label}</p>
+                <p style={{ margin: 0, fontSize: 11.5, color: "var(--text-3)" }}>{step.desc}</p>
+              </div>
+              {i < FUNNEL.length - 1 && (
+                <div style={{ display: "flex", alignItems: "center", padding: "0 6px", color: "var(--text-3)", flexShrink: 0 }}>
+                  <Icon.arrowRight size={18} stroke={2} />
+                </div>
+              )}
+            </React.Fragment>
+          ))}
         </div>
       </div>
 
@@ -836,7 +834,7 @@ export default function AdminApp() {
   const [checking, setChecking] = useState(true);
 
   // Data agregat dipakai di Ringkasan.
-  const [overview, setOverview] = useState({ totalPeternak: 0, totalSapi: null, totalPetugas: 0, tanpaSapi: 0, terbaru: [], perKecamatan: [], birahi: [], gangguan: [], kawin: 0, bunting: 0, evaluasiBirahi1: 0, evaluasiBirahi2: 0, kelahiranTerbaru: [] });
+  const [overview, setOverview] = useState({ totalPeternak: 0, totalSapi: null, totalPetugas: 0, tanpaSapi: 0, terbaru: [], perKecamatan: [], birahi: [], gangguan: [], kawin: 0, bunting: 0, evaluasiBirahi1: 0, evaluasiBirahi2: 0, berpotensiBunting: 0, kelahiranTerbaru: [] });
   const [overviewLoading, setOverviewLoading] = useState(true);
   const [pemantauanJump, setPemantauanJump] = useState(null);
 
@@ -867,6 +865,7 @@ export default function AdminApp() {
       bunting: reproRes.success ? reproRes.bunting : 0,
       evaluasiBirahi1: reproRes.success ? reproRes.evaluasiBirahi1 : 0,
       evaluasiBirahi2: reproRes.success ? reproRes.evaluasiBirahi2 : 0,
+      berpotensiBunting: reproRes.success ? reproRes.berpotensiBunting : 0,
       kelahiranTerbaru: reproRes.success ? reproRes.kelahiranTerbaru : [],
     });
     setOverviewLoading(false);
