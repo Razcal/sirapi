@@ -380,6 +380,14 @@ const JENIS_TONE = {
   'Keguguran': 'badge-crit',
 };
 
+// Warna gradasi sama seperti kartu "Alur pasca-kawin" di Ringkasan - kuning
+// → oranye → hijau, makin kuat indikasi kemungkinan buntingnya.
+const EVAL_STATUS_STYLE = {
+  'Evaluasi Birahi 1': { fg: "#B54708", bg: "#FFFAEB" },
+  'Evaluasi Birahi 2': { fg: "#C4320A", bg: "#FFF4ED" },
+  'Berpotensi Bunting': { fg: "var(--ok)", bg: "var(--ok-bg)" },
+};
+
 // Filter kejadian reproduksi per tanggal/rentang/tahun, plus unduh CSV —
 // supaya admin bisa "kolekting data" untuk keperluan laporan ke pimpinan
 // tanpa perlu minta bantuan siapa pun mengambilnya langsung dari database.
@@ -412,8 +420,8 @@ function EventCollectorCard() {
 
   const downloadCSV = () => {
     if (!events || events.length === 0) return;
-    const header = ['Tanggal', 'Jenis Kejadian', 'Kode Sapi', 'Peternak', 'Kecamatan', 'Desa'];
-    const rows = events.map(e => [e.date, e.jenis, e.cattleCode || '', e.peternakName, e.kecamatan, e.desa]);
+    const header = ['Tanggal', 'Jenis Kejadian', 'Status Evaluasi', 'Kode Sapi', 'Peternak', 'Kecamatan', 'Desa'];
+    const rows = events.map(e => [e.date, e.jenis, e.evaluasiStatus || '', e.cattleCode || '', e.peternakName, e.kecamatan, e.desa]);
     const csv = [header, ...rows]
       .map(r => r.map(v => `"${String(v ?? '').replace(/"/g, '""')}"`).join(','))
       .join('\n');
@@ -433,7 +441,7 @@ function EventCollectorCard() {
     <div className="card card-pad" style={{ marginBottom: 16 }}>
       <p className="t-over" style={{ marginBottom: 4 }}>Kolekting data — filter kejadian per tanggal</p>
       <p className="t-xs c-3" style={{ margin: "0 0 14px" }}>
-        Semua Inseminasi Buatan (IB), hasil PKB, kelahiran, dan keguguran yang tercatat pada rentang tanggal ini — siap diunduh untuk keperluan laporan.
+        Semua Inseminasi Buatan (IB), hasil PKB, kelahiran, dan keguguran yang tercatat pada rentang tanggal ini — siap diunduh untuk keperluan laporan. Baris IB yang sapinya masih menunggu PKB ikut ditandai tahap evaluasi birahinya saat ini (kolom "Status Evaluasi").
       </p>
 
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "flex-end", marginBottom: 14 }}>
@@ -469,130 +477,36 @@ function EventCollectorCard() {
                 <tr style={{ textAlign: "left", borderBottom: "1px solid var(--border)" }}>
                   <th style={{ padding: "6px 8px" }}>Tanggal</th>
                   <th style={{ padding: "6px 8px" }}>Jenis</th>
+                  <th style={{ padding: "6px 8px" }}>Status Evaluasi</th>
                   <th style={{ padding: "6px 8px" }}>Kode Sapi</th>
                   <th style={{ padding: "6px 8px" }}>Peternak</th>
                   <th style={{ padding: "6px 8px" }}>Kecamatan / Desa</th>
                 </tr>
               </thead>
               <tbody>
-                {events.map((e, i) => (
-                  <tr key={i} style={{ borderBottom: "1px solid var(--border)" }}>
-                    <td className="tabular" style={{ padding: "6px 8px", whiteSpace: "nowrap" }}>{fmtDate(e.date)}</td>
-                    <td style={{ padding: "6px 8px" }}>{e.jenis}</td>
-                    <td style={{ padding: "6px 8px", fontWeight: 700 }}>{e.cattleCode || '-'}</td>
-                    <td style={{ padding: "6px 8px" }}>{e.peternakName}</td>
-                    <td style={{ padding: "6px 8px", color: "var(--text-3)" }}>{e.desa}, {e.kecamatan}</td>
-                  </tr>
-                ))}
+                {events.map((e, i) => {
+                  const evalStyle = e.evaluasiStatus ? EVAL_STATUS_STYLE[e.evaluasiStatus] : null;
+                  return (
+                    <tr key={i} style={{ borderBottom: "1px solid var(--border)" }}>
+                      <td className="tabular" style={{ padding: "6px 8px", whiteSpace: "nowrap" }}>{fmtDate(e.date)}</td>
+                      <td style={{ padding: "6px 8px" }}>{e.jenis}</td>
+                      <td style={{ padding: "6px 8px" }}>
+                        {evalStyle && (
+                          <span style={{ background: evalStyle.bg, color: evalStyle.fg, borderRadius: 4, padding: "2px 8px", fontSize: 11.5, fontWeight: 700, whiteSpace: "nowrap" }}>
+                            {e.evaluasiStatus}
+                          </span>
+                        )}
+                      </td>
+                      <td style={{ padding: "6px 8px", fontWeight: 700 }}>{e.cattleCode || '-'}</td>
+                      <td style={{ padding: "6px 8px" }}>{e.peternakName}</td>
+                      <td style={{ padding: "6px 8px", color: "var(--text-3)" }}>{e.desa}, {e.kecamatan}</td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
         </>
-      )}
-    </div>
-  );
-}
-
-const EVAL_STAGE_META = {
-  eval1: { label: "Evaluasi Birahi 1", fg: "#B54708", bg: "#FFFAEB" },
-  eval2: { label: "Evaluasi Birahi 2", fg: "#C4320A", bg: "#FFF4ED" },
-  potensi: { label: "Berpotensi Bunting", fg: "var(--ok)", bg: "var(--ok-bg)" },
-};
-
-// Daftar sapi per tahap evaluasi birahi, bisa dicari & diunduh - sama
-// polanya dengan EventCollectorCard, tapi ini snapshot STATUS saat ini
-// (bukan kejadian bertanggal), jadi tidak ikut ke filter rentang tanggal
-// di atas - punya kontrol tahapnya sendiri.
-function EvaluasiBirahiCard({ evaluasiBirahi1List, evaluasiBirahi2List, berpotensiBuntingList }) {
-  const [stage, setStage] = useState("eval1");
-  const [search, setSearch] = useState("");
-
-  const LISTS = { eval1: evaluasiBirahi1List, eval2: evaluasiBirahi2List, potensi: berpotensiBuntingList };
-  const active = LISTS[stage] || [];
-  const meta = EVAL_STAGE_META[stage];
-
-  const q = search.trim().toLowerCase();
-  const filtered = !q ? active : active.filter(r =>
-    r.cattleCode?.toLowerCase().includes(q) || r.peternakName?.toLowerCase().includes(q) ||
-    r.kecamatan?.toLowerCase().includes(q) || r.desa?.toLowerCase().includes(q)
-  );
-
-  const downloadCSV = () => {
-    if (filtered.length === 0) return;
-    const header = ['Kode Sapi', 'Peternak', 'Kecamatan', 'Desa', 'Tanggal IB Terakhir', 'Hari Sejak IB'];
-    const rows = filtered.map(r => [r.cattleCode, r.peternakName, r.kecamatan, r.desa, r.lastIBDate, r.daysSinceIB]);
-    const csv = [header, ...rows]
-      .map(r => r.map(v => `"${String(v ?? '').replace(/"/g, '""')}"`).join(','))
-      .join('\n');
-    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `sirapi-${meta.label.toLowerCase().replace(/\s+/g, '-')}-${isoDate(new Date())}.csv`;
-    document.body.appendChild(a); a.click(); a.remove();
-    URL.revokeObjectURL(url);
-  };
-
-  return (
-    <div className="card card-pad" style={{ marginBottom: 16 }}>
-      <p className="t-over" style={{ marginBottom: 4 }}>Evaluasi birahi pasca-kawin — daftar sapi</p>
-      <p className="t-xs c-3" style={{ margin: "0 0 14px" }}>
-        Filter sapi berdasarkan tahap evaluasi, cari per kode sapi/peternak/kecamatan, unduh untuk tindak lanjut lapangan.
-      </p>
-
-      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 14 }}>
-        {Object.entries(EVAL_STAGE_META).map(([key, m]) => (
-          <button
-            key={key}
-            onClick={() => setStage(key)}
-            className="btn btn-sm"
-            style={{ background: stage === key ? m.fg : "var(--surface-3)", color: stage === key ? "#fff" : "var(--text-2)", border: "none" }}
-          >
-            {m.label} ({(LISTS[key] || []).length})
-          </button>
-        ))}
-      </div>
-
-      <div style={{ display: "flex", gap: 8, marginBottom: 14, flexWrap: "wrap" }}>
-        <input
-          placeholder="Cari kode sapi / peternak / kecamatan..."
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          className="input"
-          style={{ flex: 1, minWidth: 160 }}
-        />
-        <button onClick={downloadCSV} disabled={filtered.length === 0} className="btn btn-sm btn-primary">
-          <Icon.download size={15} stroke={2.2} /> Unduh CSV
-        </button>
-      </div>
-
-      {filtered.length === 0 ? (
-        <p className="t-sm c-3">Tidak ada sapi pada tahap ini{q ? ' yang cocok dengan pencarian' : ''}.</p>
-      ) : (
-        <div style={{ maxHeight: 360, overflowY: "auto" }}>
-          <table className="t-sm" style={{ width: "100%", borderCollapse: "collapse" }}>
-            <thead>
-              <tr style={{ textAlign: "left", borderBottom: "1px solid var(--border)" }}>
-                <th style={{ padding: "6px 8px" }}>Kode Sapi</th>
-                <th style={{ padding: "6px 8px" }}>Peternak</th>
-                <th style={{ padding: "6px 8px" }}>Kecamatan / Desa</th>
-                <th style={{ padding: "6px 8px" }}>Tanggal IB Terakhir</th>
-                <th style={{ padding: "6px 8px" }}>Hari sejak IB</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((r, i) => (
-                <tr key={i} style={{ borderBottom: "1px solid var(--border)" }}>
-                  <td style={{ padding: "6px 8px", fontWeight: 700 }}>{r.cattleCode}</td>
-                  <td style={{ padding: "6px 8px" }}>{r.peternakName}</td>
-                  <td style={{ padding: "6px 8px", color: "var(--text-3)" }}>{r.kecamatan}, {r.desa}</td>
-                  <td className="tabular" style={{ padding: "6px 8px", whiteSpace: "nowrap" }}>{fmtDate(r.lastIBDate)}</td>
-                  <td className="tabular" style={{ padding: "6px 8px", color: meta.fg, fontWeight: 700 }}>{r.daysSinceIB} hari</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
       )}
     </div>
   );
@@ -604,7 +518,7 @@ function EvaluasiBirahiCard({ evaluasiBirahi1List, evaluasiBirahi2List, berpoten
 // Halaman ini menyajikan data apa adanya — keputusan program tetap ada
 // di tangan Dinas.
 function LaporanTab({ data }) {
-  const { gangguan, evaluasiBirahi1List, evaluasiBirahi2List, berpotensiBuntingList } = data;
+  const { gangguan } = data;
   const [tanpaSapi, setTanpaSapi] = useState(null);
   const [trend, setTrend] = useState(null);
 
@@ -624,12 +538,6 @@ function LaporanTab({ data }) {
   return (
     <div>
       <EventCollectorCard />
-
-      <EvaluasiBirahiCard
-        evaluasiBirahi1List={evaluasiBirahi1List}
-        evaluasiBirahi2List={evaluasiBirahi2List}
-        berpotensiBuntingList={berpotensiBuntingList}
-      />
 
       <div className="admin-grid-2" style={{ marginBottom: 16 }}>
         <div className="card card-pad">
@@ -980,7 +888,7 @@ export default function AdminApp() {
   const [checking, setChecking] = useState(true);
 
   // Data agregat dipakai di Ringkasan.
-  const [overview, setOverview] = useState({ totalPeternak: 0, totalSapi: null, totalPetugas: 0, tanpaSapi: 0, terbaru: [], perKecamatan: [], birahi: [], gangguan: [], kawin: 0, bunting: 0, evaluasiBirahi1: 0, evaluasiBirahi2: 0, berpotensiBunting: 0, evaluasiBirahi1List: [], evaluasiBirahi2List: [], berpotensiBuntingList: [], kelahiranTerbaru: [] });
+  const [overview, setOverview] = useState({ totalPeternak: 0, totalSapi: null, totalPetugas: 0, tanpaSapi: 0, terbaru: [], perKecamatan: [], birahi: [], gangguan: [], kawin: 0, bunting: 0, evaluasiBirahi1: 0, evaluasiBirahi2: 0, berpotensiBunting: 0, kelahiranTerbaru: [] });
   const [overviewLoading, setOverviewLoading] = useState(true);
   const [pemantauanJump, setPemantauanJump] = useState(null);
 
@@ -1012,9 +920,6 @@ export default function AdminApp() {
       evaluasiBirahi1: reproRes.success ? reproRes.evaluasiBirahi1 : 0,
       evaluasiBirahi2: reproRes.success ? reproRes.evaluasiBirahi2 : 0,
       berpotensiBunting: reproRes.success ? reproRes.berpotensiBunting : 0,
-      evaluasiBirahi1List: reproRes.success ? reproRes.evaluasiBirahi1List : [],
-      evaluasiBirahi2List: reproRes.success ? reproRes.evaluasiBirahi2List : [],
-      berpotensiBuntingList: reproRes.success ? reproRes.berpotensiBuntingList : [],
       kelahiranTerbaru: reproRes.success ? reproRes.kelahiranTerbaru : [],
     });
     setOverviewLoading(false);

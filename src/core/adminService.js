@@ -98,7 +98,6 @@ export const adminService = {
         return {
           success: true, birahi: [], gangguan: [], kawin: 0, bunting: 0,
           evaluasiBirahi1: 0, evaluasiBirahi2: 0, berpotensiBunting: 0,
-          evaluasiBirahi1List: [], evaluasiBirahi2List: [], berpotensiBuntingList: [],
           kelahiranTerbaru: [],
         };
       }
@@ -135,12 +134,6 @@ export const adminService = {
       // birahi) - kandidat kuat bunting, tapi tetap "berpotensi" bukan
       // "positif" karena belum ada PKB resmi dari petugas.
       let berpotensiBunting = 0;
-      // Daftar mentah (bukan cuma angka) untuk tiap tahap - dipakai tab
-      // Laporan supaya bisa difilter & diunduh, sama seperti daftar
-      // kejadian lain (lihat getEventsInRange).
-      const evaluasiBirahi1List = [];
-      const evaluasiBirahi2List = [];
-      const berpotensiBuntingList = [];
       const kelahiranTerbaru = [];
 
       (cattleList || []).forEach(item => {
@@ -154,10 +147,9 @@ export const adminService = {
             const lastEntry = sortedIB[sortedIB.length - 1];
             const lastDate = typeof lastEntry === 'object' ? lastEntry.date : lastEntry;
             const daysSinceIB = daysDiff(lastDate);
-            const row = { cattleCode: item.code, peternakName: peternak.name, kecamatan: peternak.kecamatan, desa: peternak.desa, lastIBDate: lastDate, daysSinceIB };
-            if (daysSinceIB >= 18 && daysSinceIB <= 24) { evaluasiBirahi1++; evaluasiBirahi1List.push(row); }
-            else if (daysSinceIB >= 36 && daysSinceIB <= 48) { evaluasiBirahi2++; evaluasiBirahi2List.push(row); }
-            else if (daysSinceIB > 48) { berpotensiBunting++; berpotensiBuntingList.push(row); }
+            if (daysSinceIB >= 18 && daysSinceIB <= 24) evaluasiBirahi1++;
+            else if (daysSinceIB >= 36 && daysSinceIB <= 48) evaluasiBirahi2++;
+            else if (daysSinceIB > 48) berpotensiBunting++;
           }
         }
         else if (item.status_reproduksi === 'PREGNANT') bunting++;
@@ -176,12 +168,10 @@ export const adminService = {
       });
 
       kelahiranTerbaru.sort((a, b) => new Date(b.date) - new Date(a.date));
-      [evaluasiBirahi1List, evaluasiBirahi2List, berpotensiBuntingList].forEach(list => list.sort((a, b) => b.daysSinceIB - a.daysSinceIB));
 
       return {
         success: true, birahi, gangguan, kawin, bunting,
         evaluasiBirahi1, evaluasiBirahi2, berpotensiBunting,
-        evaluasiBirahi1List, evaluasiBirahi2List, berpotensiBuntingList,
         kelahiranTerbaru: kelahiranTerbaru.slice(0, 8),
       };
     } catch (error) {
@@ -337,7 +327,7 @@ export const adminService = {
       peternak.forEach(u => { peternakById[u.id] = u; });
 
       const cattleList = await fetchAllRows(() =>
-        supabase.from('cattle').select('code, user_id, ibLog, pkbLog, calvingLog, abortusLog').in('user_id', peternak.map(u => u.id))
+        supabase.from('cattle').select('code, user_id, status_reproduksi, ibLog, pkbLog, calvingLog, abortusLog').in('user_id', peternak.map(u => u.id))
       );
 
       const fromTime = from ? new Date(from).getTime() : -Infinity;
@@ -354,9 +344,27 @@ export const adminService = {
         if (!owner) return;
         const base = { cattleCode: item.code, peternakName: owner.name, kecamatan: owner.kecamatan, desa: owner.desa };
 
+        // Baris IB terbaru (kalau sapinya masih fase BRED, belum di-PKB)
+        // ditempeli status evaluasi birahi saat ini - jadi satu tabel ini
+        // langsung menjawab "kapan di-IB" DAN "sekarang di tahap mana",
+        // tidak perlu tabel terpisah untuk itu.
+        const ibSorted = [...(item.ibLog || [])].sort((a, b) => {
+          const da = typeof a === 'object' ? a.date : a; const db = typeof b === 'object' ? b.date : b;
+          return new Date(da) - new Date(db);
+        });
+        const latestIBDate = ibSorted.length > 0 ? (typeof ibSorted[ibSorted.length - 1] === 'object' ? ibSorted[ibSorted.length - 1].date : ibSorted[ibSorted.length - 1]) : null;
+
         (item.ibLog || []).forEach(e => {
           const date = typeof e === 'object' ? e.date : e;
-          if (inRange(date)) events.push({ ...base, date, jenis: 'Inseminasi Buatan (IB)' });
+          if (!inRange(date)) return;
+          let evaluasiStatus = null;
+          if (item.status_reproduksi === 'BRED' && date === latestIBDate) {
+            const daysSinceIB = daysDiff(date);
+            if (daysSinceIB >= 18 && daysSinceIB <= 24) evaluasiStatus = 'Evaluasi Birahi 1';
+            else if (daysSinceIB >= 36 && daysSinceIB <= 48) evaluasiStatus = 'Evaluasi Birahi 2';
+            else if (daysSinceIB > 48) evaluasiStatus = 'Berpotensi Bunting';
+          }
+          events.push({ ...base, date, jenis: 'Inseminasi Buatan (IB)', evaluasiStatus });
         });
         (item.pkbLog || []).forEach(e => {
           if (inRange(e?.date)) events.push({ ...base, date: e.date, jenis: e.result === 'POSITIVE' ? 'PKB Positif (Bunting)' : 'PKB Negatif' });
