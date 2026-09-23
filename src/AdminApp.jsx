@@ -97,7 +97,7 @@ function AdminLogin({ onLoggedIn }) {
 function RingkasanTab({ data, loading, onJumpToPeternak, onJumpToPemantauan, onJumpToLaporan }) {
   if (loading) return <p className="t-sm c-3">Memuat...</p>;
 
-  const { totalPeternak, totalSapi, totalPetugas, tanpaSapi, terbaru, perKecamatan, birahi, gangguan, kawin, bunting, kelahiranTerbaru } = data;
+  const { totalPeternak, totalSapi, totalPetugas, tanpaSapi, terbaru, perKecamatan, birahi, gangguan, kawin, bunting, evaluasiBirahi1, evaluasiBirahi2, kelahiranTerbaru } = data;
 
   return (
     <div>
@@ -147,6 +147,33 @@ function RingkasanTab({ data, loading, onJumpToPeternak, onJumpToPemantauan, onJ
             <p className="mission-desc">Jumlah sapi yang teridentifikasi mengalami gangguan reproduksi.</p>
           </div>
         </button>
+      </div>
+
+      {/* Dua titik cek dini pasca-kawin (bukan diagnosa pasti — cuma
+          indikasi awal). Ditaruh terpisah dari mission-grid supaya jelas
+          ini "pecahan" dari Sudah Dikawin di atas, bukan kategori sejajar
+          baru. */}
+      <div className="card card-pad" style={{ marginBottom: 22 }}>
+        <p className="t-over" style={{ marginBottom: 4 }}>Evaluasi birahi pasca-kawin</p>
+        <p className="t-xs c-3" style={{ margin: "0 0 14px" }}>
+          Titik cek dini dari sapi yang sudah dikawin: kalau tidak muncul tanda birahi lagi di jendela ini, ada indikasi awal kemungkinan bunting — bukan diagnosa pasti. Pemeriksaan kebuntingan (PKB) oleh petugas di bulan ke-3 tetap wajib agar hasilnya valid.
+        </p>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))", gap: 14 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", background: "var(--info-bg)", borderRadius: "var(--r)" }}>
+            <span style={{ fontSize: 26, fontWeight: 800, color: "var(--info)", fontVariantNumeric: "tabular-nums" }}>{nf.format(evaluasiBirahi1)}</span>
+            <div>
+              <p style={{ margin: 0, fontSize: 13.5, fontWeight: 700, color: "var(--text)" }}>Evaluasi Birahi 1</p>
+              <p style={{ margin: 0, fontSize: 12, color: "var(--text-3)" }}>Hari ke-21 pasca IB (siklus pertama, 18-24 hari)</p>
+            </div>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", background: "var(--info-bg)", borderRadius: "var(--r)" }}>
+            <span style={{ fontSize: 26, fontWeight: 800, color: "var(--info)", fontVariantNumeric: "tabular-nums" }}>{nf.format(evaluasiBirahi2)}</span>
+            <div>
+              <p style={{ margin: 0, fontSize: 13.5, fontWeight: 700, color: "var(--text)" }}>Evaluasi Birahi 2</p>
+              <p style={{ margin: 0, fontSize: 12, color: "var(--text-3)" }}>Hari ke-42 pasca IB (siklus kedua, 36-48 hari)</p>
+            </div>
+          </div>
+        </div>
       </div>
 
       <div className="stat-grid-4" style={{ marginBottom: 22 }}>
@@ -795,7 +822,7 @@ export default function AdminApp() {
   const [checking, setChecking] = useState(true);
 
   // Data agregat dipakai di Ringkasan.
-  const [overview, setOverview] = useState({ totalPeternak: 0, totalSapi: null, totalPetugas: 0, tanpaSapi: 0, terbaru: [], perKecamatan: [], birahi: [], gangguan: [], kawin: 0, bunting: 0, kelahiranTerbaru: [] });
+  const [overview, setOverview] = useState({ totalPeternak: 0, totalSapi: null, totalPetugas: 0, tanpaSapi: 0, terbaru: [], perKecamatan: [], birahi: [], gangguan: [], kawin: 0, bunting: 0, evaluasiBirahi1: 0, evaluasiBirahi2: 0, kelahiranTerbaru: [] });
   const [overviewLoading, setOverviewLoading] = useState(true);
   const [pemantauanJump, setPemantauanJump] = useState(null);
 
@@ -824,6 +851,8 @@ export default function AdminApp() {
       gangguan: reproRes.success ? reproRes.gangguan : [],
       kawin: reproRes.success ? reproRes.kawin : 0,
       bunting: reproRes.success ? reproRes.bunting : 0,
+      evaluasiBirahi1: reproRes.success ? reproRes.evaluasiBirahi1 : 0,
+      evaluasiBirahi2: reproRes.success ? reproRes.evaluasiBirahi2 : 0,
       kelahiranTerbaru: reproRes.success ? reproRes.kelahiranTerbaru : [],
     });
     setOverviewLoading(false);

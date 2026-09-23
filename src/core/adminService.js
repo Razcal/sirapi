@@ -1,5 +1,5 @@
 import { supabase } from './supabaseClient';
-import { analyzeCattle } from './analyzeCattle';
+import { analyzeCattle, daysDiff, ibSinceCalving } from './analyzeCattle';
 import { BULAN } from './analytics';
 import bcrypt from 'bcryptjs';
 
@@ -95,7 +95,7 @@ export const adminService = {
         supabase.from('users').select('id, name, phone, kecamatan, desa, dusun').eq('role', 'peternak')
       );
       if (peternakList.length === 0) {
-        return { success: true, birahi: [], gangguan: [], kawin: 0, bunting: 0, kelahiranTerbaru: [] };
+        return { success: true, birahi: [], gangguan: [], kawin: 0, bunting: 0, evaluasiBirahi1: 0, evaluasiBirahi2: 0, kelahiranTerbaru: [] };
       }
 
       const peternakById = {};
@@ -115,13 +115,33 @@ export const adminService = {
       // yang memang butuh interpretasi analyzeCattle.
       let kawin = 0;
       let bunting = 0;
+      // Evaluasi birahi pasca-kawin - dua titik cek dini sebelum PKB resmi
+      // (bulan ke-3/hari ke-90): hari ke-21 (satu siklus birahi normal,
+      // 18-24 hari — kalau tidak muncul lendir/birahi lagi di jendela ini,
+      // indikasi awal kemungkinan bunting) dan hari ke-42 (dua siklus,
+      // 36-48 hari — penguatan indikasi kalau sampai jendela kedua pun
+      // tetap tidak birahi). BUKAN diagnosa pasti - PKB oleh petugas di
+      // bulan ke-3 tetap wajib untuk hasil yang valid (lihat getOpsiReproduksi
+      // di analyzeCattle.js untuk aturan wajib PKB hari ke-90 itu sendiri).
+      let evaluasiBirahi1 = 0;
+      let evaluasiBirahi2 = 0;
       const kelahiranTerbaru = [];
 
       (cattleList || []).forEach(item => {
         const peternak = peternakById[item.user_id];
         if (!peternak) return; // sapi milik akun yang bukan peternak (petugas/admin) — lewati
 
-        if (item.status_reproduksi === 'BRED') kawin++;
+        if (item.status_reproduksi === 'BRED') {
+          kawin++;
+          const sortedIB = ibSinceCalving(item);
+          if (sortedIB.length > 0) {
+            const lastEntry = sortedIB[sortedIB.length - 1];
+            const lastDate = typeof lastEntry === 'object' ? lastEntry.date : lastEntry;
+            const daysSinceIB = daysDiff(lastDate);
+            if (daysSinceIB >= 18 && daysSinceIB <= 24) evaluasiBirahi1++;
+            else if (daysSinceIB >= 36 && daysSinceIB <= 48) evaluasiBirahi2++;
+          }
+        }
         else if (item.status_reproduksi === 'PREGNANT') bunting++;
 
         (item.calvingLog || []).forEach(dateStr => {
@@ -139,7 +159,7 @@ export const adminService = {
 
       kelahiranTerbaru.sort((a, b) => new Date(b.date) - new Date(a.date));
 
-      return { success: true, birahi, gangguan, kawin, bunting, kelahiranTerbaru: kelahiranTerbaru.slice(0, 8) };
+      return { success: true, birahi, gangguan, kawin, bunting, evaluasiBirahi1, evaluasiBirahi2, kelahiranTerbaru: kelahiranTerbaru.slice(0, 8) };
     } catch (error) {
       return { success: false, error: error.message };
     }
