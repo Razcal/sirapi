@@ -101,17 +101,24 @@ function RingkasanTab({ data, loading, onJumpToPeternak, onJumpToPemantauan, onJ
 
   const { totalPeternak, totalSapi, totalPetugas, tanpaSapi, terbaru, perKecamatan, birahi, gangguan, kawin, bunting, evaluasiBirahi1, evaluasiBirahi2, berpotensiBunting, kelahiranTerbaru } = data;
 
+  // Warna makin "matang" kian ke kanan - kuning (baru dievaluasi) → oranye
+  // (evaluasi kedua, indikasi menguat) → hijau (berpotensi bunting, indikasi
+  // paling kuat). Bukan token semantik warn/crit biasa (itu untuk
+  // peringatan/masalah) - ini murni gradasi tahapan, jadi pakai warna
+  // langsung, bukan var(--warn)/var(--crit) yang maknanya beda.
   const FUNNEL = [
-    { key: "kawin", label: "Sudah dikawin", value: kawin, desc: "IB tercatat" },
+    { key: "kawin", label: "Sudah dikawin", value: kawin, desc: "IB tercatat", fg: "var(--info)", bg: "var(--info-bg)" },
     {
       key: "eval1", label: "Evaluasi Birahi 1", value: evaluasiBirahi1, desc: "Hari ke-21 (18-24 hari)",
+      fg: "#B54708", bg: "#FFFAEB",
       penjelasan: "Sapi-sapi ini sedang di hari ke-18 sampai 24 sejak IB terakhir — jendela waktu birahi normalnya muncul kembali kalau IB sebelumnya TIDAK berhasil. Amati tanda birahi (3A: Abang, Abuh, Anget) dan keluarnya lendir bening dari vulva. Kalau tanda itu MUNCUL lagi di masa ini, kemungkinan besar sapi belum bunting dan perlu di-IB ulang. Kalau TIDAK ada tanda birahi sampai lewat masa ini, itu indikasi awal (belum pasti) kemungkinan bunting.",
     },
     {
       key: "eval2", label: "Evaluasi Birahi 2", value: evaluasiBirahi2, desc: "Hari ke-42 (36-48 hari)",
+      fg: "#C4320A", bg: "#FFF4ED",
       penjelasan: "Sapi-sapi ini sudah melewati Evaluasi Birahi 1 tanpa tanda birahi, dan sekarang berada di jendela siklus kedua (hari ke-36 sampai 48). Sama seperti evaluasi pertama: kalau lendir birahi MUNCUL lagi sekarang, berarti kemungkinan besar belum bunting. Kalau sampai di sini pun tetap tidak ada tanda birahi, indikasi kemungkinan buntingnya makin kuat — tapi tetap harus dipastikan lewat PKB resmi petugas di bulan ke-3.",
     },
-    { key: "potensi", label: "Berpotensi bunting", value: berpotensiBunting, desc: "Lewat hari ke-48, belum PKB" },
+    { key: "potensi", label: "Berpotensi bunting", value: berpotensiBunting, desc: "Lewat hari ke-48, belum PKB", fg: "var(--ok)", bg: "var(--ok-bg)" },
   ];
 
   return (
@@ -180,15 +187,15 @@ function RingkasanTab({ data, loading, onJumpToPeternak, onJumpToPemantauan, onJ
         <div style={{ display: "flex", alignItems: "stretch", flexWrap: "wrap", gap: 0 }}>
           {FUNNEL.map((step, i) => (
             <React.Fragment key={step.key}>
-              <div style={{ flex: "1 1 160px", display: "flex", flexDirection: "column", gap: 2, padding: "10px 14px", background: "var(--info-bg)", borderRadius: "var(--r)" }}>
-                <span style={{ fontSize: 24, fontWeight: 800, color: "var(--info)", fontVariantNumeric: "tabular-nums" }}>{nf.format(step.value)}</span>
+              <div style={{ flex: "1 1 160px", display: "flex", flexDirection: "column", gap: 2, padding: "10px 14px", background: step.bg, borderRadius: "var(--r)" }}>
+                <span style={{ fontSize: 24, fontWeight: 800, color: step.fg, fontVariantNumeric: "tabular-nums" }}>{nf.format(step.value)}</span>
                 <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
                   <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: "var(--text)" }}>{step.label}</p>
                   {step.penjelasan && (
                     <button
                       onClick={() => setOpenFunnelInfo(v => v === step.key ? null : step.key)}
                       className="icon-btn"
-                      style={{ width: 17, height: 17, background: openFunnelInfo === step.key ? "var(--info)" : "var(--surface)", color: openFunnelInfo === step.key ? "#fff" : "var(--info)", flexShrink: 0 }}
+                      style={{ width: 17, height: 17, background: openFunnelInfo === step.key ? step.fg : "var(--surface)", color: openFunnelInfo === step.key ? "#fff" : step.fg, flexShrink: 0 }}
                       aria-label={`Kenapa ${step.label}?`}
                       title="Kenapa angka ini?"
                     >
@@ -206,11 +213,14 @@ function RingkasanTab({ data, loading, onJumpToPeternak, onJumpToPemantauan, onJ
             </React.Fragment>
           ))}
         </div>
-        {openFunnelInfo && (
-          <p className="t-xs" style={{ margin: "10px 0 0", padding: "10px 12px", background: "var(--info-bg)", borderRadius: "var(--r)", color: "var(--info)" }}>
-            {FUNNEL.find(s => s.key === openFunnelInfo)?.penjelasan}
-          </p>
-        )}
+        {openFunnelInfo && (() => {
+          const s = FUNNEL.find(f => f.key === openFunnelInfo);
+          return (
+            <p className="t-xs" style={{ margin: "10px 0 0", padding: "10px 12px", background: s.bg, borderRadius: "var(--r)", color: s.fg }}>
+              {s.penjelasan}
+            </p>
+          );
+        })()}
       </div>
 
       <div className="stat-grid-4" style={{ marginBottom: 22 }}>
