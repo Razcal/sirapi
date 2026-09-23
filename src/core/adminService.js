@@ -95,7 +95,12 @@ export const adminService = {
         supabase.from('users').select('id, name, phone, kecamatan, desa, dusun').eq('role', 'peternak')
       );
       if (peternakList.length === 0) {
-        return { success: true, birahi: [], gangguan: [], kawin: 0, bunting: 0, evaluasiBirahi1: 0, evaluasiBirahi2: 0, berpotensiBunting: 0, kelahiranTerbaru: [] };
+        return {
+          success: true, birahi: [], gangguan: [], kawin: 0, bunting: 0,
+          evaluasiBirahi1: 0, evaluasiBirahi2: 0, berpotensiBunting: 0,
+          evaluasiBirahi1List: [], evaluasiBirahi2List: [], berpotensiBuntingList: [],
+          kelahiranTerbaru: [],
+        };
       }
 
       const peternakById = {};
@@ -130,6 +135,12 @@ export const adminService = {
       // birahi) - kandidat kuat bunting, tapi tetap "berpotensi" bukan
       // "positif" karena belum ada PKB resmi dari petugas.
       let berpotensiBunting = 0;
+      // Daftar mentah (bukan cuma angka) untuk tiap tahap - dipakai tab
+      // Laporan supaya bisa difilter & diunduh, sama seperti daftar
+      // kejadian lain (lihat getEventsInRange).
+      const evaluasiBirahi1List = [];
+      const evaluasiBirahi2List = [];
+      const berpotensiBuntingList = [];
       const kelahiranTerbaru = [];
 
       (cattleList || []).forEach(item => {
@@ -143,9 +154,10 @@ export const adminService = {
             const lastEntry = sortedIB[sortedIB.length - 1];
             const lastDate = typeof lastEntry === 'object' ? lastEntry.date : lastEntry;
             const daysSinceIB = daysDiff(lastDate);
-            if (daysSinceIB >= 18 && daysSinceIB <= 24) evaluasiBirahi1++;
-            else if (daysSinceIB >= 36 && daysSinceIB <= 48) evaluasiBirahi2++;
-            else if (daysSinceIB > 48) berpotensiBunting++;
+            const row = { cattleCode: item.code, peternakName: peternak.name, kecamatan: peternak.kecamatan, desa: peternak.desa, lastIBDate: lastDate, daysSinceIB };
+            if (daysSinceIB >= 18 && daysSinceIB <= 24) { evaluasiBirahi1++; evaluasiBirahi1List.push(row); }
+            else if (daysSinceIB >= 36 && daysSinceIB <= 48) { evaluasiBirahi2++; evaluasiBirahi2List.push(row); }
+            else if (daysSinceIB > 48) { berpotensiBunting++; berpotensiBuntingList.push(row); }
           }
         }
         else if (item.status_reproduksi === 'PREGNANT') bunting++;
@@ -164,8 +176,14 @@ export const adminService = {
       });
 
       kelahiranTerbaru.sort((a, b) => new Date(b.date) - new Date(a.date));
+      [evaluasiBirahi1List, evaluasiBirahi2List, berpotensiBuntingList].forEach(list => list.sort((a, b) => b.daysSinceIB - a.daysSinceIB));
 
-      return { success: true, birahi, gangguan, kawin, bunting, evaluasiBirahi1, evaluasiBirahi2, berpotensiBunting, kelahiranTerbaru: kelahiranTerbaru.slice(0, 8) };
+      return {
+        success: true, birahi, gangguan, kawin, bunting,
+        evaluasiBirahi1, evaluasiBirahi2, berpotensiBunting,
+        evaluasiBirahi1List, evaluasiBirahi2List, berpotensiBuntingList,
+        kelahiranTerbaru: kelahiranTerbaru.slice(0, 8),
+      };
     } catch (error) {
       return { success: false, error: error.message };
     }
