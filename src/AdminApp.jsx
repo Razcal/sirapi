@@ -95,6 +95,7 @@ function AdminLogin({ onLoggedIn }) {
 /* ------------------------------------------------------- RINGKASAN ----- */
 
 function RingkasanTab({ data, loading, onJumpToPeternak, onJumpToPemantauan, onJumpToLaporan }) {
+  const [showBirahiInfo, setShowBirahiInfo] = useState(false);
   if (loading) return <p className="t-sm c-3">Memuat...</p>;
 
   const { totalPeternak, totalSapi, totalPetugas, tanpaSapi, terbaru, perKecamatan, birahi, gangguan, kawin, bunting, evaluasiBirahi1, evaluasiBirahi2, kelahiranTerbaru } = data;
@@ -154,10 +155,23 @@ function RingkasanTab({ data, loading, onJumpToPeternak, onJumpToPemantauan, onJ
           ini "pecahan" dari Sudah Dikawin di atas, bukan kategori sejajar
           baru. */}
       <div className="card card-pad" style={{ marginBottom: 22 }}>
-        <p className="t-over" style={{ marginBottom: 4 }}>Evaluasi birahi pasca-kawin</p>
-        <p className="t-xs c-3" style={{ margin: "0 0 14px" }}>
-          Titik cek dini dari sapi yang sudah dikawin: kalau tidak muncul tanda birahi lagi di jendela ini, ada indikasi awal kemungkinan bunting — bukan diagnosa pasti. Pemeriksaan kebuntingan (PKB) oleh petugas di bulan ke-3 tetap wajib agar hasilnya valid.
-        </p>
+        <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: showBirahiInfo ? 8 : 14 }}>
+          <p className="t-over" style={{ margin: 0 }}>Evaluasi birahi pasca-kawin</p>
+          <button
+            onClick={() => setShowBirahiInfo(v => !v)}
+            className="icon-btn"
+            style={{ width: 20, height: 20, background: showBirahiInfo ? "var(--info-bg)" : "var(--surface-3)", color: showBirahiInfo ? "var(--info)" : "var(--text-2)" }}
+            aria-label="Penjelasan evaluasi birahi"
+            title="Penjelasan"
+          >
+            <Icon.info size={13} stroke={2.4} />
+          </button>
+        </div>
+        {showBirahiInfo && (
+          <p className="t-xs c-3" style={{ margin: "0 0 14px", padding: "10px 12px", background: "var(--info-bg)", borderRadius: "var(--r)", color: "var(--info)" }}>
+            Titik cek dini dari sapi yang sudah dikawin: kalau tidak muncul tanda birahi lagi di jendela ini, ada indikasi awal kemungkinan bunting — bukan diagnosa pasti. Pemeriksaan kebuntingan (PKB) oleh petugas di bulan ke-3 tetap wajib agar hasilnya valid.
+          </p>
+        )}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))", gap: 14 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", background: "var(--info-bg)", borderRadius: "var(--r)" }}>
             <span style={{ fontSize: 26, fontWeight: 800, color: "var(--info)", fontVariantNumeric: "tabular-nums" }}>{nf.format(evaluasiBirahi1)}</span>
